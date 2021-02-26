@@ -1,6 +1,8 @@
-defmodule Botchini.Stream do
+defmodule Botchini.Schema.Stream do
   use Ecto.Schema
   import Ecto.Changeset
+
+  alias Botchini.Schema.{Stream}
 
   schema "streams" do
     field :code, :string, null: false
@@ -15,14 +17,14 @@ defmodule Botchini.Stream do
 
   def delete_stream(stream) do
     case find_by_code(stream.code) do
-      %Botchini.Stream{} = existing -> Botchini.Repo.delete(existing)
+      %Stream{} = existing -> Botchini.Repo.delete(existing)
       nil -> nil
     end
   end
 
 
   defp find_by_code(code) do
-    Botchini.Stream
+    Stream
     |> Botchini.Repo.get_by(code: code)
   end
 

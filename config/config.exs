@@ -8,8 +8,8 @@ config :botchini, Botchini.Repo,
 
 config :botchini, ecto_repos: [Botchini.Repo]
 
-# config :logger,
-#   level: :warn
+config :logger,
+  level: :info
 
 config :nostrum,
   token: System.get_env("DISCORD_TOKEN")

@@ -1,10 +1,15 @@
 defmodule Botchini.Consumer do
+  require Logger
   use Nostrum.Consumer
 
   alias Botchini.Commands
 
   def start_link do
     Consumer.start_link(__MODULE__)
+  end
+
+  def handle_event({:READY, data, _ws_state}) do
+    Logger.info("Bot started!")
   end
 
   def handle_event({:MESSAGE_CREATE, msg, _ws_state}) do

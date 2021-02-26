@@ -1,5 +1,13 @@
 import Config
 
+config :botchini, Botchini.Repo,
+  database: "botchini",
+  username: "botchini",
+  password: System.get_env("POSTGRES_PASS"),
+  hostname: System.get_env("POSTGRES_HOST")
+
+config :botchini, ecto_repos: [Botchini.Repo]
+
 # config :logger,
 #   level: :warn
 

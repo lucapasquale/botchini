@@ -8,6 +8,7 @@ defmodule Botchini.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      Botchini.Repo,
       Botchini.Consumer
     ]
 

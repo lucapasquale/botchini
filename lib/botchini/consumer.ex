@@ -8,9 +8,12 @@ defmodule Botchini.Consumer do
   end
 
   def handle_event({:MESSAGE_CREATE, msg, _ws_state}) do
-    case msg.content do
-      "!ping" -> Commands.Ping.consume(msg)
-      "!stats" -> Commands.Stats.consume(msg)
+    case String.split(msg.content, " ") do
+      ["!ping"] -> Commands.Basic.ping(msg)
+
+      ["!stream", "add" | args] -> Commands.Stream.add(msg, args)
+      ["!stream", "remove" | args] -> Commands.Stream.remove(msg, args)
+
       _ -> :ignore
     end
   end

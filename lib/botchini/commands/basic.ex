@@ -1,8 +1,8 @@
-defmodule Botchini.Commands.Ping do
+defmodule Botchini.Commands.Basic do
   use Nostrum.Consumer
   alias Nostrum.Api
 
-  def consume(msg) do
+  def ping(msg) do
     response_msg = Api.create_message!(msg.channel_id, "pong!")
 
     time = time_diff(response_msg.timestamp, msg.timestamp)
@@ -10,6 +10,7 @@ defmodule Botchini.Commands.Ping do
 
     Api.edit_message(response_msg, content: content)
   end
+
 
   defp time_diff(time1, time2, unit \\ :millisecond) do
     from = fn

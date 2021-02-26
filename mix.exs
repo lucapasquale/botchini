@@ -11,7 +11,6 @@ defmodule Botchini.MixProject do
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
     [
       extra_applications: [:logger],
@@ -19,10 +18,11 @@ defmodule Botchini.MixProject do
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
       {:nostrum, "~> 0.4"},
+      {:ecto_sql, "~> 3.2"},
+      {:postgrex, "~> 0.15"}
     ]
   end
 end

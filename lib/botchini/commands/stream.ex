@@ -2,7 +2,7 @@ defmodule Botchini.Commands.Stream do
   use Nostrum.Consumer
   alias Nostrum.Api
 
-  alias Botchini.Schema.Stream
+  alias Botchini.Schema.{Stream, StreamFollower}
 
   def consume(msg, args) do
     case args do
@@ -13,18 +13,40 @@ defmodule Botchini.Commands.Stream do
   end
 
   defp add(msg, stream_code) do
-    Stream.get_or_insert_stream(%Stream{code: stream_code})
+    stream = Stream.get_or_insert_stream(%Stream{code: stream_code})
 
-    Api.create_message!(msg.channel_id, "Added " <> stream_code <> " to your streams!")
+    StreamFollower.get_or_insert_follower(%StreamFollower{
+      stream_id: stream.id,
+      channel_id: Integer.to_string(msg.channel_id)
+    })
+
+    Api.create_message!(msg.channel_id, "Following the stream " <> stream_code)
   end
 
-  defp remove(msg, [stream_code]) do
-    Stream.delete_stream(%Stream{code: stream_code})
+  defp remove(msg, stream_code) do
+    stream = Stream.find_by_code(stream_code)
 
-    Api.create_message!(msg.channel_id, "Removed " <> stream_code <> " from your streams!")
+    if stream != nil do
+      StreamFollower.delete_follower(%StreamFollower{
+        stream_id: stream.id,
+        channel_id: Integer.to_string(msg.channel_id)
+      })
+
+      remaining_followers = StreamFollower.find_all_for_stream(stream.id)
+
+      if (remaining_followers == []) do
+        Stream.delete_stream(stream)
+      end
+    end
+
+    Api.create_message!(
+      msg.channel_id,
+      "Removed " <> stream_code <> " from your following streams"
+    )
   end
 
   defp help(msg) do
-    Api.create_message!(msg.channel_id, "Invalid `!stream` command")
+    # TODO: Send message with all !stream commands
+    Api.create_message!(msg.channel_id, "Invalid `" <> msg.content <> "` command")
   end
 end

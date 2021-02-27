@@ -13,9 +13,13 @@ defmodule Botchini.Schema.Stream do
     timestamps()
   end
 
+  def find_by_code(code) do
+    Botchini.Repo.get_by(Stream, code: code)
+  end
+
   def find_all do
     Stream
-    |> Botchini.Repo.all
+    |> Botchini.Repo.all()
   end
 
   def update_stream(stream, payload) do
@@ -35,15 +39,13 @@ defmodule Botchini.Schema.Stream do
     end
   end
 
-  defp find_by_code(code) do
-    Stream
-    |> Botchini.Repo.get_by(code: code)
-  end
 
   defp insert(stream) do
-    stream
+    {:ok, inserted} = stream
     |> changeset()
     |> Botchini.Repo.insert()
+
+    inserted
   end
 
   defp changeset(struct, params \\ %{}) do

@@ -3,10 +3,10 @@ defmodule Botchini.Repo.Migrations.CreateStreams do
 
   def change do
     create table(:streams) do
+      timestamps()
+
       add :code, :string, null: false
       add :online, :boolean, null: false, default: false
-
-      timestamps()
     end
   end
 end

@@ -8,16 +8,18 @@ defmodule Botchini.Consumer do
     Consumer.start_link(__MODULE__)
   end
 
-  def handle_event({:READY, data, _ws_state}) do
+  def handle_event({:READY, _data, _ws_state}) do
     Logger.info("Bot started!")
   end
 
   def handle_event({:MESSAGE_CREATE, msg, _ws_state}) do
-    case String.split(msg.content, " ") do
-      ["!ping"] -> Commands.Basic.ping(msg)
+    args = msg.content
+    |> String.trim
+    |> String.split(" ")
 
-      ["!stream", "add" | args] -> Commands.Stream.add(msg, args)
-      ["!stream", "remove" | args] -> Commands.Stream.remove(msg, args)
+    case args do
+      ["!ping"] -> Commands.Basic.ping(msg)
+      ["!stream" | args] -> Commands.Stream.consume(msg, args)
 
       _ -> :ignore
     end

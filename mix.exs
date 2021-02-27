@@ -22,7 +22,11 @@ defmodule Botchini.MixProject do
     [
       {:nostrum, "~> 0.4"},
       {:ecto_sql, "~> 3.2"},
-      {:postgrex, "~> 0.15"}
+      {:postgrex, "~> 0.15"},
+      {:quantum, "~> 3.0"},
+      {:tesla, "~> 1.4.0"},
+      {:hackney, "~> 1.17.0"},
+      {:jason, ">= 1.0.0"}
     ]
   end
 end

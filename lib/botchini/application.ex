@@ -9,7 +9,8 @@ defmodule Botchini.Application do
   def start(_type, _args) do
     children = [
       Botchini.Repo,
-      Botchini.Consumer
+      Botchini.Consumer,
+      Botchini.Scheduler
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -2,13 +2,26 @@ defmodule Botchini.Schema.Stream do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Botchini.Schema.{Stream}
+  alias Botchini.Schema.{Stream, StreamFollower}
 
   schema "streams" do
-    field :code, :string, null: false
-    field :online, :boolean, null: false, default: false
+    field(:code, :string, null: false)
+    field(:online, :boolean, null: false, default: false)
+
+    has_many(:stream_followers, StreamFollower)
 
     timestamps()
+  end
+
+  def find_all do
+    Stream
+    |> Botchini.Repo.all
+  end
+
+  def update_stream(stream, payload) do
+    Botchini.Repo.get(Stream, stream.id)
+    |> changeset(payload)
+    |> Botchini.Repo.update()
   end
 
   def get_or_insert_stream(stream) do
@@ -21,7 +34,6 @@ defmodule Botchini.Schema.Stream do
       nil -> nil
     end
   end
-
 
   defp find_by_code(code) do
     Stream

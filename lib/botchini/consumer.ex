@@ -10,17 +10,18 @@ defmodule Botchini.Consumer do
 
   def handle_event({:READY, _data, _ws_state}) do
     Logger.info("Bot started!")
+    Botchini.Crons.Twitch.sync_streams()
   end
 
   def handle_event({:MESSAGE_CREATE, msg, _ws_state}) do
-    args = msg.content
-    |> String.trim
-    |> String.split(" ")
+    args =
+      msg.content
+      |> String.trim()
+      |> String.split(" ")
 
     case args do
       ["!ping"] -> Commands.Basic.ping(msg)
       ["!stream" | args] -> Commands.Stream.consume(msg, args)
-
       _ -> :ignore
     end
   end

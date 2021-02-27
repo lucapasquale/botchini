@@ -1,5 +1,8 @@
 import Config
 
+config :logger,
+  level: :info
+
 config :botchini, Botchini.Repo,
   database: "botchini",
   username: "botchini",
@@ -8,8 +11,11 @@ config :botchini, Botchini.Repo,
 
 config :botchini, ecto_repos: [Botchini.Repo]
 
-config :logger,
-  level: :info
+config :botchini, Botchini.Scheduler,
+  jobs: [
+    # Every minute
+    {"* * * * *", {Botchini.Crons.Twitch, :sync_streams, []}}
+  ]
 
 config :nostrum,
   token: System.get_env("DISCORD_TOKEN")

@@ -10,7 +10,10 @@ defmodule Botchini.Application do
     children = [
       Botchini.Repo,
       Botchini.Consumer,
-      Botchini.Scheduler
+      {Plug.Cowboy,
+       scheme: :http,
+       plug: Botchini.Router,
+       options: [port: Application.fetch_env!(:botchini, :port)]}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

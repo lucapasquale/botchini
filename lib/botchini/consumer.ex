@@ -10,7 +10,6 @@ defmodule Botchini.Consumer do
 
   def handle_event({:READY, _data, _ws_state}) do
     Logger.info("Bot started!")
-    Botchini.Crons.Twitch.sync_streams()
   end
 
   def handle_event({:MESSAGE_CREATE, msg, _ws_state}) do

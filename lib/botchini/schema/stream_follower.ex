@@ -6,7 +6,7 @@ defmodule Botchini.Schema.StreamFollower do
   alias Botchini.Schema.{Stream, StreamFollower}
 
   schema "stream_followers" do
-    field(:channel_id, :string, null: false)
+    field(:discord_channel_id, :string, null: false)
 
     belongs_to(:stream, Stream)
 
@@ -33,7 +33,7 @@ defmodule Botchini.Schema.StreamFollower do
   defp find_follower(follower) do
     StreamFollower
     |> Ecto.Query.where(stream_id: ^follower.stream_id)
-    |> Ecto.Query.where(channel_id: ^follower.channel_id)
+    |> Ecto.Query.where(discord_channel_id: ^follower.discord_channel_id)
     |> Botchini.Repo.one()
   end
 
@@ -48,7 +48,7 @@ defmodule Botchini.Schema.StreamFollower do
 
   defp changeset(struct, params \\ %{}) do
     struct
-    |> cast(params, [:channel_id, :stream_id, :inserted_at, :updated_at])
-    |> validate_required([:channel_id, :stream_id])
+    |> cast(params, [:discord_channel_id, :stream_id])
+    |> validate_required([:discord_channel_id, :stream_id])
   end
 end

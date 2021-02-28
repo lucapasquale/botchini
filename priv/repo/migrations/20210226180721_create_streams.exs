@@ -6,7 +6,8 @@ defmodule Botchini.Repo.Migrations.CreateStreams do
       timestamps()
 
       add :code, :string, null: false
-      add :online, :boolean, null: false, default: false
+      add :twitch_user_id, :string, null: false
+      add :twitch_subscription_id, :string, null: false
     end
   end
 end

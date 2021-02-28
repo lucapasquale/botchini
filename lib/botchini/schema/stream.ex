@@ -6,7 +6,8 @@ defmodule Botchini.Schema.Stream do
 
   schema "streams" do
     field(:code, :string, null: false)
-    field(:online, :boolean, null: false, default: false)
+    field(:twitch_user_id, :string, null: false)
+    field(:twitch_subscription_id, :string, null: false)
 
     has_many(:stream_followers, StreamFollower)
 
@@ -22,24 +23,7 @@ defmodule Botchini.Schema.Stream do
     |> Botchini.Repo.all()
   end
 
-  def update_stream(stream, payload) do
-    Botchini.Repo.get(Stream, stream.id)
-    |> changeset(payload)
-    |> Botchini.Repo.update()
-  end
-
-  def get_or_insert_stream(stream) do
-    find_by_code(stream.code) || insert(stream)
-  end
-
-  def delete_stream(stream) do
-    case find_by_code(stream.code) do
-      %Stream{} = existing -> Botchini.Repo.delete(existing)
-      nil -> nil
-    end
-  end
-
-  defp insert(stream) do
+  def insert(stream) do
     {:ok, inserted} =
       stream
       |> changeset()
@@ -48,10 +32,16 @@ defmodule Botchini.Schema.Stream do
     inserted
   end
 
+  def update_stream(stream, payload) do
+    Botchini.Repo.get(Stream, stream.id)
+    |> changeset(payload)
+    |> Botchini.Repo.update()
+  end
+
   defp changeset(struct, params \\ %{}) do
     struct
-    |> cast(params, [:code, :online, :inserted_at, :updated_at])
-    |> validate_required([:code])
-    |> unique_constraint(:code)
+    |> cast(params, [:code, :twitch_user_id, :twitch_subscription_id])
+    |> validate_required([:code, :twitch_user_id, :twitch_subscription_id])
+    |> unique_constraint(:twitch_user_id)
   end
 end

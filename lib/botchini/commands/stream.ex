@@ -5,11 +5,25 @@ defmodule Botchini.Commands.Stream do
   alias Botchini.Schema.{Stream, StreamFollower}
 
   def add(msg, stream_code) do
-    stream = Stream.get_or_insert_stream(%Stream{code: stream_code})
+    stream =
+      case Stream.find_by_code(stream_code) do
+        %Stream{} = existing ->
+          existing
+
+        nil ->
+          twitch_user = Botchini.Twitch.API.get_user(stream_code)
+          sub = Botchini.Twitch.API.add_stream_webhook(twitch_user["id"])
+
+          Stream.insert(%Stream{
+            code: stream_code,
+            twitch_user_id: twitch_user["id"],
+            twitch_subscription_id: sub["id"]
+          })
+      end
 
     StreamFollower.get_or_insert_follower(%StreamFollower{
       stream_id: stream.id,
-      channel_id: Integer.to_string(msg.channel_id)
+      discord_channel_id: Integer.to_string(msg.channel_id)
     })
 
     Api.create_message!(msg.channel_id, "Following the stream " <> stream_code)
@@ -26,14 +40,8 @@ defmodule Botchini.Commands.Stream do
       stream ->
         StreamFollower.delete_follower(%StreamFollower{
           stream_id: stream.id,
-          channel_id: Integer.to_string(msg.channel_id)
+          discord_channel_id: Integer.to_string(msg.channel_id)
         })
-
-        remaining_followers = StreamFollower.find_all_for_stream(stream.id)
-
-        if remaining_followers == [] do
-          Stream.delete_stream(stream)
-        end
 
         Api.create_message!(
           msg.channel_id,

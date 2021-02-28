@@ -20,13 +20,17 @@ defmodule Botchini.MixProject do
 
   defp deps do
     [
+      # Discord
       {:nostrum, "~> 0.4"},
+      # Ecto
       {:ecto_sql, "~> 3.2"},
       {:postgrex, "~> 0.15"},
-      {:quantum, "~> 3.0"},
+      # HTTP Client
       {:tesla, "~> 1.4.0"},
       {:hackney, "~> 1.17.0"},
-      {:jason, ">= 1.0.0"}
+      {:jason, ">= 1.0.0"},
+      # HTTP Server
+      {:plug_cowboy, "~> 2.0"}
     ]
   end
 end

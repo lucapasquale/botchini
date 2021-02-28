@@ -5,11 +5,17 @@ config :logger,
 
 config :botchini, Botchini.Repo,
   database: "botchini",
-  username: "botchini",
-  password: System.get_env("POSTGRES_PASS"),
-  hostname: System.get_env("POSTGRES_HOST")
+  url: System.get_env("POSTGRES_URL")
 
-config :botchini, ecto_repos: [Botchini.Repo]
+config :botchini,
+  ecto_repos: [Botchini.Repo]
+
+config :botchini,
+  twitch_url: "https://api.twitch.tv/helix",
+  twitch_headers: [
+    {"client-id", System.get_env("TWITCH_CLIENT_ID")},
+    {"authorization", "Bearer " <> System.get_env("TWITCH_TOKEN")}
+  ]
 
 config :botchini, Botchini.Scheduler,
   jobs: [

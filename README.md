@@ -16,11 +16,10 @@ Run `mix deps.get` to install all dependencies
 
 To run this bot, you'll need the following env_vars:
 
- - DISCORD_TOKEN: Token for your Discord Bot
- - POSTGRES_HOST: The host of your postgres db
- - POSTGRES_PASS: Password for user "botchini" in your db
- - TWITCH_CLIENT_ID: Client ID for your Twitch application
- - TWITCH_TOKEN: Access Token for your Twitch application (for now it doesn't re-authenticate, so it needs to be provided a new one everytime you build/run )
+ - `DISCORD_TOKEN`: Token for your Discord Bot
+ - `POSTGRES_URL`: The url to connect to your postgres db
+ - `TWITCH_CLIENT_ID`: Client ID for your Twitch application
+ - `TWITCH_TOKEN`: Access Token for your Twitch application (for now it doesn't re-authenticate, so it needs to be provided a new one everytime you build/run )
 
 After you export this env_vars on your shell, run the migrations with:
 

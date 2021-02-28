@@ -5,12 +5,8 @@ defmodule Botchini.Crons.Twitch do
   alias Botchini.Schema.{Stream, StreamFollower}
 
   plug(Tesla.Middleware.JSON)
-  plug(Tesla.Middleware.BaseUrl, "https://api.twitch.tv/helix")
-
-  plug(Tesla.Middleware.Headers, [
-    {"client-id", System.get_env("TWITCH_CLIENT_ID")},
-    {"authorization", "Bearer " <> System.get_env("TWITCH_TOKEN")}
-  ])
+  plug(Tesla.Middleware.BaseUrl, Application.fetch_env!(:botchini, :twitch_url))
+  plug(Tesla.Middleware.Headers, Application.fetch_env!(:botchini, :twitch_headers))
 
   def sync_streams do
     Logger.info("Syncing stream...")

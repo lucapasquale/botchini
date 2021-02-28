@@ -1,7 +1,7 @@
 import Config
 
-config :logger,
-  level: :info
+# config :logger,
+#   level: :info
 
 config :botchini, Botchini.Repo,
   database: "botchini",

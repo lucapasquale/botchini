@@ -39,11 +39,11 @@ defmodule Botchini.Schema.Stream do
     end
   end
 
-
   defp insert(stream) do
-    {:ok, inserted} = stream
-    |> changeset()
-    |> Botchini.Repo.insert()
+    {:ok, inserted} =
+      stream
+      |> changeset()
+      |> Botchini.Repo.insert()
 
     inserted
   end

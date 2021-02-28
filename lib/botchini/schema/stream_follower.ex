@@ -30,7 +30,6 @@ defmodule Botchini.Schema.StreamFollower do
     end
   end
 
-
   defp find_follower(follower) do
     StreamFollower
     |> Ecto.Query.where(stream_id: ^follower.stream_id)
@@ -39,9 +38,10 @@ defmodule Botchini.Schema.StreamFollower do
   end
 
   defp insert(follower) do
-    {:ok, inserted} = follower
-    |> changeset()
-    |> Botchini.Repo.insert()
+    {:ok, inserted} =
+      follower
+      |> changeset()
+      |> Botchini.Repo.insert()
 
     inserted
   end

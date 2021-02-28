@@ -13,11 +13,16 @@ defmodule Botchini.Crons.Twitch do
 
     get_stream_zip(Stream.find_all())
     |> Enum.each(fn [stream, twitch_data] ->
-      if stream.online == false and twitch_data != nil do
+      was_online = stream.online
+      is_online = twitch_data != nil
+
+      if was_online == false and is_online do
         send_followers_message(stream)
       end
 
-      Stream.update_stream(stream, %{online: twitch_data != nil})
+      if was_online != is_online do
+        Stream.update_stream(stream, %{online: twitch_data != nil})
+      end
     end)
 
     Logger.info("Syncing stream done")

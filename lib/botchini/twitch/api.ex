@@ -30,4 +30,8 @@ defmodule Botchini.Twitch.API do
     |> Map.get("data")
     |> List.first()
   end
+
+  def delete_stream_webhook(subscription_id) do
+    delete("/eventsub/subscriptions", query: [id: subscription_id])
+  end
 end

@@ -38,6 +38,13 @@ defmodule Botchini.Schema.Stream do
     |> Botchini.Repo.update()
   end
 
+  def delete_stream(stream) do
+    case find_by_code(stream.code) do
+      %Stream{} = existing -> Botchini.Repo.delete(existing)
+      nil -> nil
+    end
+  end
+
   defp changeset(struct, params \\ %{}) do
     struct
     |> cast(params, [:code, :twitch_user_id, :twitch_subscription_id])

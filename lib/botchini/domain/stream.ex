@@ -2,9 +2,7 @@ defmodule Botchini.Domain.Stream do
   alias Botchini.Schema.{Stream, StreamFollower}
 
   def follow(code, discord_channel_id) do
-    code = format_code(code)
-
-    case upsert_stream(code) do
+    case upsert_stream(format_code(code)) do
       {:error, _} ->
         {:error, :invalid_stream}
 
@@ -19,9 +17,7 @@ defmodule Botchini.Domain.Stream do
   end
 
   def stop_following(code, discord_channel_id) do
-    code = format_code(code)
-
-    case Stream.find_by_code(code) do
+    case Stream.find_by_code(format_code(code)) do
       nil ->
         {:error, :not_found}
 
@@ -30,6 +26,11 @@ defmodule Botchini.Domain.Stream do
           stream_id: stream.id,
           discord_channel_id: Integer.to_string(discord_channel_id)
         })
+
+        if StreamFollower.find_all_for_stream(stream.id) == [] do
+          Botchini.Twitch.API.delete_stream_webhook(stream.twitch_subscription_id)
+          Stream.delete_stream(stream)
+        end
 
         {:ok}
     end

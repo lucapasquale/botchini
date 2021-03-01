@@ -5,9 +5,13 @@ defmodule BotchiniDiscord.Commands.Stream do
   alias Botchini.Domain
 
   def add(msg, stream_code) do
-    {:ok, stream} = Domain.Stream.follow(stream_code, msg.channel_id)
+    response =
+      case Domain.Stream.follow(stream_code, msg.channel_id) do
+        {:ok, stream} -> "Following the stream " <> stream.code <> "!"
+        {:error, _} -> "Invalid Twitch stream!"
+      end
 
-    Api.create_message!(msg.channel_id, "Following the stream " <> stream.code)
+    Api.create_message!(msg.channel_id, response)
   end
 
   def remove(msg, stream_code) do

@@ -18,9 +18,8 @@ defmodule Botchini.Schema.Stream do
     Botchini.Repo.get_by(Stream, code: code)
   end
 
-  def find_all do
-    Stream
-    |> Botchini.Repo.all()
+  def find_by_twitch_user_id(twitch_user_id) do
+    Botchini.Repo.get_by(Stream, twitch_user_id: twitch_user_id)
   end
 
   def insert(stream) do

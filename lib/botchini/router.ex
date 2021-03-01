@@ -8,8 +8,9 @@ defmodule Botchini.Router do
 
   post "/twitch/webhooks/callback" do
     # TODO: Verify twitch secret matches
+    %{status: status, body: body} = Botchini.Twitch.Callback.handle_callback(conn)
 
-    send_resp(conn, 200, conn.body_params["challenge"])
+    send_resp(conn, status, body)
   end
 
   match _ do

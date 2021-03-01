@@ -1,4 +1,4 @@
-defmodule Botchini.Commands.Basic do
+defmodule BotchiniDiscord.Commands.Basic do
   use Nostrum.Consumer
   alias Nostrum.Api
 

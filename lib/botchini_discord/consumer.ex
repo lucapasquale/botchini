@@ -1,8 +1,8 @@
-defmodule Botchini.Consumer do
+defmodule BotchiniDiscord.Consumer do
   require Logger
   use Nostrum.Consumer
 
-  alias Botchini.Commands
+  alias BotchiniDiscord.Commands
 
   def start_link do
     Consumer.start_link(__MODULE__)

@@ -9,11 +9,11 @@ defmodule Botchini.Application do
   def start(_type, _args) do
     children = [
       Botchini.Repo,
-      Botchini.Consumer,
       {Plug.Cowboy,
        scheme: :http,
        plug: Botchini.Router,
-       options: [port: Application.fetch_env!(:botchini, :port)]}
+       options: [port: Application.fetch_env!(:botchini, :port)]},
+      BotchiniDiscord.Consumer
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

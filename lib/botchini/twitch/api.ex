@@ -26,11 +26,8 @@ defmodule Botchini.Twitch.API do
         }
       })
 
-    IO.inspect(body)
-
     body
     |> Map.get("data")
-    |> IO.inspect()
     |> List.first()
   end
 end

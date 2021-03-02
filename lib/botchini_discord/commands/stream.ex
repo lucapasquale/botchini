@@ -4,6 +4,22 @@ defmodule BotchiniDiscord.Commands.Stream do
 
   alias Botchini.Domain
 
+  def list(msg) do
+    response =
+      case Domain.Stream.following_list(msg.channel_id) do
+        {:ok, []} ->
+          "Not following any stream!"
+
+        {:ok, streams} ->
+          streams
+          |> Enum.map(fn stream -> stream.code end)
+          |> Enum.join("\n")
+          |> (&("Following streams:\n" <> &1)).()
+      end
+
+    Api.create_message!(msg.channel_id, response)
+  end
+
   def add(msg, stream_code) do
     response =
       case Domain.Stream.follow(stream_code, msg.channel_id) do

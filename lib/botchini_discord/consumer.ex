@@ -15,6 +15,7 @@ defmodule BotchiniDiscord.Consumer do
   def handle_event({:MESSAGE_CREATE, msg, _ws_state}) do
     case parse_msg_content(msg) do
       ["!ping"] -> Commands.Basic.ping(msg)
+      ["!stream", "list"] -> Commands.Stream.list(msg)
       ["!stream", "add", stream_code] -> Commands.Stream.add(msg, stream_code)
       ["!stream", "remove", stream_code] -> Commands.Stream.remove(msg, stream_code)
       _ -> :ignore

@@ -1,6 +1,15 @@
 defmodule Botchini.Domain.Stream do
   alias Botchini.Schema.{Stream, StreamFollower}
 
+  def following_list(discord_channel_id) do
+    streams =
+      discord_channel_id
+      |> Integer.to_string()
+      |> Botchini.Schema.Stream.find_all_for_discord_channel()
+
+    {:ok, streams}
+  end
+
   def follow(code, discord_channel_id) do
     case upsert_stream(format_code(code)) do
       {:error, _} ->

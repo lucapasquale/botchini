@@ -1,5 +1,6 @@
 defmodule Botchini.Schema.Stream do
   use Ecto.Schema
+  import Ecto.Query
   import Ecto.Changeset
 
   alias Botchini.Schema.{Stream, StreamFollower}
@@ -20,6 +21,21 @@ defmodule Botchini.Schema.Stream do
 
   def find_by_twitch_user_id(twitch_user_id) do
     Botchini.Repo.get_by(Stream, twitch_user_id: twitch_user_id)
+  end
+
+  def find_all_for_discord_channel(discord_channel_id) do
+    inner_query =
+      from(f in "stream_followers",
+        where: f.discord_channel_id == ^discord_channel_id,
+        select: [:stream_id]
+      )
+
+    Botchini.Repo.all(
+      from(s in Stream,
+        where: s.id in subquery(inner_query),
+        select: s
+      )
+    )
   end
 
   def insert(stream) do

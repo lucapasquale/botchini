@@ -8,7 +8,7 @@ config :botchini, Botchini.Repo,
   url: System.get_env("POSTGRES_URL")
 
 config :botchini,
-  port: System.get_env("PORT") || 3000,
+  port: System.get_env("PORT", "3000") |> String.to_integer(),
   host: System.get_env("HOST", "https://aa978acc2363.ngrok.io"),
   ecto_repos: [Botchini.Repo],
   twitch_client_id: System.get_env("TWITCH_CLIENT_ID"),

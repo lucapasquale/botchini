@@ -10,7 +10,7 @@ defmodule Botchini.Application do
     children = [
       Botchini.Repo,
       {Plug.Cowboy,
-       scheme: :http,
+       scheme: :https,
        plug: Botchini.Router,
        options: [port: Application.fetch_env!(:botchini, :port)]},
       BotchiniDiscord.Consumer,

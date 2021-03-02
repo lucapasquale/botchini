@@ -17,6 +17,14 @@ defmodule Botchini.Twitch.API do
     |> List.first()
   end
 
+  def get_stream(stream_code) do
+    {:ok, %{body: body}} = get("/streams", query: [user_login: stream_code])
+
+    body
+    |> Map.get("data")
+    |> List.first()
+  end
+
   def add_stream_webhook(user_id) do
     {:ok, %{body: body}} =
       post("/eventsub/subscriptions", %{

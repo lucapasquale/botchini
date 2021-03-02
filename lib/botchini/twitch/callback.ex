@@ -28,12 +28,17 @@ defmodule Botchini.Twitch.Callback do
     end
   end
 
-  defp send_followers_message(twitch_user_id) do
+  def send_followers_message(twitch_user_id) do
     stream = Stream.find_by_twitch_user_id(twitch_user_id)
-    followers = StreamFollower.find_all_for_stream(stream.id)
 
-    Enum.each(followers, fn follower ->
-      BotchiniDiscord.Events.StreamOnline.send_message(follower, stream)
+    user_data = Botchini.Twitch.API.get_user(stream.code)
+    stream_data = Botchini.Twitch.API.get_stream(stream.code)
+
+    Enum.each(StreamFollower.find_all_for_stream(stream.id), fn follower ->
+      follower
+      |> Map.get(:discord_channel_id)
+      |> String.to_integer()
+      |> BotchiniDiscord.Events.StreamOnline.send_message({user_data, stream_data})
     end)
   end
 end

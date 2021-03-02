@@ -3,7 +3,7 @@ defmodule Botchini.Twitch.AuthMiddleware do
   use Tesla
 
   def start_link(_initial_value) do
-    Agent.start_link(fn -> nil end, name: __MODULE__)
+    Agent.start_link(fn -> %{exp: nil, access_token: ""} end, name: __MODULE__)
   end
 
   @behaviour Tesla.Middleware
@@ -14,18 +14,25 @@ defmodule Botchini.Twitch.AuthMiddleware do
   end
 
   defp get_token do
-    case Agent.get(__MODULE__, & &1) do
-      nil ->
-        token = get_access_token()
-        Agent.update(__MODULE__, fn _ -> token end)
-        token
+    %{exp: exp, access_token: access_token} = Agent.get(__MODULE__, & &1)
 
-      token ->
-        token
+    if NaiveDateTime.utc_now() < exp do
+      access_token
+    else
+      auth_resp = request_twitch_tokens()
+
+      Agent.update(__MODULE__, fn _ ->
+        %{
+          access_token: auth_resp["access_token"],
+          exp: NaiveDateTime.add(NaiveDateTime.utc_now(), auth_resp["expires_in"])
+        }
+      end)
+
+      auth_resp["access_token"]
     end
   end
 
-  defp get_access_token do
+  defp request_twitch_tokens do
     Tesla.client([Tesla.Middleware.JSON])
     |> Tesla.post!("https://id.twitch.tv/oauth2/token", "",
       query: [
@@ -35,6 +42,5 @@ defmodule Botchini.Twitch.AuthMiddleware do
       ]
     )
     |> Map.get(:body)
-    |> Map.get("access_token")
   end
 end

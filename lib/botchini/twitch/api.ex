@@ -3,7 +3,7 @@ defmodule Botchini.Twitch.API do
 
   plug(Tesla.Middleware.JSON)
   plug(Botchini.Twitch.AuthMiddleware)
-  plug(Tesla.Middleware.BaseUrl, Application.fetch_env!(:botchini, :twitch_url))
+  plug(Tesla.Middleware.BaseUrl, "https://api.twitch.tv/helix")
 
   plug(Tesla.Middleware.Headers, [
     {"Client-ID", Application.fetch_env!(:botchini, :twitch_client_id)}

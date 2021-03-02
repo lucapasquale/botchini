@@ -1,16 +1,18 @@
-defmodule Botchini.Twitch.Callback do
+defmodule Botchini.Routes.Twitch do
   alias Botchini.Schema.{Stream, StreamFollower}
 
-  def handle_callback(conn) do
+  def webhook_callback(conn) do
     case get_event_type(conn.body_params) do
       {:confirm_subscription, challenge} ->
         %{status: 200, body: challenge}
 
       {:stream_online, subscription} ->
-        send_followers_message(subscription["condition"]["broadcaster_user_id"])
+        Stream.find_by_twitch_user_id(subscription["condition"]["broadcaster_user_id"])
+        |> send_followers_message()
+
         %{status: 200, body: "OK"}
 
-      {:error, _} ->
+      {:unknown, _} ->
         %{status: 404, body: "Invalid event"}
     end
   end
@@ -23,14 +25,12 @@ defmodule Botchini.Twitch.Callback do
     else
       case subscription["type"] do
         "stream.online" -> {:stream_online, subscription}
-        _ -> {:error, :invalid_event}
+        _ -> {:unknown, :invalid_event}
       end
     end
   end
 
-  def send_followers_message(twitch_user_id) do
-    stream = Stream.find_by_twitch_user_id(twitch_user_id)
-
+  defp send_followers_message(stream) do
     user_data = Botchini.Twitch.API.get_user(stream.code)
     stream_data = Botchini.Twitch.API.get_stream(stream.code)
 

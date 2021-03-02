@@ -16,10 +16,12 @@ Run `mix deps.get` to install all dependencies
 
 To run this bot, you'll need the following env_vars:
 
+ - `PORT`: Port to run on. Defaults to 3000
+ - `HOST`: The url your bot is running on, so we can receive webhooks from Twitch
  - `DISCORD_TOKEN`: Token for your Discord Bot
  - `POSTGRES_URL`: The url to connect to your postgres db
  - `TWITCH_CLIENT_ID`: Client ID for your Twitch application
- - `TWITCH_TOKEN`: Access Token for your Twitch application (for now it doesn't re-authenticate, so it needs to be provided a new one everytime you build/run )
+ - `TWITCH_CLIENT_SECRET`: Client Secret for your Twitch application
 
 After you export this env_vars on your shell, run the migrations with:
 

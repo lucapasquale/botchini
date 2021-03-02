@@ -2,8 +2,12 @@ defmodule Botchini.Twitch.API do
   use Tesla
 
   plug(Tesla.Middleware.JSON)
+  plug(Botchini.Twitch.AuthMiddleware)
   plug(Tesla.Middleware.BaseUrl, Application.fetch_env!(:botchini, :twitch_url))
-  plug(Tesla.Middleware.Headers, Application.fetch_env!(:botchini, :twitch_headers))
+
+  plug(Tesla.Middleware.Headers, [
+    {"Client-ID", Application.fetch_env!(:botchini, :twitch_client_id)}
+  ])
 
   def get_user(stream_code) do
     {:ok, %{body: body}} = get("/users", query: [login: stream_code])

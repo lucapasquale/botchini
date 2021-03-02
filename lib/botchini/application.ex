@@ -13,7 +13,8 @@ defmodule Botchini.Application do
        scheme: :http,
        plug: Botchini.Router,
        options: [port: Application.fetch_env!(:botchini, :port)]},
-      BotchiniDiscord.Consumer
+      BotchiniDiscord.Consumer,
+      Botchini.Twitch.AuthMiddleware
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

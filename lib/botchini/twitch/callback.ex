@@ -33,9 +33,7 @@ defmodule Botchini.Twitch.Callback do
     followers = StreamFollower.find_all_for_stream(stream.id)
 
     Enum.each(followers, fn follower ->
-      follower.discord_channel_id
-      |> String.to_integer()
-      |> Nostrum.Api.create_message!(stream.code <> " is online now!")
+      BotchiniDiscord.Events.StreamOnline.send_message(follower, stream)
     end)
   end
 end

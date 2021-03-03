@@ -7,15 +7,15 @@ defmodule Botchini.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      Botchini.Repo,
-      {Plug.Cowboy,
-       scheme: :http,
-       plug: Botchini.Router,
-       options: [port: Application.fetch_env!(:botchini, :port)]},
-      Botchini.Twitch.AuthMiddleware,
-      BotchiniDiscord.Consumer
-    ]
+    children =
+      [
+        Botchini.Repo,
+        {Plug.Cowboy,
+         scheme: :http,
+         plug: Botchini.Router,
+         options: [port: Application.fetch_env!(:botchini, :port)]},
+        Botchini.Twitch.AuthMiddleware
+      ] ++ if Mix.env() != :test, do: [BotchiniDiscord.Consumer], else: []
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

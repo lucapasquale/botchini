@@ -6,4 +6,4 @@ config :botchini, Botchini.Repo,
   pool: Ecto.Adapters.SQL.Sandbox
 
 config :nostrum,
-  token: "ODE0ODk2ODI2NTY5MTk1NTYx.YDkhzw.5RW0SIBgxnyVdb8zjLT4BJrvutZ"
+  token: "fake_token"

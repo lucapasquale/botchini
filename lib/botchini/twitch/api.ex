@@ -48,7 +48,8 @@ defmodule Botchini.Twitch.API do
   end
 
   def authenticate do
-    Tesla.client([Tesla.Middleware.JSON])
+    [Tesla.Middleware.JSON]
+    |> Tesla.client()
     |> Tesla.post!("https://id.twitch.tv/oauth2/token", "",
       query: [
         grant_type: "client_credentials",

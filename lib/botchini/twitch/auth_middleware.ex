@@ -19,16 +19,16 @@ defmodule Botchini.Twitch.AuthMiddleware do
     if NaiveDateTime.utc_now() < exp do
       access_token
     else
-      %{access_token: access_token, expires_at: expires_at} = Botchini.Twitch.API.authenticate()
+      auth_resp = Botchini.Twitch.API.authenticate()
 
       Agent.update(__MODULE__, fn _ ->
         %{
-          access_token: access_token,
-          exp: NaiveDateTime.add(NaiveDateTime.utc_now(), expires_at)
+          access_token: auth_resp["access_token"],
+          exp: NaiveDateTime.add(NaiveDateTime.utc_now(), auth_resp["expires_in"])
         }
       end)
 
-      access_token
+      auth_resp["access_token"]
     end
   end
 end

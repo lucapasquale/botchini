@@ -48,7 +48,8 @@ defmodule Botchini.Schema.Stream do
   end
 
   def update_stream(stream, payload) do
-    Botchini.Repo.get(Stream, stream.id)
+    Stream
+    |> Botchini.Repo.get(stream.id)
     |> changeset(payload)
     |> Botchini.Repo.update()
   end

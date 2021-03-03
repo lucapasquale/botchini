@@ -8,6 +8,10 @@ defmodule Botchini.Router do
   plug(Plug.Parsers, parsers: [:json], json_decoder: Poison)
   plug(:dispatch)
 
+  get "/status" do
+    send_resp(conn, 200, "ok")
+  end
+
   post "/twitch/webhooks/callback" do
     %{status: status, body: body} = Routes.Twitch.webhook_callback(conn)
     send_resp(conn, status, body)

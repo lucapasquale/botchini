@@ -46,4 +46,16 @@ defmodule Botchini.Twitch.API do
   def delete_stream_webhook(subscription_id) do
     delete("/eventsub/subscriptions", query: [id: subscription_id])
   end
+
+  def authenticate do
+    Tesla.client([Tesla.Middleware.JSON])
+    |> Tesla.post!("https://id.twitch.tv/oauth2/token", "",
+      query: [
+        grant_type: "client_credentials",
+        client_id: Application.fetch_env!(:botchini, :twitch_client_id),
+        client_secret: Application.fetch_env!(:botchini, :twitch_client_secret)
+      ]
+    )
+    |> Map.get(:body)
+  end
 end

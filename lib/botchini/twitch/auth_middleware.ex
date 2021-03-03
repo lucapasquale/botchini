@@ -19,28 +19,16 @@ defmodule Botchini.Twitch.AuthMiddleware do
     if NaiveDateTime.utc_now() < exp do
       access_token
     else
-      auth_resp = request_twitch_tokens()
+      %{access_token: access_token, expires_at: expires_at} = Botchini.Twitch.API.authenticate()
 
       Agent.update(__MODULE__, fn _ ->
         %{
-          access_token: auth_resp["access_token"],
-          exp: NaiveDateTime.add(NaiveDateTime.utc_now(), auth_resp["expires_in"])
+          access_token: access_token,
+          exp: NaiveDateTime.add(NaiveDateTime.utc_now(), expires_at)
         }
       end)
 
-      auth_resp["access_token"]
+      access_token
     end
-  end
-
-  defp request_twitch_tokens do
-    Tesla.client([Tesla.Middleware.JSON])
-    |> Tesla.post!("https://id.twitch.tv/oauth2/token", "",
-      query: [
-        grant_type: "client_credentials",
-        client_id: Application.fetch_env!(:botchini, :twitch_client_id),
-        client_secret: Application.fetch_env!(:botchini, :twitch_client_secret)
-      ]
-    )
-    |> Map.get(:body)
   end
 end

@@ -7,17 +7,21 @@ defmodule Botchini.Routes.Twitch do
         %{status: 200, body: challenge}
 
       {:stream_online, subscription} ->
-        Stream.find_by_twitch_user_id(subscription["condition"]["broadcaster_user_id"])
-        |> send_followers_message()
+        case Stream.find_by_twitch_user_id(subscription["condition"]["broadcaster_user_id"]) do
+          nil ->
+            %{status: 404, body: "Invalid stream"}
 
-        %{status: 200, body: "OK"}
+          stream ->
+            send_followers_message(stream)
+            %{status: 200, body: "OK"}
+        end
 
       {:unknown, _} ->
         %{status: 404, body: "Invalid event"}
     end
   end
 
-  defp get_event_type(body) do
+  def get_event_type(body) do
     subscription = body["subscription"]
 
     if subscription["status"] == "webhook_callback_verification_pending" do

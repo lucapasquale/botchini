@@ -2,11 +2,7 @@ defmodule Botchini.Domain.Stream do
   alias Botchini.Schema.{Stream, StreamFollower}
 
   def following_list(discord_channel_id) do
-    streams =
-      discord_channel_id
-      |> Integer.to_string()
-      |> Botchini.Schema.Stream.find_all_for_discord_channel()
-
+    streams = Botchini.Schema.Stream.find_all_for_discord_channel(discord_channel_id)
     {:ok, streams}
   end
 
@@ -16,12 +12,18 @@ defmodule Botchini.Domain.Stream do
         {:error, :invalid_stream}
 
       {:ok, stream} ->
-        StreamFollower.get_or_insert_follower(%StreamFollower{
-          stream_id: stream.id,
-          discord_channel_id: Integer.to_string(discord_channel_id)
-        })
+        case StreamFollower.find(stream.id, discord_channel_id) do
+          nil ->
+            StreamFollower.insert(%StreamFollower{
+              stream_id: stream.id,
+              discord_channel_id: discord_channel_id
+            })
 
-        {:ok, stream}
+            {:ok, stream}
+
+          _follower ->
+            {:error, :already_following}
+        end
     end
   end
 
@@ -31,10 +33,8 @@ defmodule Botchini.Domain.Stream do
         {:error, :not_found}
 
       stream ->
-        StreamFollower.delete_follower(%StreamFollower{
-          stream_id: stream.id,
-          discord_channel_id: Integer.to_string(discord_channel_id)
-        })
+        StreamFollower.find(stream.id, discord_channel_id)
+        |> StreamFollower.delete()
 
         if StreamFollower.find_all_for_stream(stream.id) == [] do
           Botchini.Twitch.API.delete_stream_webhook(stream.twitch_subscription_id)

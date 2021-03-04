@@ -13,7 +13,7 @@ defmodule BotchiniDiscord.Commands.Stream do
         Api.create_message!(msg.channel_id, "Already following!")
 
       {:ok, stream} ->
-        Api.create_message!(msg.channel_id, "Following the stream " <> stream.code <> "!")
+        Api.create_message!(msg.channel_id, "Following the stream #{stream.code}!")
 
         stream_data = Botchini.Twitch.API.get_stream(stream.code)
 
@@ -31,29 +31,28 @@ defmodule BotchiniDiscord.Commands.Stream do
   def remove(msg, stream_code) do
     case Domain.Stream.stop_following(stream_code, Integer.to_string(msg.channel_id)) do
       {:error, :not_found} ->
-        Api.create_message!(msg.channel_id, "Stream " <> stream_code <> " was not being followed")
+        Api.create_message!(msg.channel_id, "Stream #{stream_code} was not being followed")
 
       {:ok} ->
         Api.create_message!(
           msg.channel_id,
-          "Removed " <> stream_code <> " from your following streams"
+          "Removed #{stream_code} from your following streams"
         )
     end
   end
 
   def list(msg) do
-    response =
-      case Domain.Stream.following_list(Integer.to_string(msg.channel_id)) do
-        {:ok, []} ->
-          "Not following any stream!"
+    case Domain.Stream.following_list(Integer.to_string(msg.channel_id)) do
+      {:ok, []} ->
+        Api.create_message!(msg.channel_id, "Not following any stream!")
 
-        {:ok, streams} ->
+      {:ok, streams} ->
+        stream_list =
           streams
           |> Enum.map(fn stream -> stream.code end)
           |> Enum.join("\n")
-          |> (&("Following streams:\n" <> &1)).()
-      end
 
-    Api.create_message!(msg.channel_id, response)
+        Api.create_message!(msg.channel_id, "Following streams:\n" <> stream_list)
+    end
   end
 end

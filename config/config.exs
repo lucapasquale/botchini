@@ -1,6 +1,7 @@
 import Config
 
 config :botchini,
+  environment: Mix.env(),
   ecto_repos: [Botchini.Repo],
   host: System.get_env("HOST"),
   port: System.get_env("PORT", "3000") |> String.to_integer(),

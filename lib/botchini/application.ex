@@ -15,7 +15,10 @@ defmodule Botchini.Application do
          plug: Botchini.Router,
          options: [port: Application.fetch_env!(:botchini, :port)]},
         Botchini.Twitch.AuthMiddleware
-      ] ++ if Mix.env() != :test, do: [BotchiniDiscord.Consumer], else: []
+      ] ++
+        if Application.fetch_env!(:botchini, :environment) != :test,
+          do: [BotchiniDiscord.Consumer],
+          else: []
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

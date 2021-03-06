@@ -4,7 +4,7 @@ config :botchini,
   environment: Mix.env(),
   ecto_repos: [Botchini.Repo],
   host: System.get_env("HOST"),
-  port: System.get_env("PORT", "3000") |> String.to_integer(),
+  port: System.get_env("PORT", "3010") |> String.to_integer(),
   twitch_client_id: System.get_env("TWITCH_CLIENT_ID"),
   twitch_client_secret: System.get_env("TWITCH_CLIENT_SECRET")
 

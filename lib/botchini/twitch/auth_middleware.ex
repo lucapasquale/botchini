@@ -2,6 +2,8 @@ defmodule Botchini.Twitch.AuthMiddleware do
   use Agent
   use Tesla
 
+  alias Botchini.Twitch.API
+
   def start_link(_initial_value) do
     Agent.start_link(fn -> %{exp: nil, access_token: ""} end, name: __MODULE__)
   end
@@ -19,7 +21,7 @@ defmodule Botchini.Twitch.AuthMiddleware do
     if NaiveDateTime.utc_now() < exp do
       access_token
     else
-      auth_resp = Botchini.Twitch.API.authenticate()
+      auth_resp = API.authenticate()
 
       Agent.update(__MODULE__, fn _ ->
         %{

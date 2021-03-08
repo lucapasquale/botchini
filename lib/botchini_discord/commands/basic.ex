@@ -26,7 +26,7 @@ defmodule BotchiniDiscord.Commands.Basic do
     Api.create_message!(msg.channel_id, embed: embed)
   end
 
-  defp uptime() do
+  defp uptime do
     {time, _} = :erlang.statistics(:wall_clock)
 
     sec = div(time, 1000)

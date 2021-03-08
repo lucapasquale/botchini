@@ -1,4 +1,6 @@
 defmodule Botchini.Routes.Twitch do
+  alias Botchini.Twitch.API
+  alias BotchiniDiscord.Events.StreamOnline
   alias Botchini.Schema.{Stream, StreamFollower}
 
   def webhook_callback(conn) do
@@ -35,14 +37,14 @@ defmodule Botchini.Routes.Twitch do
   end
 
   defp send_followers_message(stream) do
-    user_data = Botchini.Twitch.API.get_user(stream.code)
-    stream_data = Botchini.Twitch.API.get_stream(stream.code)
+    user_data = API.get_user(stream.code)
+    stream_data = API.get_stream(stream.code)
 
     Enum.each(StreamFollower.find_all_for_stream(stream.id), fn follower ->
       follower
       |> Map.get(:discord_channel_id)
       |> String.to_integer()
-      |> BotchiniDiscord.Events.StreamOnline.send_message({user_data, stream_data})
+      |> StreamOnline.send_message({user_data, stream_data})
     end)
   end
 end

@@ -1,4 +1,8 @@
 defmodule Botchini.Schema.StreamFollower do
+  @moduledoc """
+  Schema representing a discord channel following a stream
+  """
+
   use Ecto.Schema
   require Ecto.Query
   import Ecto.Changeset

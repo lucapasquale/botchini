@@ -1,11 +1,10 @@
 defmodule Botchini.Domain.Stream do
+  @moduledoc """
+  Handles business logic for streams
+  """
+
   alias Botchini.Twitch.API
   alias Botchini.Schema.{Stream, StreamFollower}
-
-  def following_list(discord_channel_id) do
-    streams = Botchini.Schema.Stream.find_all_for_discord_channel(discord_channel_id)
-    {:ok, streams}
-  end
 
   def follow(code, discord_channel_id) do
     case upsert_stream(format_code(code)) do
@@ -44,6 +43,11 @@ defmodule Botchini.Domain.Stream do
 
         {:ok}
     end
+  end
+
+  def following_list(discord_channel_id) do
+    streams = Botchini.Schema.Stream.find_all_for_discord_channel(discord_channel_id)
+    {:ok, streams}
   end
 
   defp format_code(code) do

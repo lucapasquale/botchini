@@ -1,4 +1,8 @@
 defmodule BotchiniDiscord.Consumer do
+  @moduledoc """
+  Consumes events from the Discord API connection
+  """
+
   require Logger
   use Nostrum.Consumer
 

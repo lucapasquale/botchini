@@ -1,4 +1,8 @@
 defmodule Botchini.Schema.Stream do
+  @moduledoc """
+  Schema representing a twitch stream
+  """
+
   use Ecto.Schema
   import Ecto.Query
   import Ecto.Changeset

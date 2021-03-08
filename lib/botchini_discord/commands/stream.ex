@@ -1,4 +1,8 @@
 defmodule BotchiniDiscord.Commands.Stream do
+  @moduledoc """
+  Handles !stream commands
+  """
+
   use Nostrum.Consumer
   alias Nostrum.Api
 

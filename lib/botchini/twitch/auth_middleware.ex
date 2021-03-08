@@ -1,4 +1,8 @@
 defmodule Botchini.Twitch.AuthMiddleware do
+  @moduledoc """
+  Middleware to generate accessToken for Twitch API
+  """
+
   use Agent
   use Tesla
 

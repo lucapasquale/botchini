@@ -1,4 +1,8 @@
 defmodule Botchini.Routes.Twitch do
+  @moduledoc """
+  Routes for twitch events callback
+  """
+
   alias Botchini.Twitch.API
   alias BotchiniDiscord.Events.StreamOnline
   alias Botchini.Schema.{Stream, StreamFollower}

@@ -1,4 +1,8 @@
 defmodule Botchini.Twitch.API do
+  @moduledoc """
+  Handles communication with Twitch API
+  """
+
   use Tesla
 
   plug(Tesla.Middleware.JSON)

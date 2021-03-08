@@ -1,4 +1,8 @@
 defmodule BotchiniDiscord.Events.StreamOnline do
+  @moduledoc """
+  Embed message on Discord for when a stream is online
+  """
+
   use Nostrum.Consumer
 
   import Nostrum.Struct.Embed

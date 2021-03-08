@@ -4,7 +4,7 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "1.0.0",
+      version: "1.0.1",
       elixir: "~> 1.11",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -32,7 +32,9 @@ defmodule Botchini.MixProject do
       {:hackney, "~> 1.17.0"},
       {:jason, ">= 1.0.0"},
       # HTTP Server
-      {:plug_cowboy, "~> 2.0"}
+      {:plug_cowboy, "~> 2.0"},
+      # Development and testing
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false}
     ]
   end
 

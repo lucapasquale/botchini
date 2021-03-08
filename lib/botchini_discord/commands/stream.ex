@@ -1,8 +1,14 @@
 defmodule BotchiniDiscord.Commands.Stream do
+  @moduledoc """
+  Handles !stream commands
+  """
+
   use Nostrum.Consumer
   alias Nostrum.Api
 
   alias Botchini.Domain
+  alias Botchini.Twitch.API
+  alias BotchiniDiscord.Events.StreamOnline
 
   def add(msg, stream_code) do
     case Domain.Stream.follow(stream_code, Integer.to_string(msg.channel_id)) do
@@ -15,12 +21,12 @@ defmodule BotchiniDiscord.Commands.Stream do
       {:ok, stream} ->
         Api.create_message!(msg.channel_id, "Following the stream #{stream.code}!")
 
-        stream_data = Botchini.Twitch.API.get_stream(stream.code)
+        stream_data = API.get_stream(stream.code)
 
         if stream_data != nil do
-          user_data = Botchini.Twitch.API.get_user(stream.code)
+          user_data = API.get_user(stream.code)
 
-          BotchiniDiscord.Events.StreamOnline.send_message(
+          StreamOnline.send_message(
             msg.channel_id,
             {user_data, stream_data}
           )

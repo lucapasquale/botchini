@@ -9,8 +9,7 @@ defmodule Botchini.MixProject do
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: aliases(),
-      dialyzer: dialyzer()
+      aliases: aliases()
     ]
   end
 
@@ -35,19 +34,11 @@ defmodule Botchini.MixProject do
       # HTTP Server
       {:plug_cowboy, "~> 2.0"},
       # Development and testing
-      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false}
     ]
   end
 
   defp aliases do
     [test: ["ecto.create --quiet", "ecto.migrate", "test"]]
-  end
-
-  defp dialyzer do
-    [
-      plt_core_path: "priv/plts",
-      plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
-    ]
   end
 end

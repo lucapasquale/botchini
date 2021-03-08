@@ -56,6 +56,8 @@ jobs:
   deploy:
     runs-on: ubuntu-18.04
     steps:
+    - uses: actions/checkout@v2
+
     - uses: floms/action-caprover@v1
       with:
         app: 'botchini'

@@ -54,6 +54,7 @@ jobs:
       run: mix test
 
   deploy:
+    runs-on: ubuntu-18.04
     steps:
     - uses: floms/action-caprover@v1
       with:

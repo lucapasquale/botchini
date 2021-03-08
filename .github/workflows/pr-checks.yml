@@ -52,3 +52,12 @@ jobs:
 
     - name: Run Tests
       run: mix test
+
+  deploy:
+    steps:
+    - uses: floms/action-caprover@v1
+      with:
+        app: 'botchini'
+        host: 'https://captain.lucapasquale.dev'
+        password: '${{ secrets.CAPROVER_PASSWORD }}'
+        branch: 'main'

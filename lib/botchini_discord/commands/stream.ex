@@ -8,7 +8,7 @@ defmodule BotchiniDiscord.Commands.Stream do
 
   alias Botchini.Domain
   alias Botchini.Twitch.API
-  alias BotchiniDiscord.Events.StreamOnline
+  alias BotchiniDiscord.Messages.StreamOnline
 
   def add(msg, stream_code) do
     case Domain.Stream.follow(stream_code, Integer.to_string(msg.channel_id)) do

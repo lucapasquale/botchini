@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Events.StreamOnline do
+defmodule BotchiniDiscord.Messages.StreamOnline do
   @moduledoc """
   Embed message on Discord for when a stream is online
   """
@@ -17,7 +17,7 @@ defmodule BotchiniDiscord.Events.StreamOnline do
 
     embed =
       %Nostrum.Struct.Embed{}
-      |> put_title(user_data["display_name"] <> " started streaming!")
+      |> put_title(user_data["display_name"] <> " is streaming!")
       |> put_description(stream_data["title"])
       |> put_url(stream_url)
       |> put_thumbnail(user_data["profile_image_url"])

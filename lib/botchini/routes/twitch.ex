@@ -4,7 +4,7 @@ defmodule Botchini.Routes.Twitch do
   """
 
   alias Botchini.Twitch.API
-  alias BotchiniDiscord.Events.StreamOnline
+  alias BotchiniDiscord.Messages.StreamOnline
   alias Botchini.Schema.{Stream, StreamFollower}
 
   def webhook_callback(conn) do

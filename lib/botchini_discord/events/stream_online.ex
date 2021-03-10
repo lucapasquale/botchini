@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Events.StreamOnline do
+defmodule BotchiniDiscord.Messages.StreamOnline do
   @moduledoc """
   Embed message on Discord for when a stream is online
   """

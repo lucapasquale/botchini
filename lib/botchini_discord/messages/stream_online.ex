@@ -12,8 +12,9 @@ defmodule BotchiniDiscord.Messages.StreamOnline do
 
     thumbnail_url =
       stream_data["thumbnail_url"]
-      |> String.replace("{width}", "1280")
-      |> String.replace("{height}", "720")
+      # Adding random variance to image url to reduce chance of using old cache
+      |> String.replace("{width}", Integer.to_string(1280 + Enum.random(-5..5)))
+      |> String.replace("{height}", Integer.to_string(720 + Enum.random(-5..5)))
 
     embed =
       %Nostrum.Struct.Embed{}

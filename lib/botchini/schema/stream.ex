@@ -9,6 +9,12 @@ defmodule Botchini.Schema.Stream do
 
   alias Botchini.Schema.{Stream, StreamFollower}
 
+  @type t :: %__MODULE__{
+          code: String.t(),
+          twitch_user_id: String.t(),
+          twitch_subscription_id: String.t()
+        }
+
   schema "streams" do
     field(:code, :string, null: false)
     field(:twitch_user_id, :string, null: false)
@@ -19,14 +25,17 @@ defmodule Botchini.Schema.Stream do
     timestamps()
   end
 
+  @spec find_by_code(String.t()) :: Stream.t() | nil
   def find_by_code(code) do
     Botchini.Repo.get_by(Stream, code: code)
   end
 
+  @spec find_by_twitch_user_id(String.t()) :: Stream.t() | nil
   def find_by_twitch_user_id(twitch_user_id) do
     Botchini.Repo.get_by(Stream, twitch_user_id: twitch_user_id)
   end
 
+  @spec find_all_for_discord_channel(String.t()) :: [Stream.t()]
   def find_all_for_discord_channel(discord_channel_id) do
     inner_query =
       from(f in "stream_followers",
@@ -42,6 +51,7 @@ defmodule Botchini.Schema.Stream do
     )
   end
 
+  @spec insert(Ecto.Schema.t()) :: Stream.t()
   def insert(stream) do
     {:ok, inserted} =
       stream
@@ -51,13 +61,7 @@ defmodule Botchini.Schema.Stream do
     inserted
   end
 
-  def update_stream(stream, payload) do
-    Stream
-    |> Botchini.Repo.get(stream.id)
-    |> changeset(payload)
-    |> Botchini.Repo.update()
-  end
-
+  @spec delete_stream(Stream.t()) :: {:ok, Stream.t()} | {:err, any()}
   def delete_stream(stream) do
     case find_by_code(stream.code) do
       %Stream{} = existing -> Botchini.Repo.delete(existing)

@@ -5,11 +5,13 @@ defmodule BotchiniDiscord.Commands.Stream do
 
   use Nostrum.Consumer
   alias Nostrum.Api
+  alias Nostrum.Struct.Message
 
   alias Botchini.Domain
   alias Botchini.Twitch.API
   alias BotchiniDiscord.Messages.StreamOnline
 
+  @spec add(Message.t(), String.t()) :: no_return()
   def add(msg, stream_code) do
     case Domain.Stream.follow(stream_code, Integer.to_string(msg.channel_id)) do
       {:error, :invalid_stream} ->
@@ -34,6 +36,7 @@ defmodule BotchiniDiscord.Commands.Stream do
     end
   end
 
+  @spec remove(Message.t(), String.t()) :: no_return()
   def remove(msg, stream_code) do
     case Domain.Stream.stop_following(stream_code, Integer.to_string(msg.channel_id)) do
       {:error, :not_found} ->
@@ -47,6 +50,7 @@ defmodule BotchiniDiscord.Commands.Stream do
     end
   end
 
+  @spec list(Message.t()) :: no_return()
   def list(msg) do
     case Domain.Stream.following_list(Integer.to_string(msg.channel_id)) do
       {:ok, []} ->

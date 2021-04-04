@@ -6,6 +6,8 @@ defmodule Botchini.Domain.Stream do
   alias Botchini.Twitch.API
   alias Botchini.Schema.{Stream, StreamFollower}
 
+  @spec follow(String.t(), String.t()) ::
+          {:ok, Stream.t()} | {:error, :invalid_stream} | {:error, :already_following}
   def follow(code, discord_channel_id) do
     case upsert_stream(format_code(code)) do
       {:error, _} ->
@@ -27,6 +29,7 @@ defmodule Botchini.Domain.Stream do
     end
   end
 
+  @spec stop_following(String.t(), String.t()) :: {:ok} | {:error, :not_found}
   def stop_following(code, discord_channel_id) do
     case Stream.find_by_code(format_code(code)) do
       nil ->
@@ -45,6 +48,7 @@ defmodule Botchini.Domain.Stream do
     end
   end
 
+  @spec following_list(String.t()) :: {:ok, [Stream.t()]}
   def following_list(discord_channel_id) do
     streams = Botchini.Schema.Stream.find_all_for_discord_channel(discord_channel_id)
     {:ok, streams}

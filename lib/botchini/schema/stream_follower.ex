@@ -9,6 +9,20 @@ defmodule Botchini.Schema.StreamFollower do
 
   alias Botchini.Schema.{Stream, StreamFollower}
 
+  @type t :: %__MODULE__{
+          discord_channel_id: String.t(),
+          stream_id: String.t()
+        }
+
+  schema "stream_followers" do
+    field(:discord_channel_id, :string, null: false)
+
+    belongs_to(:stream, Stream)
+
+    timestamps()
+  end
+
+  @spec find(String.t(), String.t()) :: StreamFollower.t() | nil
   def find(stream_id, discord_channel_id) do
     StreamFollower
     |> Ecto.Query.where(stream_id: ^stream_id)
@@ -16,12 +30,14 @@ defmodule Botchini.Schema.StreamFollower do
     |> Botchini.Repo.one()
   end
 
+  @spec find_all_for_stream(String.t()) :: [StreamFollower.t()]
   def find_all_for_stream(stream_id) do
     StreamFollower
     |> Ecto.Query.where(stream_id: ^stream_id)
     |> Botchini.Repo.all()
   end
 
+  @spec insert(Ecto.Schema.t()) :: StreamFollower.t()
   def insert(follower) do
     {:ok, inserted} =
       follower
@@ -31,18 +47,11 @@ defmodule Botchini.Schema.StreamFollower do
     inserted
   end
 
+  @spec delete(StreamFollower.t()) :: {:ok, StreamFollower.t()} | {:err, any()}
   def delete(follower) do
     if follower != nil do
       Botchini.Repo.delete(follower)
     end
-  end
-
-  schema "stream_followers" do
-    field(:discord_channel_id, :string, null: false)
-
-    belongs_to(:stream, Stream)
-
-    timestamps()
   end
 
   defp changeset(struct, params \\ %{}) do

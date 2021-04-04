@@ -4,7 +4,6 @@ defmodule BotchiniDiscord.Messages.StreamOnline do
   """
 
   use Nostrum.Consumer
-
   import Nostrum.Struct.Embed
 
   def send_message(discord_channel_id, {user_data, stream_data}) do

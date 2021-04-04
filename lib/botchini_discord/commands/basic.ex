@@ -5,17 +5,20 @@ defmodule BotchiniDiscord.Commands.Basic do
 
   use Nostrum.Consumer
   alias Nostrum.Api
+  alias Nostrum.Struct.Message
   import Nostrum.Struct.Embed
 
+  @spec ping(Message.t()) :: no_return()
   def ping(msg) do
     response_msg = Api.create_message!(msg.channel_id, "pong!")
 
     time = time_diff(response_msg.timestamp, msg.timestamp)
     content = response_msg.content <> "\ntook #{time} ms"
 
-    Api.edit_message(response_msg, content: content)
+    Api.edit_message!(response_msg, content: content)
   end
 
+  @spec status(Message.t()) :: no_return()
   def status(msg) do
     embed =
       %Nostrum.Struct.Embed{}

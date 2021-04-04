@@ -41,4 +41,7 @@ WORKDIR /app
 
 COPY --from=builder _build/prod/rel/botchini/ .
 
+# Migrate DB
+RUN /app/bin/botchini eval "Botchini.Release.migrate"
+
 CMD ["/app/bin/botchini", "start"]

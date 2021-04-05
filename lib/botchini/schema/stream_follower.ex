@@ -11,15 +11,15 @@ defmodule Botchini.Schema.StreamFollower do
 
   @type t :: %__MODULE__{
           stream_id: String.t(),
-          discord_guild_id: String.t() | nil,
+          discord_guild_id: String.t(),
           discord_channel_id: String.t(),
-          discord_user_id: String.t() | nil
+          discord_user_id: String.t()
         }
 
   schema "stream_followers" do
-    field(:discord_guild_id, :string, null: true)
+    field(:discord_guild_id, :string, null: false)
     field(:discord_channel_id, :string, null: false)
-    field(:discord_user_id, :string, null: true)
+    field(:discord_user_id, :string, null: false)
 
     belongs_to(:stream, Stream)
     timestamps()

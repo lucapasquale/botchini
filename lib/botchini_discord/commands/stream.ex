@@ -16,8 +16,6 @@ defmodule BotchiniDiscord.Commands.Stream do
     do: Api.create_message!(msg.channel_id, "Only available inside servers")
 
   def add(msg, stream_code) do
-    IO.inspect(msg)
-
     case Domain.Stream.follow(stream_code, %{
            guild_id: Integer.to_string(msg.guild_id),
            channel_id: Integer.to_string(msg.channel_id),

@@ -13,7 +13,11 @@ defmodule BotchiniDiscord.Commands.Stream do
 
   @spec add(Message.t(), String.t()) :: no_return()
   def add(msg, stream_code) do
-    case Domain.Stream.follow(stream_code, Integer.to_string(msg.channel_id)) do
+    case Domain.Stream.follow(stream_code, %{
+           guild_id: Integer.to_string(msg.guild_id),
+           channel_id: Integer.to_string(msg.channel_id),
+           user_id: Integer.to_string(msg.author.id)
+         }) do
       {:error, :invalid_stream} ->
         Api.create_message!(msg.channel_id, "Invalid Twitch stream!")
 

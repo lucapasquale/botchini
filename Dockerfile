@@ -1,47 +1,47 @@
-# ---- Build Stage ----
-FROM elixir:1.11-alpine as builder
+# STEP 1 - BUILD RELEASE
+FROM hexpm/elixir:1.11.3-erlang-23.2.7-alpine-3.13.2 AS build
+
+# Install build dependencies
+RUN apk update && \
+  apk upgrade --no-cache && \
+  apk add --no-cache \
+  git \
+  build-base \
+  nodejs-current \
+  nodejs-npm \
+  python3 && \
+  mix local.rebar --force && \
+  mix local.hex --force
 
 ENV MIX_ENV=prod
+WORKDIR /app
 
-# Env vars
-ARG PORT=3010
-ENV PORT=${PORT}
+# Install elixir package dependencies
+COPY mix.exs /app/mix.exs
+COPY mix.lock /app/mix.lock
+RUN mix do deps.get --only $MIX_ENV, deps.compile
 
-ARG HOST="default"
-ENV HOST=${HOST}
+# copy config, priv and release and application directories
+COPY config /app/config
+COPY priv /app/priv
+COPY lib /app/lib
 
-ARG DISCORD_TOKEN="default"
-ENV DISCORD_TOKEN=${DISCORD_TOKEN}
+# compile app and create release
+RUN mix do compile, release
 
-ARG POSTGRES_URL="default"
-ENV POSTGRES_URL=${POSTGRES_URL}
-
-ARG TWITCH_CLIENT_ID="default"
-ENV TWITCH_CLIENT_ID=${TWITCH_CLIENT_ID}
-
-ARG TWITCH_CLIENT_SECRET="default"
-ENV TWITCH_CLIENT_SECRET=${TWITCH_CLIENT_SECRET}
-
-COPY lib ./lib
-COPY config ./config
-COPY mix.exs .
-COPY mix.lock .
-
-RUN mix local.rebar --force \
-  && mix local.hex --force \
-  && mix deps.get \
-  && mix release
-
-# ---- Application Stage ----
-FROM alpine:3
-
-RUN apk add --no-cache --update bash openssl
+####################################################################################################
+# STEP 2 - FINAL
+FROM alpine:3.13.2 as app
+RUN apk add --no-cache openssl ncurses-libs
 
 WORKDIR /app
 
-COPY --from=builder _build/prod/rel/botchini/ .
+RUN chown nobody:nobody /app
 
-# Migrate DB
-RUN /app/bin/botchini eval "Botchini.Release.migrate"
+USER nobody:nobody
 
-CMD ["/app/bin/botchini", "start"]
+COPY --from=build --chown=nobody:nobody /app/_build/prod/rel/botchini ./
+
+ENV HOME=/app
+
+CMD bin/botchini eval "Botchini.Release.migrate" && bin/botchini start

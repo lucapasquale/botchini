@@ -3,12 +3,20 @@ defmodule Botchini.Release do
   Migrations to be run before deploying prod application
   """
 
+  @app :botchini
+
   def migrate do
-    {:ok, _} = Application.ensure_all_started(:botchini)
+    for repo <- repos() do
+      {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :up, all: true))
+    end
+  end
 
-    path = Application.app_dir(:botchini, "priv/repo/migrations")
-    Ecto.Migrator.run(Botchini.Repo, path, :up, all: true)
+  def rollback(repo, version) do
+    {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :down, to: version))
+  end
 
-    :init.stop()
+  defp repos do
+    Application.load(@app)
+    Application.fetch_env!(@app, :ecto_repos)
   end
 end

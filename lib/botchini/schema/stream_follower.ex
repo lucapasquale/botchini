@@ -10,15 +10,18 @@ defmodule Botchini.Schema.StreamFollower do
   alias Botchini.Schema.{Stream, StreamFollower}
 
   @type t :: %__MODULE__{
+          stream_id: String.t(),
+          discord_guild_id: String.t() | nil,
           discord_channel_id: String.t(),
-          stream_id: String.t()
+          discord_user_id: String.t() | nil
         }
 
   schema "stream_followers" do
+    field(:discord_guild_id, :string, null: true)
     field(:discord_channel_id, :string, null: false)
+    field(:discord_user_id, :string, null: true)
 
     belongs_to(:stream, Stream)
-
     timestamps()
   end
 
@@ -56,7 +59,7 @@ defmodule Botchini.Schema.StreamFollower do
 
   defp changeset(struct, params \\ %{}) do
     struct
-    |> cast(params, [:discord_channel_id, :stream_id])
+    |> cast(params, [:discord_guild_id, :discord_channel_id, :discord_user_id, :stream_id])
     |> validate_required([:discord_channel_id, :stream_id])
   end
 end

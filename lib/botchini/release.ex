@@ -1,4 +1,8 @@
 defmodule Botchini.Release do
+  @moduledoc """
+  Migrations to be run before deploying prod application
+  """
+
   @app :botchini
 
   def migrate do

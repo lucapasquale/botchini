@@ -59,7 +59,7 @@ defmodule Botchini.Schema.StreamFollower do
 
   defp changeset(struct, params \\ %{}) do
     struct
-    |> cast(params, [:discord_channel_id, :stream_id])
+    |> cast(params, [:discord_guild_id, :discord_channel_id, :discord_user_id, :stream_id])
     |> validate_required([:discord_channel_id, :stream_id])
   end
 end

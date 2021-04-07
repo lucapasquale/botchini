@@ -13,6 +13,7 @@ defmodule BotchiniDiscord.Consumer do
   end
 
   def handle_event({:READY, _data, _ws_state}) do
+    BotchiniDiscord.SlashCommands.assign_commands()
     Logger.info("Bot started!")
   end
 
@@ -30,6 +31,10 @@ defmodule BotchiniDiscord.Consumer do
           |> BotchiniDiscord.Commands.handle(msg)
       end
     end
+  end
+
+  def handle_event({:INTERACTION_CREATE, interaction, _ws_state}) do
+    BotchiniDiscord.SlashCommands.handle_interaction(interaction)
   end
 
   def handle_event(_event) do

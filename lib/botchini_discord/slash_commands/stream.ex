@@ -4,46 +4,47 @@ defmodule BotchiniDiscord.SlashCommands.Stream do
   """
 
   alias Botchini.Domain
+  alias Botchini.Schema.Guild
   alias Botchini.Twitch.API
   alias BotchiniDiscord.Messages.StreamOnline
   import BotchiniDiscord.SlashCommands
 
   @spec follow(Nostrum.Struct.Interaction.t(), String.t()) :: no_return()
   def follow(interaction, stream_code) do
-    case Botchini.Schema.Guild.find(Integer.to_string(interaction.guild_id)) do
-      nil ->
-        respond_interaction(interaction, "Discord server not found")
+    guild = Guild.find(Integer.to_string(interaction.guild_id))
 
-      guild ->
-        response =
-          Domain.Stream.follow(stream_code, %{
-            guild: guild,
-            channel_id: Integer.to_string(interaction.channel_id),
-            user_id: Integer.to_string(interaction.member.user.id)
-          })
+    if is_nil(guild) do
+      raise("Discord server not found!")
+    end
 
-        case response do
-          {:error, :invalid_stream} ->
-            respond_interaction(interaction, "Invalid Twitch stream!")
+    response =
+      Domain.Stream.follow(stream_code, %{
+        guild: guild,
+        channel_id: Integer.to_string(interaction.channel_id),
+        user_id: Integer.to_string(interaction.member.user.id)
+      })
 
-          {:error, :already_following} ->
-            respond_interaction(interaction, "Already following!")
+    case response do
+      {:error, :invalid_stream} ->
+        respond_interaction(interaction, "Invalid Twitch stream!")
 
-          {:ok, stream} ->
-            respond_interaction(interaction, "Following the stream #{stream.code}!")
+      {:error, :already_following} ->
+        respond_interaction(interaction, "Already following!")
 
-            case API.get_stream(stream.code) do
-              nil ->
-                :noop
+      {:ok, stream} ->
+        respond_interaction(interaction, "Following the stream #{stream.code}!")
 
-              stream_data ->
-                user_data = API.get_user(stream.code)
+        case API.get_stream(stream.code) do
+          nil ->
+            :noop
 
-                StreamOnline.send_message(
-                  interaction.channel_id,
-                  {user_data, stream_data}
-                )
-            end
+          stream_data ->
+            user_data = API.get_user(stream.code)
+
+            StreamOnline.send_message(
+              interaction.channel_id,
+              {user_data, stream_data}
+            )
         end
     end
   end

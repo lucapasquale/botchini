@@ -1,14 +1,14 @@
 defmodule BotchiniDiscord.SlashCommands do
   @moduledoc """
-  All slash commands available
+  Register slash commands and handles interactions
   """
 
   alias Nostrum.Api
   alias Nostrum.Struct.Interaction
   alias BotchiniDiscord.SlashCommands.{Basic, Stream}
 
-  @spec assign_commands() :: :ok
-  def assign_commands do
+  @spec register_commands() :: :ok
+  def register_commands do
     commands = Basic.get_commands() ++ Stream.get_commands()
 
     commands

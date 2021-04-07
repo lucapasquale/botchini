@@ -16,8 +16,10 @@ defmodule BotchiniDiscord.SlashCommands do
       if Application.fetch_env!(:botchini, :environment) === :prod do
         Api.create_global_application_command(command)
       else
-        Application.fetch_env!(:botchini, :test_guild_id)
-        |> Api.create_guild_application_command(command)
+        case Application.fetch_env(:botchini, :test_guild_id) do
+          {:ok, guild_id} -> Api.create_guild_application_command(guild_id, command)
+          _ -> :noop
+        end
       end
     end)
   end
@@ -42,15 +44,8 @@ defmodule BotchiniDiscord.SlashCommands do
     end
   end
 
-  @spec respond_interaction(Interaction.t(), String.t()) :: no_return()
-  def respond_interaction(interaction, content) do
-    Api.create_interaction_response(interaction, %{
-      type: 4,
-      data: %{content: content}
-    })
-  end
-
-  defp parse_interaction(interaction_data) do
+  @spec parse_interaction(map()) :: [String.t()]
+  def parse_interaction(interaction_data) do
     case Map.get(interaction_data, :options) do
       nil ->
         [interaction_data.name]
@@ -58,5 +53,13 @@ defmodule BotchiniDiscord.SlashCommands do
       options ->
         [interaction_data.name, Enum.at(options, 0).value]
     end
+  end
+
+  @spec respond_interaction(Interaction.t(), String.t()) :: no_return()
+  def respond_interaction(interaction, content) do
+    Api.create_interaction_response(interaction, %{
+      type: 4,
+      data: %{content: content}
+    })
   end
 end

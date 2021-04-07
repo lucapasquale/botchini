@@ -6,6 +6,7 @@ defmodule BotchiniDiscord.Messages.StreamOnline do
   use Nostrum.Consumer
   import Nostrum.Struct.Embed
 
+  @spec send_message(integer(), {map(), map()}) :: no_return()
   def send_message(discord_channel_id, {user_data, stream_data}) do
     stream_url = "https://www.twitch.tv/" <> user_data["login"]
 

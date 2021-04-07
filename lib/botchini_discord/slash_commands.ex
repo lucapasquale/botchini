@@ -3,36 +3,48 @@ defmodule BotchiniDiscord.SlashCommands do
   All slash commands available
   """
 
-  alias BotchiniDiscord.SlashCommands.{Stream}
+  alias Nostrum.Api
+  alias Nostrum.Struct.Interaction
+  alias BotchiniDiscord.SlashCommands.{Basic, Stream}
 
+  @spec assign_commands() :: :ok
   def assign_commands() do
-    Stream.get_commands()
+    commands = Basic.get_commands() ++ Stream.get_commands()
+
+    commands
     |> Enum.each(fn command ->
-      case Nostrum.Api.create_guild_application_command(459_166_748_009_037_826, command) do
-        {:error, message} -> IO.inspect(message)
-        _ -> :noop
+      if Application.fetch_env!(:botchini, :environment) === :prod do
+        Api.create_global_application_command(command)
+      else
+        Application.fetch_env!(:botchini, :test_guild_id)
+        |> Api.create_guild_application_command(command)
       end
     end)
   end
 
+  @spec handle_interaction(Interaction.t()) :: no_return()
   def handle_interaction(interaction) do
     case parse_interaction(interaction.data) do
-      ["stream", "add", stream_code] ->
-        Stream.add(interaction, stream_code)
+      ["status"] ->
+        Basic.status(interaction)
 
-      ["stream", "remove", stream_code] ->
-        Stream.remove(interaction, stream_code)
+      ["follow", stream_code] ->
+        Stream.follow(interaction, stream_code)
+
+      ["unfollow", stream_code] ->
+        Stream.unfollow(interaction, stream_code)
 
       ["following"] ->
         Stream.list(interaction)
 
       _ ->
-        :noop
+        respond_interaction(interaction, "Unknown command")
     end
   end
 
+  @spec respond_interaction(Interaction.t(), String.t()) :: no_return()
   def respond_interaction(interaction, content) do
-    Nostrum.Api.create_interaction_response(interaction, %{
+    Api.create_interaction_response(interaction, %{
       type: 4,
       data: %{content: content}
     })
@@ -44,12 +56,7 @@ defmodule BotchiniDiscord.SlashCommands do
         [interaction_data.name]
 
       options ->
-        option = Enum.at(options, 0)
-
-        case Map.get(option, :options) do
-          nil -> [interaction_data.name, option.name]
-          options -> [interaction_data.name, option.name, Enum.at(options, 0).value]
-        end
+        [interaction_data.name, Enum.at(options, 0).value]
     end
   end
 end

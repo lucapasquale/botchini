@@ -1,12 +1,17 @@
 defmodule BotchiniDiscord.SlashCommands.Stream do
+  @moduledoc """
+  Handles slash commands for twitch streams
+  """
+
   alias Botchini.Domain
   alias Botchini.Twitch.API
   alias BotchiniDiscord.Messages.StreamOnline
   import BotchiniDiscord.SlashCommands
 
-  def add(interaction, stream_code) do
+  @spec follow(Nostrum.Struct.Interaction.t(), String.t()) :: no_return()
+  def follow(interaction, stream_code) do
     case Domain.Stream.follow(stream_code, %{
-           guild_id: Integer.to_string(interaction.guild_id),
+           guild_id: interaction.guild_id && Integer.to_string(interaction.guild_id),
            channel_id: Integer.to_string(interaction.channel_id),
            user_id: Integer.to_string(interaction.member.user.id)
          }) do
@@ -32,7 +37,8 @@ defmodule BotchiniDiscord.SlashCommands.Stream do
     end
   end
 
-  def remove(interaction, stream_code) do
+  @spec unfollow(Nostrum.Struct.Interaction.t(), String.t()) :: no_return()
+  def unfollow(interaction, stream_code) do
     case Domain.Stream.stop_following(stream_code, Integer.to_string(interaction.channel_id)) do
       {:error, :not_found} ->
         respond_interaction(
@@ -48,6 +54,7 @@ defmodule BotchiniDiscord.SlashCommands.Stream do
     end
   end
 
+  @spec list(Nostrum.Struct.Interaction.t()) :: no_return()
   def list(interaction) do
     case Domain.Stream.following_list(Integer.to_string(interaction.channel_id)) do
       {:ok, []} ->
@@ -59,41 +66,34 @@ defmodule BotchiniDiscord.SlashCommands.Stream do
           |> Enum.map(fn stream -> stream.code end)
           |> Enum.join("\n")
 
-        respond_interaction(interaction, "Following streams:\n" <> stream_list)
+        respond_interaction(interaction, "**Following streams:**\n" <> stream_list)
     end
   end
 
+  @spec get_commands() :: [map()]
   def get_commands() do
     [
       %{
         name: "follow",
-        description: "Add or remove twitch streams to be followed",
+        description: "Start following twitch streams",
         options: [
           %{
-            type: 1,
-            name: "add",
-            description: "start following a twitch stream",
-            options: [
-              %{
-                type: 3,
-                name: "stream",
-                description: "twitch stream code",
-                required: true
-              }
-            ]
-          },
+            type: 3,
+            name: "stream",
+            description: "twitch stream code",
+            required: true
+          }
+        ]
+      },
+      %{
+        name: "unfollow",
+        description: "Stop following twitch stream",
+        options: [
           %{
-            type: 1,
-            name: "remove",
-            description: "stops following a twitch stream",
-            options: [
-              %{
-                type: 3,
-                name: "stream",
-                description: "twitch stream code",
-                required: true
-              }
-            ]
+            type: 3,
+            name: "stream",
+            description: "twitch stream code",
+            required: true
           }
         ]
       },

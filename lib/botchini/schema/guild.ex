@@ -5,7 +5,7 @@ defmodule Botchini.Schema.Guild do
 
   use Ecto.Schema
   require Ecto.Query
-  # import Ecto.Changeset
+  import Ecto.Changeset
 
   alias Botchini.Schema.{Guild, StreamFollower}
 
@@ -26,10 +26,20 @@ defmodule Botchini.Schema.Guild do
     Botchini.Repo.get_by(Guild, discord_guild_id: discord_guild_id)
   end
 
-  # defp changeset(struct, params \\ %{}) do
-  #   struct
-  #   |> cast(params, [:discord_guild_id])
-  #   |> validate_required([:discord_guild_id])
-  #   |> unique_constraint(:discord_guild_id)
-  # end
+  @spec insert(Ecto.Schema.t()) :: Guild.t()
+  def insert(guild) do
+    {:ok, inserted} =
+      guild
+      |> changeset()
+      |> Botchini.Repo.insert()
+
+    inserted
+  end
+
+  defp changeset(struct, params \\ %{}) do
+    struct
+    |> cast(params, [:discord_guild_id])
+    |> validate_required([:discord_guild_id])
+    |> unique_constraint(:discord_guild_id)
+  end
 end

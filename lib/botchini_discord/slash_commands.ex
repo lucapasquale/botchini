@@ -8,7 +8,7 @@ defmodule BotchiniDiscord.SlashCommands do
   alias BotchiniDiscord.SlashCommands.{Basic, Stream}
 
   @spec assign_commands() :: :ok
-  def assign_commands() do
+  def assign_commands do
     commands = Basic.get_commands() ++ Stream.get_commands()
 
     commands

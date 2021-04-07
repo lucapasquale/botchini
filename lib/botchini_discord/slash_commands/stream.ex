@@ -71,7 +71,7 @@ defmodule BotchiniDiscord.SlashCommands.Stream do
   end
 
   @spec get_commands() :: [map()]
-  def get_commands() do
+  def get_commands do
     [
       %{
         name: "follow",

@@ -23,7 +23,7 @@ defmodule BotchiniDiscord.SlashCommands.Basic do
   end
 
   @spec get_commands() :: [map()]
-  def get_commands() do
+  def get_commands do
     [
       %{
         name: "status",

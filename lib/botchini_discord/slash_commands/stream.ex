@@ -4,17 +4,27 @@ defmodule BotchiniDiscord.SlashCommands.Stream do
   """
 
   alias Botchini.Domain
+  alias Botchini.Schema.Guild
   alias Botchini.Twitch.API
   alias BotchiniDiscord.Messages.StreamOnline
   import BotchiniDiscord.SlashCommands
 
   @spec follow(Nostrum.Struct.Interaction.t(), String.t()) :: no_return()
   def follow(interaction, stream_code) do
-    case Domain.Stream.follow(stream_code, %{
-           guild_id: interaction.guild_id && Integer.to_string(interaction.guild_id),
-           channel_id: Integer.to_string(interaction.channel_id),
-           user_id: Integer.to_string(interaction.member.user.id)
-         }) do
+    guild = Guild.find(Integer.to_string(interaction.guild_id))
+
+    if is_nil(guild) do
+      raise("Discord server not found!")
+    end
+
+    response =
+      Domain.Stream.follow(stream_code, %{
+        guild: guild,
+        channel_id: Integer.to_string(interaction.channel_id),
+        user_id: Integer.to_string(interaction.member.user.id)
+      })
+
+    case response do
       {:error, :invalid_stream} ->
         respond_interaction(interaction, "Invalid Twitch stream!")
 
@@ -24,15 +34,17 @@ defmodule BotchiniDiscord.SlashCommands.Stream do
       {:ok, stream} ->
         respond_interaction(interaction, "Following the stream #{stream.code}!")
 
-        stream_data = API.get_stream(stream.code)
+        case API.get_stream(stream.code) do
+          nil ->
+            :noop
 
-        if stream_data != nil do
-          user_data = API.get_user(stream.code)
+          stream_data ->
+            user_data = API.get_user(stream.code)
 
-          StreamOnline.send_message(
-            interaction.channel_id,
-            {user_data, stream_data}
-          )
+            StreamOnline.send_message(
+              interaction.channel_id,
+              {user_data, stream_data}
+            )
         end
     end
   end
@@ -61,12 +73,12 @@ defmodule BotchiniDiscord.SlashCommands.Stream do
         respond_interaction(interaction, "Not following any stream!")
 
       {:ok, streams} ->
-        stream_list =
-          streams
-          |> Enum.map(fn stream -> stream.code end)
-          |> Enum.join("\n")
+        stream_codes = Enum.map(streams, fn stream -> stream.code end)
 
-        respond_interaction(interaction, "**Following streams:**\n" <> stream_list)
+        respond_interaction(
+          interaction,
+          "**Following streams:**\n" <> Enum.join(stream_codes, "\n")
+        )
     end
   end
 

@@ -2,18 +2,16 @@
 
 Discord Bot with Twitch integration for stream notifications!
 
-### [Add to your server](https://discord.com/oauth2/authorize?client_id=814896826569195561&scope=bot&permissions=2048)
+## [Add it to your server](https://discord.com/api/oauth2/authorize?client_id=814896826569195561&permissions=2048&scope=bot%20applications.commands)
 
 ![image](https://user-images.githubusercontent.com/15659967/110556115-a5766800-811c-11eb-940b-95cd01acaa5c.png)
 
-## Commands
+## Slash Commands
 
- - `!ping` : Check if the bot is alive, and how long it takes to respond
- - `!status` : Information about the bot, uptime, memory usage, etc.
-
- - `!stream add <channel_name>` : Add a stream to be notified when a channel starts streaming
- - `!stream remove <channel_name>` : Stop following a channel
- - `!stream list` : Lists all channels currently followed
+ - `/status` : Information about the bot, uptime, memory usage, etc.
+ - `/follow <stream_code>` : Follow a stream to be notified when the channel starts streaming
+ - `/unfollow <stream_code>` : Stop following a channel
+ - `/following` : Lists all channels currently followed
 
 ## Installation
 
@@ -38,4 +36,4 @@ Or, if you want to use Docker:
 
 `docker build -t botchini:latest .`
 
-`sudo docker run --rm -p 3010:3010 botchini:latest`
+`docker run --rm -p 3010:3010 botchini:latest`

@@ -1,25 +1,14 @@
-defmodule BotchiniDiscord.Commands.Basic do
+defmodule BotchiniDiscord.SlashCommands.Basic do
   @moduledoc """
-  Handles basic commands to check bot status
+  Handles slash command to check bot status
   """
 
-  use Nostrum.Consumer
   alias Nostrum.Api
-  alias Nostrum.Struct.Message
+  alias Nostrum.Struct.Interaction
   import Nostrum.Struct.Embed
 
-  @spec ping(Message.t()) :: no_return()
-  def ping(msg) do
-    response_msg = Api.create_message!(msg.channel_id, "pong!")
-
-    time = time_diff(response_msg.timestamp, msg.timestamp)
-    content = response_msg.content <> "\ntook #{time} ms"
-
-    Api.edit_message!(response_msg, content: content)
-  end
-
-  @spec status(Message.t()) :: no_return()
-  def status(msg) do
+  @spec status(Interaction.t()) :: no_return()
+  def status(interaction) do
     embed =
       %Nostrum.Struct.Embed{}
       |> put_title("Botchini status")
@@ -30,7 +19,17 @@ defmodule BotchiniDiscord.Commands.Basic do
       |> put_field("Processes", "#{length(:erlang.processes())}", true)
       |> put_field("Memory Usage", "#{div(:erlang.memory(:total), 1_000_000)} MB", true)
 
-    Api.create_message!(msg.channel_id, embed: embed)
+    Api.create_interaction_response(interaction, %{type: 4, data: %{embeds: [embed]}})
+  end
+
+  @spec get_commands() :: [map()]
+  def get_commands do
+    [
+      %{
+        name: "status",
+        description: "Information about the bot"
+      }
+    ]
   end
 
   defp uptime do
@@ -46,15 +45,5 @@ defmodule BotchiniDiscord.Commands.Basic do
       {0, _glyph}, acc -> acc
       {t, glyph}, acc -> " #{t}" <> glyph <> acc
     end)
-  end
-
-  defp time_diff(time1, time2, unit \\ :millisecond) do
-    from = fn
-      %NaiveDateTime{} = x -> x
-      x -> NaiveDateTime.from_iso8601!(x)
-    end
-
-    {time1, time2} = {from.(time1), from.(time2)}
-    NaiveDateTime.diff(time1, time2, unit)
   end
 end

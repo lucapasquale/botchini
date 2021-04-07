@@ -21,7 +21,7 @@ defmodule BotchiniDiscord.Consumer do
     if is_nil(interaction.member) do
       Nostrum.Api.create_interaction_response(interaction, %{
         type: 4,
-        data: %{content: "Can't use comands from DMs!"}
+        data: %{content: "Can't use commands from DMs!"}
       })
     else
       SlashCommands.handle_interaction(interaction)

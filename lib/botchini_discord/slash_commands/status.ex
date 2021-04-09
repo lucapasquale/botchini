@@ -5,6 +5,7 @@ defmodule BotchiniDiscord.SlashCommands.Status do
 
   alias Nostrum.Api
   alias Nostrum.Struct.Interaction
+
   import Nostrum.Struct.Embed
 
   @spec get_command() :: map()

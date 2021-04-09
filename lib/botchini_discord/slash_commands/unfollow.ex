@@ -4,6 +4,7 @@ defmodule BotchiniDiscord.SlashCommands.Unfollow do
   """
 
   alias Nostrum.Struct.Interaction
+
   alias Botchini.Domain.Stream
 
   @spec get_command() :: map()

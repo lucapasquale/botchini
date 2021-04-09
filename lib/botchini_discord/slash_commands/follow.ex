@@ -4,8 +4,11 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
   """
 
   alias Nostrum.Struct.Interaction
+
   alias Botchini.Domain
   alias Botchini.Schema.Guild
+  alias Botchini.Twitch
+  alias BotchiniDiscord.Messages
 
   @spec get_command() :: map()
   def get_command,
@@ -43,14 +46,14 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
           data: %{content: "Following the stream #{stream.code}!"}
         })
 
-        case Botchini.Twitch.API.get_stream(stream.code) do
+        case Twitch.API.get_stream(stream.code) do
           nil ->
             :noop
 
           stream_data ->
-            user_data = Botchini.Twitch.API.get_user(stream.code)
+            user_data = Twitch.API.get_user(stream.code)
 
-            BotchiniDiscord.Messages.StreamOnline.send_message(
+            Messages.StreamOnline.send_message(
               interaction.channel_id,
               {user_data, stream_data}
             )

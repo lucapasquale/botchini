@@ -7,6 +7,58 @@ env:
   OTP_VER: 23
 
 jobs:
+  check-format:
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup elixir
+      uses: actions/setup-elixir@v1
+      with:
+        elixir-version: ${{ env.ELIXIR_VER }}
+        otp-version: ${{ env.OTP_VER }}
+    - id: mix-cache
+      name: Retrieve Mix Dependencies Cache
+      uses: actions/cache@v1
+      with:
+        path: deps
+        key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+    - name: Install Mix Dependencies
+      if: steps.mix-cache.outputs.cache-hit != 'true'
+      run: |
+        mix local.rebar --force
+        mix local.hex --force
+        mix deps.get
+
+    - name: Check Formatting
+      run: mix format --check-formatted
+
+  credo:
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup elixir
+      uses: actions/setup-elixir@v1
+      with:
+        elixir-version: ${{ env.ELIXIR_VER }}
+        otp-version: ${{ env.OTP_VER }}
+    - id: mix-cache
+      name: Retrieve Mix Dependencies Cache
+      uses: actions/cache@v1
+      with:
+        path: deps
+        key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+    - name: Install Mix Dependencies
+      if: steps.mix-cache.outputs.cache-hit != 'true'
+      run: |
+        mix local.rebar --force
+        mix local.hex --force
+        mix deps.get
+
+    - name: Run Credo
+      run: mix credo --strict
+
   test:
     runs-on: ubuntu-18.04
     services:
@@ -23,32 +75,23 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-
     - name: Setup elixir
       uses: actions/setup-elixir@v1
       with:
         elixir-version: ${{ env.ELIXIR_VER }}
         otp-version: ${{ env.OTP_VER }}
-
     - id: mix-cache
       name: Retrieve Mix Dependencies Cache
       uses: actions/cache@v1
       with:
         path: deps
         key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
-
     - name: Install Mix Dependencies
       if: steps.mix-cache.outputs.cache-hit != 'true'
       run: |
         mix local.rebar --force
         mix local.hex --force
         mix deps.get
-
-    - name: Check Formatting
-      run: mix format --check-formatted
-
-    - name: Run Credo
-      run: mix credo --strict
 
     - name: Run Tests
       run: mix test

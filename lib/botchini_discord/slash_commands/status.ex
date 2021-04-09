@@ -1,14 +1,22 @@
-defmodule BotchiniDiscord.SlashCommands.Basic do
+defmodule BotchiniDiscord.SlashCommands.Status do
   @moduledoc """
-  Handles slash command to check bot status
+  Handles /status slash command
   """
 
   alias Nostrum.Api
   alias Nostrum.Struct.Interaction
+
   import Nostrum.Struct.Embed
 
-  @spec status(Interaction.t()) :: no_return()
-  def status(interaction) do
+  @spec get_command() :: map()
+  def get_command,
+    do: %{
+      name: "status",
+      description: "Information about the bot"
+    }
+
+  @spec handle_interaction(Interaction.t()) :: no_return()
+  def handle_interaction(interaction) do
     embed =
       %Nostrum.Struct.Embed{}
       |> put_title("Botchini status")
@@ -20,16 +28,6 @@ defmodule BotchiniDiscord.SlashCommands.Basic do
       |> put_field("Memory Usage", "#{div(:erlang.memory(:total), 1_000_000)} MB", true)
 
     Api.create_interaction_response(interaction, %{type: 4, data: %{embeds: [embed]}})
-  end
-
-  @spec get_commands() :: [map()]
-  def get_commands do
-    [
-      %{
-        name: "status",
-        description: "Information about the bot"
-      }
-    ]
   end
 
   defp uptime do

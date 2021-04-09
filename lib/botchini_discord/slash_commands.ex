@@ -5,11 +5,16 @@ defmodule BotchiniDiscord.SlashCommands do
 
   alias Nostrum.Api
   alias Nostrum.Struct.Interaction
-  alias BotchiniDiscord.SlashCommands.{Basic, Stream}
+  alias BotchiniDiscord.SlashCommands.{Follow, Following, Status, Unfollow}
 
   @spec register_commands() :: :ok
   def register_commands do
-    commands = Basic.get_commands() ++ Stream.get_commands()
+    commands = [
+      Follow.get_command(),
+      Following.get_command(),
+      Status.get_command(),
+      Unfollow.get_command()
+    ]
 
     commands
     |> Enum.each(fn command ->
@@ -28,19 +33,22 @@ defmodule BotchiniDiscord.SlashCommands do
   def handle_interaction(interaction) do
     case parse_interaction(interaction.data) do
       ["status"] ->
-        Basic.status(interaction)
+        Status.handle_interaction(interaction)
 
       ["follow", stream_code] ->
-        Stream.follow(interaction, stream_code)
+        Follow.handle_interaction(interaction, stream_code)
 
       ["unfollow", stream_code] ->
-        Stream.unfollow(interaction, stream_code)
+        Unfollow.handle_interaction(interaction, stream_code)
 
       ["following"] ->
-        Stream.list(interaction)
+        Following.handle_interaction(interaction)
 
       _ ->
-        respond_interaction(interaction, "Unknown command")
+        Api.create_interaction_response(interaction, %{
+          type: 4,
+          data: %{content: "Unknown command"}
+        })
     end
   end
 
@@ -53,13 +61,5 @@ defmodule BotchiniDiscord.SlashCommands do
       options ->
         [interaction_data.name, Enum.at(options, 0).value]
     end
-  end
-
-  @spec respond_interaction(Interaction.t(), String.t()) :: no_return()
-  def respond_interaction(interaction, content) do
-    Api.create_interaction_response(interaction, %{
-      type: 4,
-      data: %{content: content}
-    })
   end
 end

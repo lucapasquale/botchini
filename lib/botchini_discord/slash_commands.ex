@@ -31,24 +31,31 @@ defmodule BotchiniDiscord.SlashCommands do
 
   @spec handle_interaction(Interaction.t()) :: no_return()
   def handle_interaction(interaction) do
-    case parse_interaction(interaction.data) do
-      ["status"] ->
-        Status.handle_interaction(interaction)
+    if is_nil(interaction.member) do
+      Nostrum.Api.create_interaction_response(interaction, %{
+        type: 4,
+        data: %{content: "Can't use commands from DMs!"}
+      })
+    else
+      case parse_interaction(interaction.data) do
+        ["status"] ->
+          Status.handle_interaction(interaction)
 
-      ["follow", stream_code] ->
-        Follow.handle_interaction(interaction, stream_code)
+        ["follow", stream_code] ->
+          Follow.handle_interaction(interaction, stream_code)
 
-      ["unfollow", stream_code] ->
-        Unfollow.handle_interaction(interaction, stream_code)
+        ["unfollow", stream_code] ->
+          Unfollow.handle_interaction(interaction, stream_code)
 
-      ["following"] ->
-        Following.handle_interaction(interaction)
+        ["following"] ->
+          Following.handle_interaction(interaction)
 
-      _ ->
-        Api.create_interaction_response(interaction, %{
-          type: 4,
-          data: %{content: "Unknown command"}
-        })
+        _ ->
+          Api.create_interaction_response(interaction, %{
+            type: 4,
+            data: %{content: "Unknown command"}
+          })
+      end
     end
   end
 

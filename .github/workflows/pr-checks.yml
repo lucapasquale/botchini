@@ -8,6 +8,7 @@ env:
 
 jobs:
   check-format:
+    name: Check formatting
     runs-on: ubuntu-18.04
 
     steps:
@@ -30,10 +31,10 @@ jobs:
         mix local.hex --force
         mix deps.get
 
-    - name: Check Formatting
-      run: mix format --check-formatted
+    - run: mix format --check-formatted
 
   credo:
+    name: Run Credo
     runs-on: ubuntu-18.04
 
     steps:
@@ -56,10 +57,10 @@ jobs:
         mix local.hex --force
         mix deps.get
 
-    - name: Run Credo
-      run: mix credo --strict
+    - run: mix credo --strict
 
   test:
+    name: Run Tests
     runs-on: ubuntu-18.04
     services:
       db:
@@ -93,5 +94,4 @@ jobs:
         mix local.hex --force
         mix deps.get
 
-    - name: Run Tests
-      run: mix test
+    - run: mix test

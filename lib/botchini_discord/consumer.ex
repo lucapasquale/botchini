@@ -15,6 +15,10 @@ defmodule BotchiniDiscord.Consumer do
 
   def handle_event({:READY, _data, _ws_state}) do
     SlashCommands.register_commands()
+
+    version = to_string(Application.spec(:botchini, :vsn))
+    Nostrum.Api.update_status(:online, "on v#{version}")
+
     Logger.info("Bot started!")
   end
 
@@ -28,14 +32,7 @@ defmodule BotchiniDiscord.Consumer do
   end
 
   def handle_event({:INTERACTION_CREATE, interaction, _ws_state}) do
-    if is_nil(interaction.member) do
-      Nostrum.Api.create_interaction_response(interaction, %{
-        type: 4,
-        data: %{content: "Can't use commands from DMs!"}
-      })
-    else
-      SlashCommands.handle_interaction(interaction)
-    end
+    SlashCommands.handle_interaction(interaction)
   end
 
   def handle_event(_event) do

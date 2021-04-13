@@ -38,22 +38,29 @@ defmodule Botchini.Domain.Stream do
         {:error, :not_found}
 
       stream ->
-        StreamFollower.find(stream.id, discord_channel_id)
-        |> StreamFollower.delete()
+        case StreamFollower.find(stream.id, discord_channel_id) do
+          nil ->
+            {:error, :not_found}
 
-        if StreamFollower.find_all_for_stream(stream.id) == [] do
-          API.delete_stream_webhook(stream.twitch_subscription_id)
-          Stream.delete_stream(stream)
+          follower ->
+            StreamFollower.delete(follower)
+
+            if StreamFollower.find_all_for_stream(stream.id) == [] do
+              API.delete_stream_webhook(stream.twitch_subscription_id)
+              Stream.delete_stream(stream)
+            end
+
+            {:ok}
         end
-
-        {:ok}
     end
   end
 
-  @spec following_list(String.t()) :: {:ok, [Stream.t()]}
-  def following_list(discord_channel_id) do
-    streams = Botchini.Schema.Stream.find_all_for_discord_channel(discord_channel_id)
-    {:ok, streams}
+  @spec following_list(String.t()) :: {:ok, [{String.t(), String.t()}]} | {:error, :no_guild}
+  def following_list(discord_guild_id) do
+    case Guild.find(discord_guild_id) do
+      nil -> {:error, :no_guild}
+      guild -> {:ok, Stream.find_all_for_guild(guild.id)}
+    end
   end
 
   defp format_code(code) do

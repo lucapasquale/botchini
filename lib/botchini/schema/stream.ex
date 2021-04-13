@@ -35,18 +35,14 @@ defmodule Botchini.Schema.Stream do
     Botchini.Repo.get_by(Stream, twitch_user_id: twitch_user_id)
   end
 
-  @spec find_all_for_discord_channel(String.t()) :: [Stream.t()]
-  def find_all_for_discord_channel(discord_channel_id) do
-    inner_query =
-      from(f in "stream_followers",
-        where: f.discord_channel_id == ^discord_channel_id,
-        select: [:stream_id]
-      )
-
+  @spec find_all_for_guild(String.t()) :: [Stream.t()]
+  def find_all_for_guild(guild_id) do
     Botchini.Repo.all(
       from(s in Stream,
-        where: s.id in subquery(inner_query),
-        select: s
+        join: sf in StreamFollower,
+        on: sf.stream_id == s.id,
+        where: sf.guild_id == ^guild_id,
+        select: {sf.discord_channel_id, s.code}
       )
     )
   end

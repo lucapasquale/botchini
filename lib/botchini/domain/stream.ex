@@ -6,9 +6,11 @@ defmodule Botchini.Domain.Stream do
   alias Botchini.Twitch.API
   alias Botchini.Schema.{Guild, Stream, StreamFollower}
 
-  @spec follow(String.t(), %{guild: Guild.t(), channel_id: String.t(), user_id: String.t()}) ::
+  @spec follow(String.t(), %{guild_id: String.t(), channel_id: String.t(), user_id: String.t()}) ::
           {:ok, Stream.t()} | {:error, :invalid_stream} | {:error, :already_following}
-  def follow(code, %{guild: guild, channel_id: channel_id, user_id: user_id}) do
+  def follow(code, %{guild_id: guild_id, channel_id: channel_id, user_id: user_id}) do
+    guild = Guild.find(guild_id)
+
     case upsert_stream(format_code(code)) do
       {:error, _} ->
         {:error, :invalid_stream}

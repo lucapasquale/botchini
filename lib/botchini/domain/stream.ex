@@ -6,21 +6,23 @@ defmodule Botchini.Domain.Stream do
   alias Botchini.Twitch.API
   alias Botchini.Schema.{Guild, Stream, StreamFollower}
 
-  @spec follow(String.t(), %{guild: Guild.t(), channel_id: String.t(), user_id: String.t()}) ::
+  @spec follow(String.t(), %{guild_id: String.t(), channel_id: String.t(), user_id: String.t()}) ::
           {:ok, Stream.t()} | {:error, :invalid_stream} | {:error, :already_following}
-  def follow(code, %{guild: guild, channel_id: channel_id, user_id: user_id}) do
+  def follow(code, %{guild_id: guild_id, channel_id: channel_id, user_id: user_id}) do
     case upsert_stream(format_code(code)) do
       {:error, _} ->
         {:error, :invalid_stream}
 
       {:ok, stream} ->
+        guild = Guild.find(guild_id)
+
         case StreamFollower.find(stream.id, channel_id) do
           nil ->
             StreamFollower.insert(%StreamFollower{
-              stream_id: stream.id,
-              guild_id: guild.id,
               discord_channel_id: channel_id,
-              discord_user_id: user_id
+              discord_user_id: user_id,
+              stream_id: stream.id,
+              guild_id: guild.id
             })
 
             {:ok, stream}
@@ -38,22 +40,23 @@ defmodule Botchini.Domain.Stream do
         {:error, :not_found}
 
       stream ->
-        StreamFollower.find(stream.id, discord_channel_id)
-        |> StreamFollower.delete()
+        case StreamFollower.find(stream.id, discord_channel_id) do
+          nil ->
+            {:error, :not_found}
 
-        if StreamFollower.find_all_for_stream(stream.id) == [] do
-          API.delete_stream_webhook(stream.twitch_subscription_id)
-          Stream.delete_stream(stream)
+          follower ->
+            delete_follower(follower, stream)
+            {:ok}
         end
-
-        {:ok}
     end
   end
 
-  @spec following_list(String.t()) :: {:ok, [Stream.t()]}
-  def following_list(discord_channel_id) do
-    streams = Botchini.Schema.Stream.find_all_for_discord_channel(discord_channel_id)
-    {:ok, streams}
+  @spec following_list(String.t()) :: {:ok, [{String.t(), String.t()}]} | {:error, :no_guild}
+  def following_list(discord_guild_id) do
+    case Guild.find(discord_guild_id) do
+      nil -> {:error, :no_guild}
+      guild -> {:ok, Stream.find_all_for_guild(guild.id)}
+    end
   end
 
   defp format_code(code) do
@@ -84,6 +87,15 @@ defmodule Botchini.Domain.Stream do
 
             {:ok, stream}
         end
+    end
+  end
+
+  defp delete_follower(follower, stream) do
+    StreamFollower.delete(follower)
+
+    if StreamFollower.find_all_for_stream(stream.id) == [] do
+      API.delete_stream_webhook(stream.twitch_subscription_id)
+      Stream.delete_stream(stream)
     end
   end
 end

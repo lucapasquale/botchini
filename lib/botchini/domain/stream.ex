@@ -9,20 +9,20 @@ defmodule Botchini.Domain.Stream do
   @spec follow(String.t(), %{guild_id: String.t(), channel_id: String.t(), user_id: String.t()}) ::
           {:ok, Stream.t()} | {:error, :invalid_stream} | {:error, :already_following}
   def follow(code, %{guild_id: guild_id, channel_id: channel_id, user_id: user_id}) do
-    guild = Guild.find(guild_id)
-
     case upsert_stream(format_code(code)) do
       {:error, _} ->
         {:error, :invalid_stream}
 
       {:ok, stream} ->
+        guild = Guild.find(guild_id)
+
         case StreamFollower.find(stream.id, channel_id) do
           nil ->
             StreamFollower.insert(%StreamFollower{
-              stream_id: stream.id,
-              guild_id: guild.id,
               discord_channel_id: channel_id,
-              discord_user_id: user_id
+              discord_user_id: user_id,
+              stream_id: stream.id,
+              guild_id: guild.id
             })
 
             {:ok, stream}
@@ -45,13 +45,7 @@ defmodule Botchini.Domain.Stream do
             {:error, :not_found}
 
           follower ->
-            StreamFollower.delete(follower)
-
-            if StreamFollower.find_all_for_stream(stream.id) == [] do
-              API.delete_stream_webhook(stream.twitch_subscription_id)
-              Stream.delete_stream(stream)
-            end
-
+            delete_follower(follower, stream)
             {:ok}
         end
     end
@@ -93,6 +87,15 @@ defmodule Botchini.Domain.Stream do
 
             {:ok, stream}
         end
+    end
+  end
+
+  defp delete_follower(follower, stream) do
+    StreamFollower.delete(follower)
+
+    if StreamFollower.find_all_for_stream(stream.id) == [] do
+      API.delete_stream_webhook(stream.twitch_subscription_id)
+      Stream.delete_stream(stream)
     end
   end
 end

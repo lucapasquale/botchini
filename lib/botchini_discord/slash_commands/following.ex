@@ -3,8 +3,8 @@ defmodule BotchiniDiscord.SlashCommands.Following do
   Handles /following slash command
   """
 
-  alias Nostrum.Struct.Embed
-  alias Nostrum.Struct.Interaction
+  alias Nostrum.Cache.ChannelCache
+  alias Nostrum.Struct.{Embed, Interaction}
 
   alias Botchini.Domain.Stream
 
@@ -44,7 +44,7 @@ defmodule BotchiniDiscord.SlashCommands.Following do
     fields =
       channel_groups
       |> Enum.reduce([], fn {channel_id, streams}, acc ->
-        {:ok, channel} = Nostrum.Cache.ChannelCache.get(String.to_integer(channel_id))
+        {:ok, channel} = ChannelCache.get(String.to_integer(channel_id))
         stream_codes = Enum.map(streams, &elem(&1, 1))
 
         acc ++

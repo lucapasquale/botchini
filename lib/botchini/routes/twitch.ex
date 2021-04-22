@@ -7,7 +7,6 @@ defmodule Botchini.Routes.Twitch do
 
   alias Botchini.Twitch.API
   alias BotchiniDiscord.Messages.StreamOnline
-  alias Botchini.Domain
   alias Botchini.Schema.{Stream, StreamFollower}
 
   @spec webhook_callback(Plug.Conn.t()) :: %{status: Integer.t(), body: String.t()}

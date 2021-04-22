@@ -6,12 +6,13 @@ defmodule BotchiniDiscord.Messages.StreamOnline do
   use Nostrum.Consumer
   import Nostrum.Struct.Embed
 
-  @spec send_message(integer(), {map(), map()}) :: no_return()
+  @spec send_message(integer(), {map(), map()}) ::
+          {:ok, Nostrum.Struct.Message.t()} | {:error, any()}
   def send_message(discord_channel_id, {user_data, stream_data}) do
     stream_url = "https://www.twitch.tv/" <> user_data["login"]
 
     thumbnail_url =
-      stream_data["thumbnail_url"]
+      (stream_data["thumbnail_url"] || "")
       # Adding random variance to image url to reduce chance of using old cache
       |> String.replace("{width}", Integer.to_string(1280 + Enum.random(-5..5)))
       |> String.replace("{height}", Integer.to_string(720 + Enum.random(-5..5)))
@@ -27,6 +28,6 @@ defmodule BotchiniDiscord.Messages.StreamOnline do
       |> put_field("Game", stream_data["game_name"], true)
       |> put_field("Viewer count", stream_data["viewer_count"], true)
 
-    Nostrum.Api.create_message!(discord_channel_id, content: stream_url, embed: embed)
+    Nostrum.Api.create_message(discord_channel_id, content: stream_url, embed: embed)
   end
 end

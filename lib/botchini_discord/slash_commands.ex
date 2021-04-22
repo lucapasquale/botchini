@@ -33,9 +33,7 @@ defmodule BotchiniDiscord.SlashCommands do
 
   @spec handle_interaction(Interaction.t()) :: no_return()
   def handle_interaction(interaction) do
-    Logger.info("Interaction received",
-      interaction: %{data: interaction.data, member: interaction.member}
-    )
+    Logger.info("Interaction received", interaction: %{data: interaction.data})
 
     try do
       response = interaction_response(interaction)
@@ -46,20 +44,20 @@ defmodule BotchiniDiscord.SlashCommands do
       })
 
       Logger.info("Interaction response",
-        interaction: %{data: interaction.data, member: interaction.member},
+        interaction: %{data: interaction.data},
         response: response
       )
     rescue
       err ->
-        Logger.error("Interaction error",
-          error: err,
-          interaction: %{data: interaction.data, member: interaction.member}
-        )
-
         Nostrum.Api.create_interaction_response(interaction, %{
           type: 4,
           data: %{content: "Something went wrong :("}
         })
+
+        Logger.error("Interaction error",
+          error: err,
+          interaction: interaction
+        )
     end
   end
 

@@ -6,6 +6,7 @@ defmodule Botchini.Twitch.API do
   use Tesla
 
   plug(Tesla.Middleware.JSON)
+  plug(Tesla.Middleware.Logger)
   plug(Botchini.Twitch.AuthMiddleware)
   plug(Tesla.Middleware.BaseUrl, "https://api.twitch.tv/helix")
 
@@ -13,6 +14,7 @@ defmodule Botchini.Twitch.API do
     {"Client-ID", Application.fetch_env!(:botchini, :twitch_client_id)}
   ])
 
+  @spec get_user(String.t()) :: any()
   def get_user(stream_code) do
     {:ok, %{body: body}} = get("/users", query: [login: stream_code])
 
@@ -21,6 +23,7 @@ defmodule Botchini.Twitch.API do
     |> List.first()
   end
 
+  @spec get_stream(String.t()) :: any()
   def get_stream(stream_code) do
     {:ok, %{body: body}} = get("/streams", query: [user_login: stream_code])
 
@@ -29,6 +32,7 @@ defmodule Botchini.Twitch.API do
     |> List.first()
   end
 
+  @spec add_stream_webhook(String.t()) :: any()
   def add_stream_webhook(user_id) do
     {:ok, %{body: body}} =
       post("/eventsub/subscriptions", %{
@@ -47,10 +51,12 @@ defmodule Botchini.Twitch.API do
     |> List.first()
   end
 
+  @spec delete_stream_webhook(String.t()) :: any()
   def delete_stream_webhook(subscription_id) do
     delete("/eventsub/subscriptions", query: [id: subscription_id])
   end
 
+  @spec authenticate() :: any()
   def authenticate do
     [Tesla.Middleware.JSON]
     |> Tesla.client()

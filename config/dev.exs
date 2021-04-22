@@ -1,12 +1,9 @@
 import Config
 
 config :logger,
-  level: :debug,
-  backends: [Ink]
+  level: :debug
 
-config :logger, Ink,
-  name: "botchini",
-  metadata: [:error, :interaction, :response]
+config :tesla, Tesla.Middleware.Logger, debug: false
 
 config :botchini, Botchini.Repo, url: "postgres://postgres:postgres@localhost/botchini_dev"
 

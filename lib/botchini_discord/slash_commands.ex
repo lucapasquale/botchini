@@ -38,13 +38,20 @@ defmodule BotchiniDiscord.SlashCommands do
     )
 
     try do
+      response = interaction_response(interaction)
+
       Nostrum.Api.create_interaction_response(interaction, %{
         type: 4,
-        data: interaction_response(interaction)
+        data: response
       })
+
+      Logger.info("Interaction response",
+        interaction: %{data: interaction.data, member: interaction.member},
+        response: response
+      )
     rescue
       err ->
-        Logger.error("Failed to run interaction",
+        Logger.error("Interaction error",
           error: err,
           interaction: %{data: interaction.data, member: interaction.member}
         )

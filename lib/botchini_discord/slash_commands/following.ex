@@ -18,9 +18,6 @@ defmodule BotchiniDiscord.SlashCommands.Following do
   @spec handle_interaction(Interaction.t()) :: map()
   def handle_interaction(interaction) do
     case Stream.following_list(Integer.to_string(interaction.guild_id)) do
-      {:error, _} ->
-        %{content: "Not following any stream!"}
-
       {:ok, streams} when streams == [] ->
         %{content: "Not following any stream!"}
 

@@ -1,7 +1,12 @@
 import Config
 
 config :logger,
-  level: :debug
+  level: :debug,
+  backends: [Ink]
+
+config :logger, Ink,
+  name: "botchini",
+  metadata: [:error, :interaction]
 
 config :botchini, Botchini.Repo, url: "postgres://postgres:postgres@localhost/botchini_dev"
 

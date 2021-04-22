@@ -23,11 +23,16 @@ defmodule BotchiniDiscord.Consumer do
   end
 
   def handle_event({:GUILD_CREATE, {guild}, _ws_state}) do
+    IO.puts("CHEGOU EVENTO")
     discord_guild_id = Integer.to_string(guild.id)
 
     case Guild.find(discord_guild_id) do
-      nil -> Guild.insert(%Guild{discord_guild_id: discord_guild_id})
-      _ -> :noop
+      nil ->
+        Guild.insert(%Guild{discord_guild_id: discord_guild_id})
+        Logger.info("Added new guild", discord_guild_id: discord_guild_id)
+
+      _ ->
+        :noop
     end
   end
 

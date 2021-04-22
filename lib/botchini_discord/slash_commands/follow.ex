@@ -24,7 +24,7 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
       ]
     }
 
-  @spec handle_interaction(Interaction.t(), String.t()) :: no_return()
+  @spec handle_interaction(Interaction.t(), String.t()) :: map()
   def handle_interaction(interaction, stream_code) do
     follow_response =
       Domain.Stream.follow(stream_code, %{
@@ -35,23 +35,12 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
 
     case follow_response do
       {:error, :invalid_stream} ->
-        Nostrum.Api.create_interaction_response(interaction, %{
-          type: 4,
-          data: %{content: "Invalid Twitch stream!"}
-        })
+        %{content: "Invalid Twitch stream!"}
 
       {:error, :already_following} ->
-        Nostrum.Api.create_interaction_response(interaction, %{
-          type: 4,
-          data: %{content: "Already following!"}
-        })
+        %{content: "Already following!"}
 
       {:ok, stream} ->
-        Nostrum.Api.create_interaction_response(interaction, %{
-          type: 4,
-          data: %{content: "Following the stream #{stream.code}!"}
-        })
-
         case Twitch.API.get_stream(stream.code) do
           nil ->
             :noop
@@ -64,6 +53,8 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
               {user_data, stream_data}
             )
         end
+
+        %{content: "Following the stream #{stream.code}!"}
     end
   end
 end

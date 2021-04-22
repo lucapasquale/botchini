@@ -22,20 +22,14 @@ defmodule BotchiniDiscord.SlashCommands.Unfollow do
       ]
     }
 
-  @spec handle_interaction(Interaction.t(), String.t()) :: no_return()
+  @spec handle_interaction(Interaction.t(), String.t()) :: map()
   def handle_interaction(interaction, stream_code) do
     case Stream.stop_following(stream_code, Integer.to_string(interaction.channel_id)) do
       {:error, :not_found} ->
-        Nostrum.Api.create_interaction_response(interaction, %{
-          type: 4,
-          data: %{content: "Stream #{stream_code} was not being followed"}
-        })
+        %{content: "Stream #{stream_code} was not being followed"}
 
       {:ok} ->
-        Nostrum.Api.create_interaction_response(interaction, %{
-          type: 4,
-          data: %{content: "Removed #{stream_code} from your following streams"}
-        })
+        %{content: "Removed #{stream_code} from your following streams"}
     end
   end
 end

@@ -14,7 +14,7 @@ defmodule Botchini.Domain.Stream do
         {:error, :invalid_stream}
 
       {:ok, stream} ->
-        guild = Guild.find(guild_id)
+        guild = Guild.upsert(%Guild{discord_guild_id: guild_id})
 
         case StreamFollower.find(stream.id, channel_id) do
           nil ->
@@ -51,12 +51,11 @@ defmodule Botchini.Domain.Stream do
     end
   end
 
-  @spec following_list(String.t()) :: {:ok, [{String.t(), String.t()}]} | {:error, :no_guild}
+  @spec following_list(String.t()) :: {:ok, [{String.t(), String.t()}]}
   def following_list(discord_guild_id) do
-    case Guild.find(discord_guild_id) do
-      nil -> {:error, :no_guild}
-      guild -> {:ok, Stream.find_all_for_guild(guild.id)}
-    end
+    guild = Guild.upsert(%Guild{discord_guild_id: discord_guild_id})
+
+    {:ok, Stream.find_all_for_guild(guild.id)}
   end
 
   defp format_code(code) do

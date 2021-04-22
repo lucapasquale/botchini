@@ -21,6 +21,14 @@ defmodule Botchini.Schema.Guild do
     timestamps()
   end
 
+  @spec upsert(Ecto.Schema.t()) :: Guild.t()
+  def upsert(guild) do
+    case find(guild.discord_guild_id) do
+      nil -> insert(guild)
+      existing_guild -> existing_guild
+    end
+  end
+
   @spec find(String.t()) :: Guild.t() | nil
   def find(discord_guild_id) do
     Botchini.Repo.get_by(Guild, discord_guild_id: discord_guild_id)

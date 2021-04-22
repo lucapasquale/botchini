@@ -15,26 +15,14 @@ defmodule BotchiniDiscord.SlashCommands.Following do
       description: "list streams"
     }
 
-  @spec handle_interaction(Interaction.t()) :: no_return()
+  @spec handle_interaction(Interaction.t()) :: map()
   def handle_interaction(interaction) do
     case Stream.following_list(Integer.to_string(interaction.guild_id)) do
-      {:error, _} ->
-        Nostrum.Api.create_interaction_response(interaction, %{
-          type: 4,
-          data: %{content: "Not following any stream!"}
-        })
-
       {:ok, streams} when streams == [] ->
-        Nostrum.Api.create_interaction_response(interaction, %{
-          type: 4,
-          data: %{content: "Not following any stream!"}
-        })
+        %{content: "Not following any stream!"}
 
       {:ok, streams} ->
-        Nostrum.Api.create_interaction_response(interaction, %{
-          type: 4,
-          data: %{embeds: [following_streams_embed(streams)]}
-        })
+        %{embeds: [following_streams_embed(streams)]}
     end
   end
 

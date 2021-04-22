@@ -1,4 +1,7 @@
 import Config
 
 config :logger,
-  level: :info
+  level: :info,
+  backends: [Ink]
+
+config :logger, Ink, name: "botchini"

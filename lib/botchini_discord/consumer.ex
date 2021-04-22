@@ -26,8 +26,12 @@ defmodule BotchiniDiscord.Consumer do
     discord_guild_id = Integer.to_string(guild.id)
 
     case Guild.find(discord_guild_id) do
-      nil -> Guild.insert(%Guild{discord_guild_id: discord_guild_id})
-      _ -> :noop
+      nil ->
+        Guild.insert(%Guild{discord_guild_id: discord_guild_id})
+        Logger.info("Added new guild", discord_guild_id: discord_guild_id)
+
+      _ ->
+        :noop
     end
   end
 

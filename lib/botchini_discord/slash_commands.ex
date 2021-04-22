@@ -3,6 +3,8 @@ defmodule BotchiniDiscord.SlashCommands do
   Register slash commands and handles interactions
   """
 
+  require Logger
+
   alias Nostrum.Api
   alias Nostrum.Struct.Interaction
   alias BotchiniDiscord.SlashCommands.{Follow, Following, Status, Unfollow}
@@ -31,11 +33,39 @@ defmodule BotchiniDiscord.SlashCommands do
 
   @spec handle_interaction(Interaction.t()) :: no_return()
   def handle_interaction(interaction) do
-    if is_nil(interaction.member) do
+    Logger.info("Interaction received",
+      interaction: %{data: interaction.data, member: interaction.member}
+    )
+
+    try do
+      response = interaction_response(interaction)
+
       Nostrum.Api.create_interaction_response(interaction, %{
         type: 4,
-        data: %{content: "Can't use commands from DMs!"}
+        data: response
       })
+
+      Logger.info("Interaction response",
+        interaction: %{data: interaction.data, member: interaction.member},
+        response: response
+      )
+    rescue
+      err ->
+        Logger.error("Interaction error",
+          error: err,
+          interaction: %{data: interaction.data, member: interaction.member}
+        )
+
+        Nostrum.Api.create_interaction_response(interaction, %{
+          type: 4,
+          data: %{content: "Something went wrong :("}
+        })
+    end
+  end
+
+  defp interaction_response(interaction) do
+    if is_nil(interaction.member) do
+      %{content: "Can't use commands from DMs!"}
     else
       case parse_interaction(interaction.data) do
         ["status"] ->

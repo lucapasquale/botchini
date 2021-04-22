@@ -6,9 +6,8 @@ defmodule BotchiniDiscord.Messages.StreamOnline do
   use Nostrum.Consumer
   import Nostrum.Struct.Embed
 
-  alias Botchini.Domain.Stream
-
-  @spec send_message(integer(), {map(), map()}) :: no_return()
+  @spec send_message(integer(), {map(), map()}) ::
+          {:ok, Nostrum.Struct.Message.t()} | {:error, any()}
   def send_message(discord_channel_id, {user_data, stream_data}) do
     stream_url = "https://www.twitch.tv/" <> user_data["login"]
 
@@ -29,12 +28,6 @@ defmodule BotchiniDiscord.Messages.StreamOnline do
       |> put_field("Game", stream_data["game_name"], true)
       |> put_field("Viewer count", stream_data["viewer_count"], true)
 
-    case Nostrum.Api.create_message(discord_channel_id, content: stream_url, embed: embed) do
-      {:error, _} ->
-        Stream.stop_following(user_data["login"], Integer.to_string(discord_channel_id))
-
-      _ ->
-        :noop
-    end
+    Nostrum.Api.create_message(discord_channel_id, content: stream_url, embed: embed)
   end
 end

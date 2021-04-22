@@ -3,8 +3,11 @@ defmodule Botchini.Routes.Twitch do
   Routes for twitch events callback
   """
 
+  require Logger
+
   alias Botchini.Twitch.API
   alias BotchiniDiscord.Messages.StreamOnline
+  alias Botchini.Domain
   alias Botchini.Schema.{Stream, StreamFollower}
 
   @spec webhook_callback(Plug.Conn.t()) :: %{status: Integer.t(), body: String.t()}
@@ -50,10 +53,15 @@ defmodule Botchini.Routes.Twitch do
     stream_data = API.get_stream(stream.code)
 
     Enum.each(StreamFollower.find_all_for_stream(stream.id), fn follower ->
-      follower
-      |> Map.get(:discord_channel_id)
-      |> String.to_integer()
-      |> StreamOnline.send_message({user_data, stream_data})
+      channel_id = Map.get(follower, :discord_channel_id)
+
+      case StreamOnline.send_message(String.to_integer(channel_id), {user_data, stream_data}) do
+        {:error, _err} ->
+          Logger.warn("Channel #{channel_id} doesn't exist anymore")
+
+        _ ->
+          :noop
+      end
     end)
   end
 end

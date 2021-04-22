@@ -4,19 +4,6 @@ on:
     branches:
       - main
 jobs:
-  deploy:
-    name: Deploy
-    runs-on: ubuntu-18.04
-    steps:
-    - uses: actions/checkout@v2
-
-    - uses: floms/action-caprover@v1
-      with:
-        app: 'botchini'
-        host: 'https://captain.lucapasquale.dev'
-        password: '${{ secrets.CAPROVER_PASSWORD }}'
-        branch: 'main'
-
   push_to_registry:
     name: Push Docker image to GitHub Packages
     runs-on: ubuntu-latest
@@ -34,3 +21,17 @@ jobs:
           registry: docker.pkg.github.com
           repository:  lucapasquale/botchini/botchini
           tag_with_ref: true
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-18.04
+    needs: push_to_registry
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: floms/action-caprover@v1
+      with:
+        app: 'botchini'
+        host: 'https://captain.lucapasquale.dev'
+        password: '${{ secrets.CAPROVER_PASSWORD }}'
+        image: 'docker.pkg.github.com/lucapasquale/botchini/botchini:main'

@@ -7,6 +7,7 @@ defmodule Botchini.Routes.Twitch do
   alias BotchiniDiscord.Messages.StreamOnline
   alias Botchini.Schema.{Stream, StreamFollower}
 
+  @spec webhook_callback(Plug.Conn.t()) :: %{status: Integer.t(), body: String.t()}
   def webhook_callback(conn) do
     case get_event_type(conn.body_params) do
       {:confirm_subscription, challenge} ->
@@ -27,6 +28,10 @@ defmodule Botchini.Routes.Twitch do
     end
   end
 
+  @spec get_event_type(any()) ::
+          {:confirm_subscription, String.t()}
+          | {:stream_online, any()}
+          | {:unknown, :invalid_event}
   def get_event_type(body) do
     subscription = body["subscription"]
 

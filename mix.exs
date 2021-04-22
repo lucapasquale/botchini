@@ -33,8 +33,6 @@ defmodule Botchini.MixProject do
       {:jason, ">= 1.0.0"},
       # HTTP Server
       {:plug_cowboy, "~> 2.0"},
-      # Logging
-      {:ink, "~> 1.0"},
       # Development and testing
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false}
     ]

@@ -14,8 +14,10 @@ jobs:
       SHA8: ${GITHUB_SHA::8}
     steps:
     - uses: actions/checkout@v2
-    - run: |
-      echo $SHA7 $SHA8
+    - name: echo values
+      run: |
+        echo $SHA7 $SHA8
+
 
   check-format:
     name: Check formatting

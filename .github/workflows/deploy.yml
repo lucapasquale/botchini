@@ -13,13 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Push to GitHub Packages
+      - name: Push to Docker Hub
         uses: docker/build-push-action@v1
         with:
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-          registry: docker.pkg.github.com
-          repository:  lucapasquale/botchini/botchini
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: lucapasquale094/botchini
           tag_with_ref: true
 
   deploy:
@@ -34,4 +33,4 @@ jobs:
         app: 'botchini'
         host: 'https://captain.lucapasquale.dev'
         password: '${{ secrets.CAPROVER_PASSWORD }}'
-        image: 'docker.pkg.github.com/lucapasquale/botchini/botchini:main'
+        image: 'lucapasquale094/botchini:main'

@@ -2,4 +2,6 @@ import Config
 
 config :logger,
   level: :info,
-  backends: [LogflareLogger.HttpBackend]
+  backends: [Ink]
+
+config :logger, Ink, name: "botchini"

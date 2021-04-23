@@ -6,7 +6,7 @@ config :botchini,
   port: System.get_env("PORT", "3010") |> String.to_integer()
 
 config :logger, :console,
-  format: "\n$time [$level] $levelpad$message $metadata\n",
+  format: "\n$time [$level] $levelpad $message $metadata\n",
   metadata: [:interaction_data, :guild_id, :channel_id, :user_id, :error_message]
 
 config :porcelain,

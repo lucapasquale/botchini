@@ -5,13 +5,17 @@ defmodule Botchini.Routes.Twitch do
 
   require Logger
 
+  alias Botchini.Domain
+  alias Botchini.Schema.{Stream, StreamFollower}
   alias Botchini.Twitch.API
   alias BotchiniDiscord.Messages.StreamOnline
-  alias Botchini.Schema.{Stream, StreamFollower}
 
   @spec webhook_callback(Plug.Conn.t()) :: %{status: Integer.t(), body: String.t()}
   def webhook_callback(conn) do
     case get_event_type(conn.body_params) do
+      {:unknown, _} ->
+        %{status: 404, body: "Invalid event"}
+
       {:confirm_subscription, challenge} ->
         %{status: 200, body: challenge}
 
@@ -24,9 +28,6 @@ defmodule Botchini.Routes.Twitch do
             send_followers_message(stream)
             %{status: 200, body: "OK"}
         end
-
-      {:unknown, _} ->
-        %{status: 404, body: "Invalid event"}
     end
   end
 
@@ -56,7 +57,8 @@ defmodule Botchini.Routes.Twitch do
 
       case StreamOnline.send_message(String.to_integer(channel_id), {user_data, stream_data}) do
         {:error, _err} ->
-          Logger.warn("Channel #{channel_id} doesn't exist anymore")
+          Logger.warn("Removing channel since doesn't exist anymore", channel_id: channel_id)
+          Domain.Stream.stop_following(stream.code, channel_id)
 
         _ ->
           :noop

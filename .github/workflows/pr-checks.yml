@@ -7,14 +7,6 @@ env:
   OTP_VER: 23
 
 jobs:
-  sha-test:
-    runs-on: ubuntu-18.04
-    steps:
-    - uses: actions/checkout@v2
-    - name: echo values
-      run: |
-        echo $(echo ${GITHUB_SHA} | cut -c1-8)
-
   check-format:
     name: Check formatting
     runs-on: ubuntu-18.04

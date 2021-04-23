@@ -34,4 +34,4 @@ jobs:
         app: 'botchini'
         host: 'https://captain.lucapasquale.dev'
         password: '${{ secrets.CAPROVER_PASSWORD }}'
-        image: lucapasquale094/botchini:sha-$(echo ${GITHUB_SHA} | cut -c1-7)
+        image: lucapasquale094/botchini:main

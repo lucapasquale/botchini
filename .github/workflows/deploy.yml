@@ -20,6 +20,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: lucapasquale094/botchini
           tag_with_ref: true
+          tag_with_sha: true
 
   deploy:
     name: Deploy

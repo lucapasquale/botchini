@@ -9,15 +9,11 @@ env:
 jobs:
   sha-test:
     runs-on: ubuntu-18.04
-    env:
-      SHA7: ${GITHUB_SHA::7}
-      SHA8: ${GITHUB_SHA::8}
     steps:
     - uses: actions/checkout@v2
     - name: echo values
       run: |
-        echo $SHA7 $SHA8
-
+        echo $(echo ${GITHUB_SHA} | cut -c1-8)
 
   check-format:
     name: Check formatting

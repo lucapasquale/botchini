@@ -5,10 +5,10 @@ defmodule Botchini.Routes.Twitch do
 
   require Logger
 
-  alias Botchini.Twitch.API
   alias Botchini.Domain
-  alias BotchiniDiscord.Messages.StreamOnline
   alias Botchini.Schema.{Stream, StreamFollower}
+  alias Botchini.Twitch.API
+  alias BotchiniDiscord.Messages.StreamOnline
 
   @spec webhook_callback(Plug.Conn.t()) :: %{status: Integer.t(), body: String.t()}
   def webhook_callback(conn) do

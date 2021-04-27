@@ -52,17 +52,22 @@ defmodule Botchini.Routes.Twitch do
     user_data = API.get_user(stream.code)
     stream_data = API.get_stream(stream.code)
 
-    Enum.each(StreamFollower.find_all_for_stream(stream.id), fn follower ->
-      channel_id = Map.get(follower, :discord_channel_id)
+    followers = StreamFollower.find_all_for_stream(stream.id)
+    Logger.info("Stream #{stream.code} is online, sending to #{length(followers)} channels")
 
-      case StreamOnline.send_message(String.to_integer(channel_id), {user_data, stream_data}) do
-        {:error, _err} ->
-          Logger.warn("Removing channel since doesn't exist anymore", channel_id: channel_id)
-          Domain.Stream.stop_following(stream.code, channel_id)
+    Enum.each(followers, fn follower ->
+      Task.start(fn ->
+        channel_id = Map.get(follower, :discord_channel_id)
 
-        _ ->
-          :noop
-      end
+        case StreamOnline.send_message(String.to_integer(channel_id), {user_data, stream_data}) do
+          {:error, _err} ->
+            Logger.warn("Removing channel since doesn't exist anymore", channel_id: channel_id)
+            Domain.Stream.stop_following(stream.code, channel_id)
+
+          _ ->
+            :noop
+        end
+      end)
     end)
   end
 end

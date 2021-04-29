@@ -9,7 +9,6 @@ config :logger, :console,
   format: "\n$time [$level] $levelpad $message $metadata\n",
   metadata: [:interaction_data, :guild_id, :channel_id, :user_id, :error_message]
 
-config :porcelain,
-  driver: Porcelain.Driver.Basic
+config :tesla, adapter: Tesla.Adapter.Hackney
 
 import_config "#{Mix.env()}.exs"

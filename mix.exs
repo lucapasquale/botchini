@@ -4,7 +4,7 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "2.3.6",
+      version: "2.4.0",
       elixir: "~> 1.11",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -25,8 +25,8 @@ defmodule Botchini.MixProject do
       # Discord
       {:nostrum, "~> 0.4", runtime: Mix.env() != :test},
       # Ecto
-      {:ecto_sql, "~> 3.5.4"},
-      {:postgrex, "~> 0.15"},
+      {:ecto_sql, "~> 3.6"},
+      {:postgrex, ">= 0.0.0"},
       # HTTP Client
       {:tesla, "~> 1.4.0"},
       {:hackney, "~> 1.17.0"},

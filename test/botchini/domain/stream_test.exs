@@ -8,8 +8,10 @@ defmodule BotchiniTest.Domain.StreamTest do
   alias Botchini.Schema.{Guild, Stream, StreamFollower}
   alias Botchini.Twitch
 
+  alias Ecto.Adapters.SQL
+
   setup do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Repo)
+    :ok = SQL.Sandbox.checkout(Repo)
   end
 
   describe "follow" do

@@ -5,8 +5,8 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
 
   alias Nostrum.Struct.Interaction
 
-  alias Botchini.Domain
   alias Botchini.Twitch
+  alias Botchini.Guilds
   alias BotchiniDiscord.Messages
 
   @spec get_command() :: map()
@@ -26,14 +26,14 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
 
   @spec handle_interaction(Interaction.t(), String.t()) :: map()
   def handle_interaction(interaction, stream_code) do
-    follow_response =
-      Domain.Stream.follow(stream_code, %{
-        guild_id: Integer.to_string(interaction.guild_id),
-        channel_id: Integer.to_string(interaction.channel_id),
-        user_id: Integer.to_string(interaction.member.user.id)
-      })
+    {:ok, guild} = Guilds.upsert_guild(Integer.to_string(interaction.guild_id))
 
-    case follow_response do
+    follow_info = %{
+      channel_id: Integer.to_string(interaction.channel_id),
+      user_id: Integer.to_string(interaction.member.user.id)
+    }
+
+    case Twitch.follow_stream(format_code(stream_code), guild, follow_info) do
       {:error, :invalid_stream} ->
         %{content: "Invalid Twitch stream!"}
 
@@ -56,5 +56,11 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
 
         %{content: "Following the stream #{stream.code}!"}
     end
+  end
+
+  defp format_code(code) do
+    code
+    |> String.trim()
+    |> String.downcase()
   end
 end

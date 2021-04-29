@@ -35,7 +35,7 @@ defmodule Botchini.Schema.Stream do
     Botchini.Repo.get_by(Stream, twitch_user_id: twitch_user_id)
   end
 
-  @spec find_all_for_guild(String.t()) :: [Stream.t()]
+  @spec find_all_for_guild(String.t()) :: [{String.t(), String.t()}]
   def find_all_for_guild(guild_id) do
     Botchini.Repo.all(
       from(s in Stream,

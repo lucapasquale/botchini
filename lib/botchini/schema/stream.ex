@@ -69,6 +69,7 @@ defmodule Botchini.Schema.Stream do
     struct
     |> cast(params, [:code, :twitch_user_id, :twitch_subscription_id])
     |> validate_required([:code, :twitch_user_id, :twitch_subscription_id])
+    |> unique_constraint(:code)
     |> unique_constraint(:twitch_user_id)
   end
 end

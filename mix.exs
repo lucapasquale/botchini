@@ -36,11 +36,12 @@ defmodule Botchini.MixProject do
       # Logging
       {:ink, "~> 1.0"},
       # Development and testing
-      {:credo, "~> 1.5", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
+      {:mock, "~> 0.3.0", only: :test}
     ]
   end
 
   defp aliases do
-    [test: ["ecto.create --quiet", "ecto.migrate", "test"]]
+    [test: ["ecto.drop", "ecto.create --quiet", "ecto.migrate --quiet", "test"]]
   end
 end

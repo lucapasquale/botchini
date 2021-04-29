@@ -42,6 +42,6 @@ defmodule Botchini.MixProject do
   end
 
   defp aliases do
-    [test: ["ecto.drop", "ecto.create --quiet", "ecto.migrate --quiet", "test"]]
+    [test: ["ecto.drop --quiet", "ecto.create --quiet", "ecto.migrate --quiet", "test"]]
   end
 end

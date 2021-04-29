@@ -37,7 +37,8 @@ defmodule Botchini.MixProject do
       {:ink, "~> 1.0"},
       # Development and testing
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
-      {:mock, "~> 0.3.0", only: :test}
+      {:mock, "~> 0.3.0", only: :test},
+      {:faker, "~> 0.16", only: :test}
     ]
   end
 

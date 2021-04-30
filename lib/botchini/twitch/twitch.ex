@@ -1,7 +1,9 @@
 defmodule Botchini.Twitch do
   @moduledoc """
-  Handles business logic for twitch streams
+  Handles twitch context
   """
+
+  require Ecto.Query
 
   alias Botchini.Repo
   alias Botchini.Guilds.Guild
@@ -66,5 +68,57 @@ defmodule Botchini.Twitch do
       discord_channel_id: channel_id
     })
     |> Repo.insert!()
+  end
+
+  @spec unfollow(String.t(), %{channel_id: String.t()}) :: {:ok} | {:error, :not_found}
+  def unfollow(code, %{channel_id: channel_id}) do
+    case Repo.get_by(Stream, code: code) do
+      nil ->
+        {:error, :not_found}
+
+      stream ->
+        existing_follower =
+          Repo.get_by(Follower,
+            stream_id: stream.id,
+            discord_channel_id: channel_id
+          )
+
+        case existing_follower do
+          nil ->
+            {:error, :not_found}
+
+          follower ->
+            unfollow_stream(stream, follower)
+            {:ok}
+        end
+    end
+  end
+
+  defp unfollow_stream(stream, follower) do
+    Repo.delete(follower)
+
+    remaining_followers =
+      Ecto.Query.where(Follower, stream_id: ^stream.id)
+      |> Repo.all()
+
+    if remaining_followers == [] do
+      API.delete_stream_webhook(stream.twitch_subscription_id)
+      Repo.delete(stream)
+    end
+  end
+
+  @spec guild_following_list(Guild.t()) :: {:ok, [{String.t(), String.t()}]}
+  def guild_following_list(guild) do
+    follow_list =
+      Ecto.Query.from(
+        s in Stream,
+        join: sf in Follower,
+        on: sf.stream_id == s.id,
+        where: sf.guild_id == ^guild.id,
+        select: {sf.discord_channel_id, s.code}
+      )
+      |> Repo.all()
+
+    {:ok, follow_list}
   end
 end

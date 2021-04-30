@@ -6,7 +6,8 @@ defmodule BotchiniDiscord.SlashCommands.Following do
   alias Nostrum.Cache.ChannelCache
   alias Nostrum.Struct.{Embed, Interaction}
 
-  alias Botchini.Domain.Stream
+  alias Botchini.Discord
+  alias Botchini.Twitch
 
   @spec get_command() :: map()
   def get_command,
@@ -17,7 +18,9 @@ defmodule BotchiniDiscord.SlashCommands.Following do
 
   @spec handle_interaction(Interaction.t()) :: map()
   def handle_interaction(interaction) do
-    case Stream.following_list(Integer.to_string(interaction.guild_id)) do
+    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
+
+    case Twitch.guild_following_list(guild) do
       {:ok, streams} when streams == [] ->
         %{content: "Not following any stream!"}
 

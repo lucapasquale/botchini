@@ -1,6 +1,6 @@
-defmodule Botchini.Guilds do
+defmodule Botchini.Discord do
   alias Botchini.Repo
-  alias Botchini.Guilds.Guild
+  alias Botchini.Discord.Guild
 
   @spec upsert_guild(String.t()) :: {:ok, Guild.t()}
   def upsert_guild(discord_guild_id) do

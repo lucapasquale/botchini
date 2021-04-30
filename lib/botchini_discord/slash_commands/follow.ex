@@ -6,7 +6,7 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
   alias Nostrum.Struct.Interaction
 
   alias Botchini.Twitch
-  alias Botchini.Guilds
+  alias Botchini.Discord
   alias BotchiniDiscord.Messages
 
   @spec get_command() :: map()
@@ -26,7 +26,7 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
 
   @spec handle_interaction(Interaction.t(), String.t()) :: map()
   def handle_interaction(interaction, stream_code) do
-    {:ok, guild} = Guilds.upsert_guild(Integer.to_string(interaction.guild_id))
+    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
 
     follow_info = %{
       channel_id: Integer.to_string(interaction.channel_id),

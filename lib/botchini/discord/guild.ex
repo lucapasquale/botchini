@@ -1,4 +1,4 @@
-defmodule Botchini.Guilds.Guild do
+defmodule Botchini.Discord.Guild do
   @moduledoc """
   Schema representing a discord guild
   """
@@ -7,7 +7,7 @@ defmodule Botchini.Guilds.Guild do
   require Ecto.Query
   import Ecto.Changeset
 
-  alias Botchini.Guilds.Guild
+  alias Botchini.Discord.Guild
   alias Botchini.Twitch.{Follower}
 
   @type t :: %__MODULE__{

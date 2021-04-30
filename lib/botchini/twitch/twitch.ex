@@ -5,10 +5,10 @@ defmodule Botchini.Twitch do
 
   require Ecto.Query
 
-  alias Botchini.Discord.Guild
+  alias Botchini.Discord.Schema.Guild
   alias Botchini.Repo
   alias Botchini.Twitch.API
-  alias Botchini.Twitch.{Follower, Stream}
+  alias Botchini.Twitch.Schema.{Follower, Stream}
 
   @spec find_stream_by_twitch_user_id(String.t()) :: nil | Stream.t()
   def find_stream_by_twitch_user_id(twitch_user_id) do

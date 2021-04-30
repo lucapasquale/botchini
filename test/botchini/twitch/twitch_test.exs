@@ -4,8 +4,7 @@ defmodule BotchiniTest.Twitch.TwitchTest do
   import Mock
 
   alias Botchini.{Repo, Twitch}
-  alias Botchini.Twitch.{Follower, Stream}
-  alias Botchini.TestGenerators
+  alias Botchini.Twitch.Schema.{Follower, Stream}
 
   describe "follow" do
     test "create stream, guild and follower, calls twitch API" do
@@ -13,7 +12,7 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       twitch_sub_id = Faker.String.base64()
 
       code = Faker.String.base64()
-      guild = TestGenerators.generate_guild()
+      guild = generate_guild()
       message = generate_message()
 
       with_mock Twitch.API,
@@ -37,8 +36,8 @@ defmodule BotchiniTest.Twitch.TwitchTest do
     end
 
     test "use existing stream" do
-      stream = TestGenerators.generate_stream()
-      guild = TestGenerators.generate_guild()
+      stream = generate_stream()
+      guild = generate_guild()
       message = generate_message()
 
       with_mock Twitch.API,
@@ -55,7 +54,7 @@ defmodule BotchiniTest.Twitch.TwitchTest do
     end
 
     test "invalid_stream if twitch API returns nil" do
-      guild = TestGenerators.generate_guild()
+      guild = generate_guild()
       message = generate_message()
 
       with_mock Twitch.API,
@@ -68,9 +67,9 @@ defmodule BotchiniTest.Twitch.TwitchTest do
     end
 
     test "already_following if channel was already following" do
-      stream = TestGenerators.generate_stream()
-      guild = TestGenerators.generate_guild()
-      follower = TestGenerators.generate_follower(%{stream_id: stream.id, guild_id: guild.id})
+      stream = generate_stream()
+      guild = generate_guild()
+      follower = generate_follower(%{stream_id: stream.id, guild_id: guild.id})
 
       with_mock Twitch.API,
         get_user: fn _code -> %{"id" => stream.twitch_user_id} end,
@@ -84,7 +83,7 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       end
     end
 
-    defp generate_message(),
+    defp generate_message,
       do: %{
         user_id: Faker.String.base64(),
         channel_id: Faker.String.base64()
@@ -93,9 +92,9 @@ defmodule BotchiniTest.Twitch.TwitchTest do
 
   describe "unfollow" do
     test "stop following, and delete stream if no more followers for that stream" do
-      stream = TestGenerators.generate_stream()
-      guild = TestGenerators.generate_guild()
-      follower = TestGenerators.generate_follower(%{stream_id: stream.id, guild_id: guild.id})
+      stream = generate_stream()
+      guild = generate_guild()
+      follower = generate_follower(%{stream_id: stream.id, guild_id: guild.id})
 
       with_mock Twitch.API,
         delete_stream_webhook: fn _ -> :noop end do
@@ -109,11 +108,11 @@ defmodule BotchiniTest.Twitch.TwitchTest do
     end
 
     test "stop following, but DONT delete stream if still has followers" do
-      stream = TestGenerators.generate_stream()
-      guild = TestGenerators.generate_guild()
+      stream = generate_stream()
+      guild = generate_guild()
 
-      follower_1 = TestGenerators.generate_follower(%{stream_id: stream.id, guild_id: guild.id})
-      follower_2 = TestGenerators.generate_follower(%{stream_id: stream.id, guild_id: guild.id})
+      follower_1 = generate_follower(%{stream_id: stream.id, guild_id: guild.id})
+      follower_2 = generate_follower(%{stream_id: stream.id, guild_id: guild.id})
 
       with_mock Twitch.API,
         delete_stream_webhook: fn _ -> :noop end do
@@ -128,9 +127,9 @@ defmodule BotchiniTest.Twitch.TwitchTest do
     end
 
     test "not_found if stream was not found" do
-      stream = TestGenerators.generate_stream()
-      guild = TestGenerators.generate_guild()
-      follower = TestGenerators.generate_follower(%{stream_id: stream.id, guild_id: guild.id})
+      stream = generate_stream()
+      guild = generate_guild()
+      follower = generate_follower(%{stream_id: stream.id, guild_id: guild.id})
 
       with_mock Twitch.API,
         delete_stream_webhook: fn _ -> :noop end do
@@ -145,7 +144,7 @@ defmodule BotchiniTest.Twitch.TwitchTest do
     end
 
     test "not_found if follower was not found" do
-      stream = TestGenerators.generate_stream()
+      stream = generate_stream()
 
       with_mock Twitch.API,
         delete_stream_webhook: fn _ -> :noop end do
@@ -160,13 +159,13 @@ defmodule BotchiniTest.Twitch.TwitchTest do
 
   describe "following_list" do
     test "lists all follower.channel_id and stream.code for a guild" do
-      stream_1 = TestGenerators.generate_stream()
-      stream_2 = TestGenerators.generate_stream()
+      stream_1 = generate_stream()
+      stream_2 = generate_stream()
 
-      guild = TestGenerators.generate_guild()
+      guild = generate_guild()
 
-      follower_1 = TestGenerators.generate_follower(%{stream_id: stream_1.id, guild_id: guild.id})
-      follower_2 = TestGenerators.generate_follower(%{stream_id: stream_2.id, guild_id: guild.id})
+      follower_1 = generate_follower(%{stream_id: stream_1.id, guild_id: guild.id})
+      follower_2 = generate_follower(%{stream_id: stream_2.id, guild_id: guild.id})
 
       {:ok, following_list} = Twitch.guild_following_list(guild)
 
@@ -176,11 +175,11 @@ defmodule BotchiniTest.Twitch.TwitchTest do
     end
 
     test "lists for same stream but different followers" do
-      stream = TestGenerators.generate_stream()
-      guild = TestGenerators.generate_guild()
+      stream = generate_stream()
+      guild = generate_guild()
 
-      follower_1 = TestGenerators.generate_follower(%{stream_id: stream.id, guild_id: guild.id})
-      follower_2 = TestGenerators.generate_follower(%{stream_id: stream.id, guild_id: guild.id})
+      follower_1 = generate_follower(%{stream_id: stream.id, guild_id: guild.id})
+      follower_2 = generate_follower(%{stream_id: stream.id, guild_id: guild.id})
 
       {:ok, following_list} = Twitch.guild_following_list(guild)
 
@@ -190,12 +189,12 @@ defmodule BotchiniTest.Twitch.TwitchTest do
     end
 
     test "ignores followers from other guild" do
-      stream = TestGenerators.generate_stream()
-      guild = TestGenerators.generate_guild()
-      other_guild = TestGenerators.generate_guild()
+      stream = generate_stream()
+      guild = generate_guild()
+      other_guild = generate_guild()
 
-      follower_1 = TestGenerators.generate_follower(%{stream_id: stream.id, guild_id: guild.id})
-      TestGenerators.generate_follower(%{stream_id: stream.id, guild_id: other_guild.id})
+      follower_1 = generate_follower(%{stream_id: stream.id, guild_id: guild.id})
+      generate_follower(%{stream_id: stream.id, guild_id: other_guild.id})
 
       {:ok, following_list} = Twitch.guild_following_list(guild)
 

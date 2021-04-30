@@ -3,7 +3,7 @@ defmodule Botchini.Discord do
   Handles discord context
   """
 
-  alias Botchini.Discord.Guild
+  alias Botchini.Discord.Schema.Guild
   alias Botchini.Repo
 
   @spec upsert_guild(String.t()) :: {:ok, Guild.t()}

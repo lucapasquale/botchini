@@ -1,4 +1,4 @@
-defmodule Botchini.Twitch.Stream do
+defmodule Botchini.Twitch.Schema.Stream do
   @moduledoc """
   Schema representing a twitch stream
   """
@@ -6,7 +6,7 @@ defmodule Botchini.Twitch.Stream do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Botchini.Twitch.{Follower, Stream}
+  alias Botchini.Twitch.Schema.{Follower, Stream}
 
   @type t :: %__MODULE__{
           code: String.t(),

@@ -1,4 +1,4 @@
-defmodule Botchini.Twitch.Follower do
+defmodule Botchini.Twitch.Schema.Follower do
   @moduledoc """
   Schema representing a discord channel following a stream
   """
@@ -7,8 +7,8 @@ defmodule Botchini.Twitch.Follower do
   require Ecto.Query
   import Ecto.Changeset
 
-  alias Botchini.Discord.Guild
-  alias Botchini.Twitch.{Follower, Stream}
+  alias Botchini.Discord.Schema.Guild
+  alias Botchini.Twitch.Schema.{Follower, Stream}
 
   @type t :: %__MODULE__{
           stream_id: String.t(),

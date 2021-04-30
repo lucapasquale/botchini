@@ -1,7 +1,7 @@
 defmodule Botchini.Router do
   use Plug.Router
 
-  alias Botchini.Routes
+  alias Botchini.Twitch.Routes.WebhookCallback
 
   plug(Plug.Logger)
   plug(:match)
@@ -13,8 +13,10 @@ defmodule Botchini.Router do
   end
 
   post "/twitch/webhooks/callback" do
-    %{status: status, body: body} = Routes.Twitch.webhook_callback(conn)
-    send_resp(conn, status, body)
+    case WebhookCallback.call(conn) do
+      {:ok, body} -> send_resp(conn, 200, body)
+      {:error, :not_found} -> send_resp(conn, 404, "Invalid")
+    end
   end
 
   match _ do

@@ -5,8 +5,8 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
 
   alias Nostrum.Struct.Interaction
 
-  alias Botchini.Twitch
   alias Botchini.Discord
+  alias Botchini.Twitch
   alias BotchiniDiscord.Messages
 
   @spec get_command() :: map()

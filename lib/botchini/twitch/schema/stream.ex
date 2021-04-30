@@ -6,7 +6,7 @@ defmodule Botchini.Twitch.Stream do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Botchini.Twitch.{Stream, Follower}
+  alias Botchini.Twitch.{Follower, Stream}
 
   @type t :: %__MODULE__{
           code: String.t(),

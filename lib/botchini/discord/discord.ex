@@ -1,6 +1,10 @@
 defmodule Botchini.Discord do
-  alias Botchini.Repo
+  @moduledoc """
+  Handles discord context
+  """
+
   alias Botchini.Discord.Guild
+  alias Botchini.Repo
 
   @spec upsert_guild(String.t()) :: {:ok, Guild.t()}
   def upsert_guild(discord_guild_id) do

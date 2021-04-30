@@ -7,8 +7,8 @@ defmodule Botchini.Twitch.Follower do
   require Ecto.Query
   import Ecto.Changeset
 
-  alias Botchini.Schema.{Guild}
-  alias Botchini.Twitch.{Stream, Follower}
+  alias Botchini.Discord.Guild
+  alias Botchini.Twitch.{Follower, Stream}
 
   @type t :: %__MODULE__{
           stream_id: String.t(),

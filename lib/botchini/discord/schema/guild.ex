@@ -8,7 +8,7 @@ defmodule Botchini.Discord.Guild do
   import Ecto.Changeset
 
   alias Botchini.Discord.Guild
-  alias Botchini.Twitch.{Follower}
+  alias Botchini.Twitch.Follower
 
   @type t :: %__MODULE__{
           discord_guild_id: String.t()

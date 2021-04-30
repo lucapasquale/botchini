@@ -4,12 +4,13 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "2.4.0",
+      version: "2.5.0",
       elixir: "~> 1.11",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: aliases()
+      aliases: aliases(),
+      elixirc_paths: elixirc_paths(Mix.env())
     ]
   end
 
@@ -45,4 +46,7 @@ defmodule Botchini.MixProject do
   defp aliases do
     [test: ["ecto.drop --quiet", "ecto.create --quiet", "ecto.migrate --quiet", "test"]]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 end

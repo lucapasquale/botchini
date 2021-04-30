@@ -4,9 +4,9 @@ defmodule BotchiniDiscord.SlashCommands do
   """
 
   require Logger
-
   alias Nostrum.Api
   alias Nostrum.Struct.Interaction
+
   alias BotchiniDiscord.SlashCommands.{Follow, Following, Status, Unfollow}
 
   @spec register_commands() :: :ok

@@ -1,32 +1,32 @@
-defmodule Botchini.Routes.Twitch do
+defmodule Botchini.Twitch.Routes.WebhookCallback do
   @moduledoc """
   Routes for twitch events callback
   """
 
   require Logger
 
-  alias Botchini.Domain
-  alias Botchini.Schema.{Stream, StreamFollower}
-  alias Botchini.Twitch.API
+  alias Botchini.Twitch
   alias BotchiniDiscord.Messages.StreamOnline
 
-  @spec webhook_callback(Plug.Conn.t()) :: %{status: Integer.t(), body: String.t()}
-  def webhook_callback(conn) do
+  @spec call(Plug.Conn.t()) :: {:ok, any()} | {:error, :not_found}
+  def call(conn) do
     case get_event_type(conn.body_params) do
       {:unknown, _} ->
-        %{status: 404, body: "Invalid event"}
+        {:error, :not_found}
 
       {:confirm_subscription, challenge} ->
-        %{status: 200, body: challenge}
+        {:ok, challenge}
 
       {:stream_online, subscription} ->
-        case Stream.find_by_twitch_user_id(subscription["condition"]["broadcaster_user_id"]) do
+        twitch_user_id = subscription["condition"]["broadcaster_user_id"]
+
+        case Twitch.find_stream_by_twitch_user_id(twitch_user_id) do
           nil ->
-            %{status: 404, body: "Invalid stream"}
+            {:error, :not_found}
 
           stream ->
             send_stream_online_messages(stream)
-            %{status: 200, body: "OK"}
+            {:ok, "ok"}
         end
     end
   end
@@ -49,11 +49,10 @@ defmodule Botchini.Routes.Twitch do
   end
 
   defp send_stream_online_messages(stream) do
-    user_data = API.get_user(stream.code)
-    stream_data = API.get_stream(stream.code)
+    user_data = Twitch.API.get_user(stream.code)
+    stream_data = Twitch.API.get_stream(stream.code)
 
-    followers = StreamFollower.find_all_for_stream(stream.id)
-
+    followers = Twitch.find_followers_for_stream(stream)
     Logger.info("Stream #{stream.code} is online, sending to #{length(followers)} channels")
 
     Enum.each(followers, fn follower ->
@@ -66,19 +65,10 @@ defmodule Botchini.Routes.Twitch do
   defp send_followers_message(stream, follower, {user_data, stream_data}) do
     channel_id = Map.get(follower, :discord_channel_id)
 
-    msg_response =
-      StreamOnline.send_message(
-        String.to_integer(channel_id),
-        {user_data, stream_data}
-      )
-
-    case msg_response do
+    case StreamOnline.send_message(String.to_integer(channel_id), {user_data, stream_data}) do
       {:error, _err} ->
-        Logger.warn("Removing channel since doesn't exist anymore",
-          channel_id: channel_id
-        )
-
-        Domain.Stream.stop_following(stream.code, channel_id)
+        Logger.warn("Removing channel since doesn't exist anymore", channel_id: channel_id)
+        {:ok} = Twitch.unfollow(stream.code, %{channel_id: channel_id})
 
       _ ->
         :noop

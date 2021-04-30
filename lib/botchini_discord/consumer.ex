@@ -6,7 +6,7 @@ defmodule BotchiniDiscord.Consumer do
   require Logger
   use Nostrum.Consumer
 
-  alias Botchini.Schema.Guild
+  alias Botchini.Discord
   alias BotchiniDiscord.SlashCommands
 
   def start_link do
@@ -23,16 +23,7 @@ defmodule BotchiniDiscord.Consumer do
   end
 
   def handle_event({:GUILD_CREATE, {guild}, _ws_state}) do
-    discord_guild_id = Integer.to_string(guild.id)
-
-    case Guild.find(discord_guild_id) do
-      nil ->
-        Guild.insert(%Guild{discord_guild_id: discord_guild_id})
-        Logger.info("Added new guild", discord_guild_id: discord_guild_id)
-
-      _ ->
-        :noop
-    end
+    Discord.upsert_guild(Integer.to_string(guild.id))
   end
 
   def handle_event({:INTERACTION_CREATE, interaction, _ws_state}) do

@@ -1,6 +1,6 @@
-defmodule BotchiniDiscord.SlashCommands.Status do
+defmodule BotchiniDiscord.SlashCommands.Info do
   @moduledoc """
-  Handles /status slash command
+  Handles /info slash command
   """
 
   import Nostrum.Struct.Embed
@@ -8,7 +8,7 @@ defmodule BotchiniDiscord.SlashCommands.Status do
   @spec get_command() :: map()
   def get_command,
     do: %{
-      name: "status",
+      name: "info",
       description: "Information about the bot"
     }
 
@@ -16,7 +16,7 @@ defmodule BotchiniDiscord.SlashCommands.Status do
   def handle_interaction(_interaction) do
     embed =
       %Nostrum.Struct.Embed{}
-      |> put_title("Botchini status")
+      |> put_title("Botchini information")
       |> put_field("Version", Application.spec(:botchini, :vsn) |> to_string(), true)
       |> put_field("Author", "Luca\#1813", true)
       |> put_field("Source code", "[GitHub](https://github.com/lucapasquale/botchini/)", true)

@@ -8,7 +8,7 @@ Discord Bot with Twitch integration for stream notifications!
 
 ## Slash Commands
 
- - `/status` : Information about the bot, uptime, memory usage, etc.
+ - `/info` : Information about the bot, uptime, memory usage, etc.
  - `/follow <stream_code>` : Follow a stream to be notified when the channel starts streaming
  - `/unfollow <stream_code>` : Stop following a channel
  - `/following` : Lists all channels currently followed

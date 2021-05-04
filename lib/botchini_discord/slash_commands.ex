@@ -7,14 +7,14 @@ defmodule BotchiniDiscord.SlashCommands do
   alias Nostrum.Api
   alias Nostrum.Struct.Interaction
 
-  alias BotchiniDiscord.SlashCommands.{Follow, Following, Status, Unfollow}
+  alias BotchiniDiscord.SlashCommands.{Follow, Following, Info, Unfollow}
 
   @spec register_commands() :: :ok
   def register_commands do
     commands = [
       Follow.get_command(),
       Following.get_command(),
-      Status.get_command(),
+      Info.get_command(),
       Unfollow.get_command()
     ]
 
@@ -31,13 +31,20 @@ defmodule BotchiniDiscord.SlashCommands do
     end)
   end
 
-  @spec handle_interaction(Interaction.t()) :: no_return()
+  @spec handle_interaction(Interaction.t()) :: any()
+  def handle_interaction(interaction) when is_nil(interaction.member) do
+    Nostrum.Api.create_interaction_response(interaction, %{
+      type: 4,
+      data: %{content: "Can't use commands from DMs!"}
+    })
+  end
+
   def handle_interaction(interaction) do
     Logger.metadata(
       interaction_data: interaction.data,
       guild_id: interaction.guild_id,
       channel_id: interaction.channel_id,
-      user_id: if(is_nil(interaction.member), do: nil, else: interaction.member.user.id)
+      user_id: interaction.member.user.id
     )
 
     Logger.info("Interaction received")
@@ -59,39 +66,32 @@ defmodule BotchiniDiscord.SlashCommands do
   end
 
   defp interaction_response(interaction) do
-    if is_nil(interaction.member) do
-      %{content: "Can't use commands from DMs!"}
-    else
-      case parse_interaction(interaction.data) do
-        ["status"] ->
-          Status.handle_interaction(interaction)
+    case parse_interaction(interaction.data) do
+      {"info", []} ->
+        Info.handle_interaction(interaction)
 
-        ["follow", stream_code] ->
-          Follow.handle_interaction(interaction, stream_code)
+      {"follow", [stream_code]} ->
+        Follow.handle_interaction(interaction, stream_code)
 
-        ["unfollow", stream_code] ->
-          Unfollow.handle_interaction(interaction, stream_code)
+      {"unfollow", [stream_code]} ->
+        Unfollow.handle_interaction(interaction, stream_code)
 
-        ["following"] ->
-          Following.handle_interaction(interaction)
+      {"following", []} ->
+        Following.handle_interaction(interaction)
 
-        _ ->
-          Api.create_interaction_response(interaction, %{
-            type: 4,
-            data: %{content: "Unknown command"}
-          })
-      end
+      _ ->
+        %{content: "Unknown command"}
     end
   end
 
-  @spec parse_interaction(map()) :: [String.t()]
+  @spec parse_interaction(map()) :: {String.t(), [String.t()]}
   def parse_interaction(interaction_data) do
     case Map.get(interaction_data, :options) do
       nil ->
-        [interaction_data.name]
+        {interaction_data.name, []}
 
       options ->
-        [interaction_data.name, Enum.at(options, 0).value]
+        {interaction_data.name, Enum.map(options, fn opt -> opt.value end)}
     end
   end
 end

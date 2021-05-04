@@ -4,7 +4,7 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "2.5.0",
+      version: "2.5.1",
       elixir: "~> 1.11",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -32,6 +32,7 @@ defmodule Botchini.MixProject do
       {:tesla, "~> 1.4.0"},
       {:hackney, "~> 1.17.0"},
       {:jason, ">= 1.0.0"},
+      {:exconstructor, "~> 1.1.0"},
       # HTTP Server
       {:plug_cowboy, "~> 2.0"},
       # Logging

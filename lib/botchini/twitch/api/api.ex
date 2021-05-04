@@ -5,6 +5,8 @@ defmodule Botchini.Twitch.API do
 
   use Tesla
 
+  alias Botchini.Twitch.API.Structs.{Stream, User}
+
   plug(Tesla.Middleware.JSON)
   plug(Tesla.Middleware.Logger)
   plug(Botchini.Twitch.AuthMiddleware)
@@ -14,22 +16,28 @@ defmodule Botchini.Twitch.API do
     {"Client-ID", Application.fetch_env!(:botchini, :twitch_client_id)}
   ])
 
-  @spec get_user(String.t()) :: any()
+  @spec get_user(String.t()) :: User.t() | nil
   def get_user(stream_code) do
     {:ok, %{body: body}} = get("/users", query: [login: stream_code])
 
-    body
-    |> Map.get("data")
-    |> List.first()
+    user =
+      body
+      |> Map.get("data")
+      |> List.first()
+
+    if user != nil, do: User.new(user), else: nil
   end
 
-  @spec get_stream(String.t()) :: any()
+  @spec get_stream(String.t()) :: Stream.t() | nil
   def get_stream(stream_code) do
     {:ok, %{body: body}} = get("/streams", query: [user_login: stream_code])
 
-    body
-    |> Map.get("data")
-    |> List.first()
+    stream =
+      body
+      |> Map.get("data")
+      |> List.first()
+
+    if stream != nil, do: Stream.new(stream), else: nil
   end
 
   @spec add_stream_webhook(String.t()) :: any()

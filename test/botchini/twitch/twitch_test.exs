@@ -16,7 +16,7 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       message = generate_message()
 
       with_mock Twitch.API,
-        get_user: fn _code -> %{"id" => twitch_id} end,
+        get_user: fn _code -> %{id: twitch_id} end,
         add_stream_webhook: fn _twitch_id -> %{"id" => twitch_sub_id} end do
         {:ok, stream} = Twitch.follow_stream(code, guild, message)
 
@@ -41,7 +41,7 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       message = generate_message()
 
       with_mock Twitch.API,
-        get_user: fn _code -> %{"id" => stream.twitch_user_id} end,
+        get_user: fn _code -> %{id: stream.twitch_user_id} end,
         add_stream_webhook: fn _twitch_id -> %{"id" => stream.twitch_subscription_id} end do
         {:ok, returned_stream} = Twitch.follow_stream(stream.code, guild, message)
         assert stream.id == returned_stream.id
@@ -72,7 +72,7 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       follower = generate_follower(%{stream_id: stream.id, guild_id: guild.id})
 
       with_mock Twitch.API,
-        get_user: fn _code -> %{"id" => stream.twitch_user_id} end,
+        get_user: fn _code -> %{id: stream.twitch_user_id} end,
         add_stream_webhook: fn _twitch_id -> %{"id" => stream.twitch_subscription_id} end do
         message = %{
           channel_id: follower.discord_channel_id,

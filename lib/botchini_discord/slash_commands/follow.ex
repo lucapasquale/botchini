@@ -5,8 +5,7 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
 
   alias Nostrum.Struct.Interaction
 
-  alias Botchini.Discord
-  alias Botchini.Twitch
+  alias Botchini.{Discord, Twitch}
   alias BotchiniDiscord.Messages
 
   @spec get_command() :: map()
@@ -18,7 +17,7 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
         %{
           type: 3,
           name: "stream",
-          description: "twitch stream code",
+          description: "Twitch stream code",
           required: true
         }
       ]
@@ -41,19 +40,7 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
         %{content: "Already following!"}
 
       {:ok, stream} ->
-        case Twitch.API.get_stream(stream.code) do
-          nil ->
-            :noop
-
-          stream_data ->
-            user_data = Twitch.API.get_user(stream.code)
-
-            Messages.StreamOnline.send_message(
-              interaction.channel_id,
-              {user_data, stream_data}
-            )
-        end
-
+        send_stream_online_message(interaction.channel_id, stream)
         %{content: "Following the stream #{stream.code}!"}
     end
   end
@@ -62,5 +49,13 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
     code
     |> String.trim()
     |> String.downcase()
+  end
+
+  defp send_stream_online_message(channel_id, stream) do
+    {:ok, {user, stream_data}} = Twitch.stream_info(stream.code)
+
+    if stream_data != nil do
+      Messages.StreamOnline.send_message(channel_id, {user, stream_data})
+    end
   end
 end

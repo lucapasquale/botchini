@@ -49,23 +49,22 @@ defmodule Botchini.Twitch.Routes.WebhookCallback do
   end
 
   defp send_stream_online_messages(stream) do
-    user_data = Twitch.API.get_user(stream.code)
-    stream_data = Twitch.API.get_stream(stream.code)
+    {:ok, {user, stream_data}} = Twitch.stream_info(stream.code)
 
     followers = Twitch.find_followers_for_stream(stream)
     Logger.info("Stream #{stream.code} is online, sending to #{length(followers)} channels")
 
     Enum.each(followers, fn follower ->
       Task.start(fn ->
-        send_followers_message(stream, follower, {user_data, stream_data})
+        send_followers_message(stream, follower, {user, stream_data})
       end)
     end)
   end
 
-  defp send_followers_message(stream, follower, {user_data, stream_data}) do
-    channel_id = Map.get(follower, :discord_channel_id)
+  defp send_followers_message(stream, follower, {user, stream_data}) do
+    channel_id = follower.discord_channel_id
 
-    case StreamOnline.send_message(String.to_integer(channel_id), {user_data, stream_data}) do
+    case StreamOnline.send_message(String.to_integer(channel_id), {user, stream_data}) do
       {:error, _err} ->
         Logger.warn("Removing channel since doesn't exist anymore", channel_id: channel_id)
         {:ok} = Twitch.unfollow(stream.code, %{channel_id: channel_id})

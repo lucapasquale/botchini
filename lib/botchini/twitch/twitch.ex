@@ -8,6 +8,7 @@ defmodule Botchini.Twitch do
   alias Botchini.Discord.Schema.Guild
   alias Botchini.Repo
   alias Botchini.Twitch.API
+  alias Botchini.Twitch.API.Structs
   alias Botchini.Twitch.Schema.{Follower, Stream}
 
   @spec find_stream_by_twitch_user_id(String.t()) :: nil | Stream.t()
@@ -86,6 +87,18 @@ defmodule Botchini.Twitch do
     {:ok, follow_list}
   end
 
+  @spec stream_info(String.t()) ::
+          {:error, :not_found} | {:ok, {Structs.User.t(), Structs.Stream.t() | nil}}
+  def stream_info(code) do
+    case API.get_user(code) do
+      nil ->
+        {:error, :not_found}
+
+      user ->
+        {:ok, {user, API.get_stream(code)}}
+    end
+  end
+
   defp upsert_stream(code) do
     case Repo.get_by(Stream, code: code) do
       %Stream{} = existing ->
@@ -96,13 +109,13 @@ defmodule Botchini.Twitch do
           nil ->
             {:error, :invalid_stream}
 
-          twitch_user ->
-            event_subscription = API.add_stream_webhook(twitch_user["id"])
+          user ->
+            event_subscription = API.add_stream_webhook(user.id)
 
             %Stream{}
             |> Stream.changeset(%{
               code: code,
-              twitch_user_id: twitch_user["id"],
+              twitch_user_id: user.id,
               twitch_subscription_id: event_subscription["id"]
             })
             |> Repo.insert()

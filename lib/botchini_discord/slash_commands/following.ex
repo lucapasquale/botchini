@@ -6,8 +6,7 @@ defmodule BotchiniDiscord.SlashCommands.Following do
   alias Nostrum.Cache.ChannelCache
   alias Nostrum.Struct.{Embed, Interaction}
 
-  alias Botchini.Discord
-  alias Botchini.Twitch
+  alias Botchini.{Discord, Twitch}
 
   @spec get_command() :: map()
   def get_command,

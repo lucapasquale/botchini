@@ -56,15 +56,21 @@ defmodule Botchini.Twitch.Routes.WebhookCallback do
 
     Enum.each(followers, fn follower ->
       Task.start(fn ->
-        send_followers_message(stream, follower, {user, stream_data})
+        notify_followers(stream, follower, {user, stream_data})
       end)
     end)
   end
 
-  defp send_followers_message(stream, follower, {user, stream_data}) do
+  defp notify_followers(stream, follower, {user, stream_data}) do
     channel_id = follower.discord_channel_id
 
-    case StreamOnline.send_message(String.to_integer(channel_id), {user, stream_data}) do
+    msg_response =
+      Nostrum.Api.create_message(
+        String.to_integer(channel_id),
+        embed: StreamOnline.generate_embed(user, stream_data)
+      )
+
+    case msg_response do
       {:error, _err} ->
         Logger.warn("Removing channel since doesn't exist anymore", channel_id: channel_id)
         {:ok} = Twitch.unfollow(stream.code, %{channel_id: channel_id})

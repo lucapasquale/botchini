@@ -8,8 +8,8 @@ defmodule Botchini.Twitch do
   alias Botchini.Discord.Schema.Guild
   alias Botchini.Repo
   alias Botchini.Twitch.API
-  alias Botchini.Twitch.Schema.{Follower, Stream}
   alias Botchini.Twitch.API.Structs
+  alias Botchini.Twitch.Schema.{Follower, Stream}
 
   @spec find_stream_by_twitch_user_id(String.t()) :: nil | Stream.t()
   def find_stream_by_twitch_user_id(twitch_user_id) do

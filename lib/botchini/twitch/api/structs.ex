@@ -1,4 +1,8 @@
 defmodule Botchini.Twitch.API.Structs.User do
+  @moduledoc """
+  User from Twitch API
+  """
+
   defstruct id: "",
             login: "",
             display_name: "",
@@ -27,6 +31,10 @@ defmodule Botchini.Twitch.API.Structs.User do
 end
 
 defmodule Botchini.Twitch.API.Structs.Stream do
+  @moduledoc """
+  Stream from Twitch API
+  """
+
   defstruct id: "",
             user_id: "",
             user_login: "",

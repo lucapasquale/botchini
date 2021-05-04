@@ -90,12 +90,11 @@ defmodule BotchiniDiscord.SlashCommands do
 
   @spec parse_interaction(map()) :: {String.t(), [String.t()]}
   def parse_interaction(interaction_data) do
-    case Map.get(interaction_data, :options) do
-      nil ->
-        {interaction_data.name, []}
+    arguments =
+      interaction_data
+      |> Map.get(:options, [])
+      |> Enum.map(fn opt -> opt.value end)
 
-      options ->
-        {interaction_data.name, Enum.map(options, fn opt -> opt.value end)}
-    end
+    {interaction_data.name, arguments}
   end
 end

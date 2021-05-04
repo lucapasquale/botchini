@@ -60,7 +60,7 @@ defmodule Botchini.Twitch.API.Structs.Stream do
           type: String.t(),
           title: String.t(),
           viewer_count: integer(),
-          started_at: DateTime.t(),
+          started_at: String.t(),
           language: String.t(),
           thumbnail_url: String.t(),
           tag_ids: [String.t()],

@@ -7,7 +7,7 @@ defmodule BotchiniDiscord.SlashCommands do
   alias Nostrum.Api
   alias Nostrum.Struct.Interaction
 
-  alias BotchiniDiscord.SlashCommands.{Follow, Following, Info, Unfollow}
+  alias BotchiniDiscord.SlashCommands.{Follow, Following, Info, Stream, Unfollow}
 
   @spec register_commands() :: :ok
   def register_commands do
@@ -15,6 +15,7 @@ defmodule BotchiniDiscord.SlashCommands do
       Follow.get_command(),
       Following.get_command(),
       Info.get_command(),
+      Stream.get_command(),
       Unfollow.get_command()
     ]
 
@@ -69,6 +70,9 @@ defmodule BotchiniDiscord.SlashCommands do
     case parse_interaction(interaction.data) do
       {"info", []} ->
         Info.handle_interaction(interaction)
+
+      {"stream", [stream_code]} ->
+        Stream.handle_interaction(interaction, stream_code)
 
       {"follow", [stream_code]} ->
         Follow.handle_interaction(interaction, stream_code)

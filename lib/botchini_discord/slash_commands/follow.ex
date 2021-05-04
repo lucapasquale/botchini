@@ -6,7 +6,7 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
   alias Nostrum.Struct.Interaction
 
   alias Botchini.{Discord, Twitch}
-  alias BotchiniDiscord.Messages
+  alias BotchiniDiscord.Messages.StreamOnline
 
   @spec get_command() :: map()
   def get_command,
@@ -55,7 +55,10 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
     {:ok, {user, stream_data}} = Twitch.stream_info(stream.code)
 
     if stream_data != nil do
-      Messages.StreamOnline.send_message(channel_id, {user, stream_data})
+      Nostrum.Api.create_message(
+        channel_id,
+        embed: StreamOnline.generate_embed(user, stream_data)
+      )
     end
   end
 end

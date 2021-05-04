@@ -16,7 +16,7 @@ defmodule BotchiniDiscord.SlashCommands.Unfollow do
         %{
           type: 3,
           name: "stream",
-          description: "twitch stream code",
+          description: "Twitch stream code",
           required: true
         }
       ]

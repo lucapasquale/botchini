@@ -13,7 +13,7 @@ defmodule BotchiniDiscord.SlashCommands.Following do
   def get_command,
     do: %{
       name: "following",
-      description: "List streams"
+      description: "List followed streams by channel"
     }
 
   @spec handle_interaction(Interaction.t()) :: map()

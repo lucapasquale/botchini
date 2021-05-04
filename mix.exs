@@ -32,6 +32,7 @@ defmodule Botchini.MixProject do
       {:tesla, "~> 1.4.0"},
       {:hackney, "~> 1.17.0"},
       {:jason, ">= 1.0.0"},
+      {:exconstructor, "~> 1.1.0"},
       # HTTP Server
       {:plug_cowboy, "~> 2.0"},
       # Logging

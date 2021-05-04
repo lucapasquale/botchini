@@ -17,9 +17,9 @@ defmodule BotchiniDiscord.Messages.TwitchUser do
     |> put_title(user.display_name)
     |> put_description(user.description)
     |> put_url(stream_url)
-    |> put_footer("Since")
     |> put_thumbnail(user.profile_image_url)
     |> put_color(6_570_404)
+    |> put_footer("Since")
     |> put_timestamp(user.created_at)
   end
 end

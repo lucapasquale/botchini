@@ -33,9 +33,7 @@ defmodule BotchiniDiscord.SlashCommands.Stream do
         %{embeds: [TwitchUser.generate_embed(user)]}
 
       {:ok, {user, stream}} ->
-        if stream != nil do
-          %{embeds: [StreamOnline.generate_embed(user, stream)]}
-        end
+        %{embeds: [StreamOnline.generate_embed(user, stream)]}
     end
   end
 end

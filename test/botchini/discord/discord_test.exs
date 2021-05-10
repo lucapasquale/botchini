@@ -1,10 +1,7 @@
 defmodule BotchiniTest.Discord.DiscordTest do
   use Botchini.DataCase, async: false
 
-  import Mock
-
-  alias Botchini.{Discord, Repo}
-  alias Botchini.Discord.Schema.Guild
+  alias Botchini.{Discord}
 
   describe "upsert_guild" do
     test "create new guild if doesnt exist" do

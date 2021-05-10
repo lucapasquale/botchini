@@ -12,7 +12,7 @@ defmodule Botchini.Twitch.API.Structs.User do
             profile_image_url: "",
             offline_image_url: "",
             view_count: 0,
-            created_at: DateTime.now!("Etc/UTC")
+            created_at: ""
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -24,7 +24,7 @@ defmodule Botchini.Twitch.API.Structs.User do
           profile_image_url: String.t(),
           offline_image_url: String.t(),
           view_count: integer(),
-          created_at: DateTime.t()
+          created_at: String.t()
         }
 
   use ExConstructor
@@ -44,7 +44,7 @@ defmodule Botchini.Twitch.API.Structs.Stream do
             type: "",
             title: "",
             viewer_count: 0,
-            started_at: DateTime.now!("Etc/UTC"),
+            started_at: "",
             language: "",
             thumbnail_url: "",
             tag_ids: [],
@@ -60,7 +60,7 @@ defmodule Botchini.Twitch.API.Structs.Stream do
           type: String.t(),
           title: String.t(),
           viewer_count: integer(),
-          started_at: DateTime.t(),
+          started_at: String.t(),
           language: String.t(),
           thumbnail_url: String.t(),
           tag_ids: [String.t()],

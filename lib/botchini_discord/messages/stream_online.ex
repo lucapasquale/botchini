@@ -29,6 +29,6 @@ defmodule BotchiniDiscord.Messages.StreamOnline do
     |> put_field("Game", stream.game_name, true)
     |> put_field("Viewer count", Integer.to_string(stream.viewer_count), true)
     |> put_footer("Since")
-    |> put_timestamp(DateTime.to_iso8601(stream.started_at))
+    |> put_timestamp(stream.started_at)
   end
 end

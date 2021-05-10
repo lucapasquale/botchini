@@ -20,6 +20,6 @@ defmodule BotchiniDiscord.Messages.TwitchUser do
     |> put_thumbnail(user.profile_image_url)
     |> put_color(6_570_404)
     |> put_footer("Since")
-    |> put_timestamp(DateTime.to_iso8601(user.created_at))
+    |> put_timestamp(user.created_at)
   end
 end

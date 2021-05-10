@@ -56,13 +56,11 @@ defmodule BotchiniDiscord.SlashCommands do
         data: interaction_response(interaction)
       })
     rescue
-      err ->
+      _err ->
         Nostrum.Api.create_interaction_response(interaction, %{
           type: 4,
           data: %{content: "Something went wrong :("}
         })
-
-        Logger.error("Interaction error", error_message: err.message)
     end
   end
 

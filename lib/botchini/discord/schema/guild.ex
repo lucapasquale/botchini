@@ -22,7 +22,7 @@ defmodule Botchini.Discord.Schema.Guild do
     timestamps()
   end
 
-  @doc false
+  @spec changeset(Guild.t() | map(), any()) :: Ecto.Changeset.t()
   def changeset(%Guild{} = guild, attrs \\ %{}) do
     guild
     |> cast(attrs, [:discord_guild_id])

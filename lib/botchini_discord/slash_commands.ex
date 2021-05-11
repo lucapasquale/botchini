@@ -33,19 +33,14 @@ defmodule BotchiniDiscord.SlashCommands do
   end
 
   @spec handle_interaction(Interaction.t()) :: any()
-  def handle_interaction(interaction) when is_nil(interaction.member) do
-    Nostrum.Api.create_interaction_response(interaction, %{
-      type: 4,
-      data: %{content: "Can't use commands from DMs!"}
-    })
-  end
-
   def handle_interaction(interaction) do
+    IO.inspect(interaction)
+
     Logger.metadata(
       interaction_data: interaction.data,
       guild_id: interaction.guild_id,
       channel_id: interaction.channel_id,
-      user_id: interaction.member.user.id
+      user_id: interaction.member && interaction.member.user.id
     )
 
     Logger.info("Interaction received")
@@ -56,7 +51,9 @@ defmodule BotchiniDiscord.SlashCommands do
         data: interaction_response(interaction)
       })
     rescue
-      _err ->
+      err ->
+        Logger.error(err)
+
         Nostrum.Api.create_interaction_response(interaction, %{
           type: 4,
           data: %{content: "Something went wrong :("}

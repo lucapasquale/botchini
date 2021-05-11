@@ -23,7 +23,10 @@ defmodule Botchini.Twitch do
     |> Botchini.Repo.all()
   end
 
-  @spec follow_stream(String.t(), Guild.t(), %{channel_id: String.t(), user_id: String.t()}) ::
+  @spec follow_stream(String.t(), Guild.t() | nil, %{
+          channel_id: String.t(),
+          user_id: String.t() | nil
+        }) ::
           {:ok, Stream.t()} | {:error, :invalid_stream} | {:error, :already_following}
   def follow_stream(code, guild, follower_info) do
     case upsert_stream(code) do
@@ -126,8 +129,8 @@ defmodule Botchini.Twitch do
   defp insert_follower(stream, guild, %{channel_id: channel_id, user_id: user_id}) do
     %Follower{}
     |> Follower.changeset(%{
-      guild_id: guild.id,
       stream_id: stream.id,
+      guild_id: guild && guild.id,
       discord_user_id: user_id,
       discord_channel_id: channel_id
     })

@@ -25,11 +25,11 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
 
   @spec handle_interaction(Interaction.t(), String.t()) :: map()
   def handle_interaction(interaction, stream_code) do
-    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
+    guild = get_guild(interaction)
 
     follow_info = %{
       channel_id: Integer.to_string(interaction.channel_id),
-      user_id: Integer.to_string(interaction.member.user.id)
+      user_id: interaction.member && Integer.to_string(interaction.member.user.id)
     }
 
     case Twitch.follow_stream(format_code(stream_code), guild, follow_info) do
@@ -45,6 +45,15 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
     end
   end
 
+  defp get_guild(interaction) do
+    if is_nil(interaction.guild_id) do
+      nil
+    else
+      {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
+      guild
+    end
+  end
+
   defp format_code(code) do
     code
     |> String.trim()
@@ -52,12 +61,12 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
   end
 
   defp send_stream_online_message(channel_id, stream) do
-    {:ok, {user, stream_data}} = Twitch.stream_info(stream.code)
+    {:ok, {user_data, stream_data}} = Twitch.stream_info(stream.code)
 
     if stream_data != nil do
       Nostrum.Api.create_message(
         channel_id,
-        embed: StreamOnline.generate_embed(user, stream_data)
+        embed: StreamOnline.generate_embed(user_data, stream_data)
       )
     end
   end

@@ -34,8 +34,6 @@ defmodule BotchiniDiscord.SlashCommands do
 
   @spec handle_interaction(Interaction.t()) :: any()
   def handle_interaction(interaction) do
-    IO.inspect(interaction)
-
     Logger.metadata(
       interaction_data: interaction.data,
       guild_id: interaction.guild_id,

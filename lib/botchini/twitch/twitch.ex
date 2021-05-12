@@ -20,7 +20,7 @@ defmodule Botchini.Twitch do
   def find_followers_for_stream(stream) do
     Follower
     |> Ecto.Query.where(stream_id: ^stream.id)
-    |> Botchini.Repo.all()
+    |> Repo.all()
   end
 
   @spec follow_stream(String.t(), Guild.t() | nil, %{
@@ -84,6 +84,21 @@ defmodule Botchini.Twitch do
         on: sf.stream_id == s.id,
         where: sf.guild_id == ^guild.id,
         select: {sf.discord_channel_id, s.code}
+      )
+      |> Repo.all()
+
+    {:ok, follow_list}
+  end
+
+  @spec channel_following_list(String.t()) :: {:ok, [String.t()]}
+  def channel_following_list(channel_id) do
+    follow_list =
+      Ecto.Query.from(
+        s in Stream,
+        join: sf in Follower,
+        on: sf.stream_id == s.id,
+        where: sf.discord_channel_id == ^channel_id,
+        select: s.code
       )
       |> Repo.all()
 

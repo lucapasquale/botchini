@@ -53,6 +53,21 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       end
     end
 
+    test "follow from DM" do
+      stream = generate_stream()
+      message = %{channel_id: Faker.String.base64(), user_id: nil}
+
+      with_mock Twitch.API,
+        get_user: fn _code -> %{id: stream.twitch_user_id} end,
+        add_stream_webhook: fn _twitch_id -> %{"id" => stream.twitch_subscription_id} end do
+        {:ok, _stream} = Twitch.follow_stream(stream.code, nil, message)
+
+        follower = Repo.get_by(Follower, stream_id: stream.id)
+        assert follower.discord_user_id == nil
+        assert follower.discord_channel_id == message.channel_id
+      end
+    end
+
     test "invalid_stream if twitch API returns nil" do
       guild = generate_guild()
       message = generate_message()
@@ -157,7 +172,7 @@ defmodule BotchiniTest.Twitch.TwitchTest do
     end
   end
 
-  describe "following_list" do
+  describe "guild_following_list" do
     test "lists all follower.channel_id and stream.code for a guild" do
       stream_1 = generate_stream()
       stream_2 = generate_stream()
@@ -200,6 +215,31 @@ defmodule BotchiniTest.Twitch.TwitchTest do
 
       assert length(following_list) == 1
       assert Enum.at(following_list, 0) == {follower_1.discord_channel_id, stream.code}
+    end
+  end
+
+  describe "channel_following_list" do
+    test "lists all follower.channel_id and stream.code for a guild" do
+      stream_1 = generate_stream()
+      stream_2 = generate_stream()
+
+      discord_channel_id = Faker.String.base64()
+      generate_follower(%{stream_id: stream_1.id, discord_channel_id: discord_channel_id})
+      generate_follower(%{stream_id: stream_2.id, discord_channel_id: discord_channel_id})
+
+      {:ok, following_list} = Twitch.channel_following_list(discord_channel_id)
+      assert following_list == [stream_1.code, stream_2.code]
+    end
+
+    test "ignores followers from other channel" do
+      stream = generate_stream()
+
+      discord_channel_id = Faker.String.base64()
+      generate_follower(%{stream_id: stream.id, discord_channel_id: discord_channel_id})
+      generate_follower(%{stream_id: stream.id, discord_channel_id: Faker.String.base64()})
+
+      {:ok, following_list} = Twitch.channel_following_list(discord_channel_id)
+      assert following_list == [stream.code]
     end
   end
 end

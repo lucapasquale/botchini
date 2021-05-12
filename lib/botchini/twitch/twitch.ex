@@ -20,10 +20,13 @@ defmodule Botchini.Twitch do
   def find_followers_for_stream(stream) do
     Follower
     |> Ecto.Query.where(stream_id: ^stream.id)
-    |> Botchini.Repo.all()
+    |> Repo.all()
   end
 
-  @spec follow_stream(String.t(), Guild.t(), %{channel_id: String.t(), user_id: String.t()}) ::
+  @spec follow_stream(String.t(), Guild.t() | nil, %{
+          channel_id: String.t(),
+          user_id: String.t() | nil
+        }) ::
           {:ok, Stream.t()} | {:error, :invalid_stream} | {:error, :already_following}
   def follow_stream(code, guild, follower_info) do
     case upsert_stream(code) do
@@ -87,6 +90,21 @@ defmodule Botchini.Twitch do
     {:ok, follow_list}
   end
 
+  @spec channel_following_list(String.t()) :: {:ok, [String.t()]}
+  def channel_following_list(channel_id) do
+    follow_list =
+      Ecto.Query.from(
+        s in Stream,
+        join: sf in Follower,
+        on: sf.stream_id == s.id,
+        where: sf.discord_channel_id == ^channel_id,
+        select: s.code
+      )
+      |> Repo.all()
+
+    {:ok, follow_list}
+  end
+
   @spec stream_info(String.t()) ::
           {:error, :not_found} | {:ok, {Structs.User.t(), Structs.Stream.t() | nil}}
   def stream_info(code) do
@@ -126,8 +144,8 @@ defmodule Botchini.Twitch do
   defp insert_follower(stream, guild, %{channel_id: channel_id, user_id: user_id}) do
     %Follower{}
     |> Follower.changeset(%{
-      guild_id: guild.id,
       stream_id: stream.id,
+      guild_id: guild && guild.id,
       discord_user_id: user_id,
       discord_channel_id: channel_id
     })

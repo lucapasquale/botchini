@@ -24,7 +24,7 @@ defmodule Botchini.Twitch.Schema.Stream do
     timestamps()
   end
 
-  @doc false
+  @spec changeset(Stream.t() | map(), any()) :: Ecto.Changeset.t()
   def changeset(%Stream{} = stream, attrs \\ %{}) do
     stream
     |> cast(attrs, [:code, :twitch_user_id, :twitch_subscription_id])

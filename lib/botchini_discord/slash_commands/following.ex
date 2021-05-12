@@ -16,26 +16,36 @@ defmodule BotchiniDiscord.SlashCommands.Following do
     }
 
   @spec handle_interaction(Interaction.t()) :: map()
+  def handle_interaction(interaction) when is_nil(interaction.guild_id) do
+    case Twitch.channel_following_list(Integer.to_string(interaction.channel_id)) do
+      {:ok, following} when following == [] ->
+        %{content: "Not following any stream!"}
+
+      {:ok, following} ->
+        %{content: "Following streams:\n#{Enum.join(following, "\n")}"}
+    end
+  end
+
   def handle_interaction(interaction) do
     {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
 
     case Twitch.guild_following_list(guild) do
-      {:ok, streams} when streams == [] ->
+      {:ok, following} when following == [] ->
         %{content: "Not following any stream!"}
 
-      {:ok, streams} ->
-        %{embeds: [following_streams_embed(streams)]}
+      {:ok, following} ->
+        %{embeds: [guild_following_embed(following)]}
     end
   end
 
-  defp following_streams_embed(streams) do
-    channel_groups = Enum.group_by(streams, fn {channel_id, _} -> channel_id end)
+  defp guild_following_embed(following) do
+    channel_groups = Enum.group_by(following, fn {channel_id, _} -> channel_id end)
 
     fields =
       channel_groups
-      |> Enum.reduce([], fn {channel_id, streams}, acc ->
+      |> Enum.reduce([], fn {channel_id, following}, acc ->
         {:ok, channel} = ChannelCache.get(String.to_integer(channel_id))
-        stream_codes = Enum.map(streams, &elem(&1, 1))
+        stream_codes = Enum.map(following, &elem(&1, 1))
 
         acc ++
           [

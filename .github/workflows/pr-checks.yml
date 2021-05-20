@@ -3,8 +3,8 @@ on: pull_request
 
 env:
   MIX_ENV: test
-  ELIXIR_VER: 1.12.0
-  OTP_VER: 24
+  ELIXIR_VER: 1.11.2
+  OTP_VER: 23
 
 jobs:
   check-format:

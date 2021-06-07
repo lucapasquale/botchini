@@ -5,7 +5,7 @@ defmodule BotchiniDiscord.SlashCommands do
 
   require Logger
   alias Nostrum.Api
-  alias Nostrum.Struct.Interaction
+  alias Nostrum.Struct.{ApplicationCommandInteractionData, Interaction}
 
   alias BotchiniDiscord.SlashCommands.{Follow, Following, Info, Stream, Unfollow}
 
@@ -43,11 +43,25 @@ defmodule BotchiniDiscord.SlashCommands do
 
     Logger.info("Interaction received")
 
+    IO.inspect(interaction)
+
     try do
       Nostrum.Api.create_interaction_response(interaction, %{
         type: 4,
-        data: interaction_response(interaction)
+        # data: interaction_response(interaction)
+        data: %{
+          content: "test",
+          components: [
+            %{
+              type: 1,
+              components: [
+                %{type: 2, label: "Click me", style: 1, custom_id: "click_one"}
+              ]
+            }
+          ]
+        }
       })
+      |> IO.inspect()
     rescue
       err ->
         Logger.error(err)
@@ -81,7 +95,7 @@ defmodule BotchiniDiscord.SlashCommands do
     end
   end
 
-  @spec parse_interaction(map()) :: {String.t(), [String.t()]}
+  @spec parse_interaction(ApplicationCommandInteractionData.t()) :: {String.t(), [String.t()]}
   def parse_interaction(interaction_data) do
     arguments =
       interaction_data

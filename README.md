@@ -4,7 +4,7 @@ Discord Bot with Twitch integration for stream notifications!
 
 ## [Add it to your server](https://discord.com/api/oauth2/authorize?client_id=814896826569195561&permissions=2048&scope=bot%20applications.commands)
 
-![image](https://user-images.githubusercontent.com/15659967/117481302-2ee9c100-af39-11eb-99bb-11c111b1c35c.png)
+![image](https://user-images.githubusercontent.com/15659967/121256832-5bb82d80-c883-11eb-8346-44cf02c37ceb.png)
 
 ## Slash Commands
 

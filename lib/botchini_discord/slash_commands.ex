@@ -43,14 +43,11 @@ defmodule BotchiniDiscord.SlashCommands do
 
     Logger.info("Interaction received")
 
-    IO.inspect(interaction)
-
     try do
       Nostrum.Api.create_interaction_response(interaction, %{
         type: 4,
         data: interaction_response(interaction)
       })
-      |> IO.inspect()
     rescue
       err ->
         Logger.error(err)
@@ -70,16 +67,10 @@ defmodule BotchiniDiscord.SlashCommands do
       {:command, ["stream", stream_code]} ->
         Stream.handle_interaction(interaction, stream_code)
 
-      {:command, ["follow", stream_code]} ->
+      {_, ["follow", stream_code]} ->
         Follow.handle_interaction(interaction, stream_code)
 
-      {:component, ["follow", stream_code]} ->
-        Follow.handle_interaction(interaction, stream_code)
-
-      {:command, ["unfollow", stream_code]} ->
-        Unfollow.handle_interaction(interaction, stream_code)
-
-      {:component, ["unfollow", stream_code]} ->
+      {_, ["unfollow", stream_code]} ->
         Unfollow.handle_interaction(interaction, stream_code)
 
       {:command, ["following"]} ->
@@ -90,7 +81,7 @@ defmodule BotchiniDiscord.SlashCommands do
     end
   end
 
-  @spec parse_interaction(map()) :: {:command, [String.t()]} | {:component, [String.t()]}
+  @spec parse_interaction(map()) :: {:command | :component, [String.t()]}
   def parse_interaction(interaction_data) do
     case Map.get(interaction_data, :custom_id) do
       nil ->

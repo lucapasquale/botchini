@@ -6,7 +6,7 @@ defmodule Botchini.Twitch.Routes.WebhookCallback do
   require Logger
 
   alias Botchini.Twitch
-  alias BotchiniDiscord.Messages.StreamOnline
+  alias BotchiniDiscord.Responses.{Components, Embeds}
 
   @spec call(Plug.Conn.t()) :: {:ok, any()} | {:error, :not_found}
   def call(conn) do
@@ -67,20 +67,8 @@ defmodule Botchini.Twitch.Routes.WebhookCallback do
     msg_response =
       Nostrum.Api.create_message(
         String.to_integer(channel_id),
-        embed: StreamOnline.generate_embed(user, stream_data),
-        components: [
-          %{
-            type: 1,
-            components: [
-              %{
-                type: 2,
-                style: 4,
-                label: "Unfollow stream",
-                custom_id: "unfollow:#{stream.code}"
-              }
-            ]
-          }
-        ]
+        embed: Embeds.stream_online(user, stream_data),
+        components: [Components.unfollow_stream(stream.code)]
       )
 
     case msg_response do

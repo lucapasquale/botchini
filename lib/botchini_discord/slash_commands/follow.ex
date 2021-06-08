@@ -6,7 +6,7 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
   alias Nostrum.Struct.Interaction
 
   alias Botchini.{Discord, Twitch}
-  alias BotchiniDiscord.Messages.StreamOnline
+  alias BotchiniDiscord.Responses.{Components, Embeds}
 
   @spec get_command() :: map()
   def get_command,
@@ -40,7 +40,12 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
         %{content: "Already following!"}
 
       {:ok, stream} ->
-        send_stream_online_message(interaction.channel_id, stream)
+        spawn(fn ->
+          # Waits for the slash command response so it shows message after it
+          :timer.sleep(500)
+          send_stream_online_message(interaction.channel_id, stream)
+        end)
+
         %{content: "Following the stream #{stream.code}!"}
     end
   end
@@ -66,7 +71,8 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
     if stream_data != nil do
       Nostrum.Api.create_message(
         channel_id,
-        embed: StreamOnline.generate_embed(user_data, stream_data)
+        embed: Embeds.stream_online(user_data, stream_data),
+        components: [Components.unfollow_stream(stream.code)]
       )
     end
   end

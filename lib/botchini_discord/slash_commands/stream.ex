@@ -6,7 +6,7 @@ defmodule BotchiniDiscord.SlashCommands.Stream do
   alias Nostrum.Struct.Interaction
 
   alias Botchini.Twitch
-  alias BotchiniDiscord.Messages.{StreamOnline, TwitchUser}
+  alias BotchiniDiscord.Responses.{Components, Embeds}
 
   @spec get_command() :: map()
   def get_command,
@@ -29,11 +29,11 @@ defmodule BotchiniDiscord.SlashCommands.Stream do
       {:error, :not_found} ->
         %{content: "Invalid Twitch stream!"}
 
-      {:ok, {user, nil}} ->
-        %{embeds: [TwitchUser.generate_embed(user)]}
-
-      {:ok, {user, stream}} ->
-        %{embeds: [StreamOnline.generate_embed(user, stream)]}
+      {:ok, {user, _}} ->
+        %{
+          embeds: [Embeds.twitch_user(user)],
+          components: [Components.follow_stream(stream_code)]
+        }
     end
   end
 end

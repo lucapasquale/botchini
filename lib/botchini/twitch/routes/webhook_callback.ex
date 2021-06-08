@@ -67,7 +67,20 @@ defmodule Botchini.Twitch.Routes.WebhookCallback do
     msg_response =
       Nostrum.Api.create_message(
         String.to_integer(channel_id),
-        embed: StreamOnline.generate_embed(user, stream_data)
+        embed: StreamOnline.generate_embed(user, stream_data),
+        components: [
+          %{
+            type: 1,
+            components: [
+              %{
+                type: 2,
+                style: 4,
+                label: "Unfollow stream",
+                custom_id: "unfollow:#{stream.code}"
+              }
+            ]
+          }
+        ]
       )
 
     case msg_response do

@@ -66,7 +66,20 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
     if stream_data != nil do
       Nostrum.Api.create_message(
         channel_id,
-        embed: StreamOnline.generate_embed(user_data, stream_data)
+        embed: StreamOnline.generate_embed(user_data, stream_data),
+        components: [
+          %{
+            type: 1,
+            components: [
+              %{
+                type: 2,
+                style: 4,
+                label: "Unfollow stream",
+                custom_id: "unfollow:#{stream.code}"
+              }
+            ]
+          }
+        ]
       )
     end
   end

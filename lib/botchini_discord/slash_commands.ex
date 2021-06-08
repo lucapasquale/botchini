@@ -5,7 +5,7 @@ defmodule BotchiniDiscord.SlashCommands do
 
   require Logger
   alias Nostrum.Api
-  alias Nostrum.Struct.{ApplicationCommandInteractionData, Interaction}
+  alias Nostrum.Struct.Interaction
 
   alias BotchiniDiscord.SlashCommands.{Follow, Following, Info, Stream, Unfollow}
 
@@ -48,18 +48,7 @@ defmodule BotchiniDiscord.SlashCommands do
     try do
       Nostrum.Api.create_interaction_response(interaction, %{
         type: 4,
-        # data: interaction_response(interaction)
-        data: %{
-          content: "test",
-          components: [
-            %{
-              type: 1,
-              components: [
-                %{type: 2, label: "Click me", style: 1, custom_id: "click_one"}
-              ]
-            }
-          ]
-        }
+        data: interaction_response(interaction)
       })
       |> IO.inspect()
     rescue
@@ -75,19 +64,25 @@ defmodule BotchiniDiscord.SlashCommands do
 
   defp interaction_response(interaction) do
     case parse_interaction(interaction.data) do
-      {"info", []} ->
+      {:command, ["info"]} ->
         Info.handle_interaction(interaction)
 
-      {"stream", [stream_code]} ->
+      {:command, ["stream", stream_code]} ->
         Stream.handle_interaction(interaction, stream_code)
 
-      {"follow", [stream_code]} ->
+      {:command, ["follow", stream_code]} ->
         Follow.handle_interaction(interaction, stream_code)
 
-      {"unfollow", [stream_code]} ->
+      {:component, ["follow", stream_code]} ->
+        Follow.handle_interaction(interaction, stream_code)
+
+      {:command, ["unfollow", stream_code]} ->
         Unfollow.handle_interaction(interaction, stream_code)
 
-      {"following", []} ->
+      {:component, ["unfollow", stream_code]} ->
+        Unfollow.handle_interaction(interaction, stream_code)
+
+      {:command, ["following"]} ->
         Following.handle_interaction(interaction)
 
       _ ->
@@ -95,13 +90,19 @@ defmodule BotchiniDiscord.SlashCommands do
     end
   end
 
-  @spec parse_interaction(ApplicationCommandInteractionData.t()) :: {String.t(), [String.t()]}
+  @spec parse_interaction(map()) :: {:command, [String.t()]} | {:component, [String.t()]}
   def parse_interaction(interaction_data) do
-    arguments =
-      interaction_data
-      |> Map.get(:options, [])
-      |> Enum.map(fn opt -> opt.value end)
+    case Map.get(interaction_data, :custom_id) do
+      nil ->
+        args =
+          interaction_data
+          |> Map.get(:options, [])
+          |> Enum.map(fn opt -> opt.value end)
 
-    {interaction_data.name, arguments}
+        {:command, [interaction_data.name] ++ args}
+
+      custom_id ->
+        {:component, String.split(custom_id, ":")}
+    end
   end
 end

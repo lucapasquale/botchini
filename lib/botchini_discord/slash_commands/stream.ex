@@ -30,10 +30,30 @@ defmodule BotchiniDiscord.SlashCommands.Stream do
         %{content: "Invalid Twitch stream!"}
 
       {:ok, {user, nil}} ->
-        %{embeds: [TwitchUser.generate_embed(user)]}
+        %{
+          embeds: [TwitchUser.generate_embed(user)],
+          components: [follow_component(stream_code)]
+        }
 
       {:ok, {user, stream}} ->
-        %{embeds: [StreamOnline.generate_embed(user, stream)]}
+        %{
+          embeds: [StreamOnline.generate_embed(user, stream)],
+          components: [follow_component(stream_code)]
+        }
     end
+  end
+
+  defp follow_component(stream_code) do
+    %{
+      type: 1,
+      components: [
+        %{
+          type: 2,
+          style: 1,
+          label: "Follow stream",
+          custom_id: "follow:#{stream_code}"
+        }
+      ]
+    }
   end
 end

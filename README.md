@@ -2,15 +2,21 @@
 
 Discord Bot with Twitch integration for stream notifications!
 
+Uses modern features like [Slash Commands](https://blog.discord.com/slash-commands-are-here-8db0a385d9e6?gi=cb5c18566e7) and [Message Components](https://discord.com/developers/docs/interactions/message-components)
+
 ## [Add it to your server](https://discord.com/api/oauth2/authorize?client_id=814896826569195561&permissions=2048&scope=bot%20applications.commands)
 
+<<<<<<< Updated upstream
 ![image](https://user-images.githubusercontent.com/15659967/121256832-5bb82d80-c883-11eb-8346-44cf02c37ceb.png)
+=======
+![image](https://user-images.githubusercontent.com/15659967/121437344-89bb7180-c958-11eb-9d2f-034cf8b5f179.png)
+>>>>>>> Stashed changes
 
 ## Slash Commands
 
- - `/info` : Information about the bot, uptime, memory usage, etc.
+ - `/info` : Bot status with uptime, memory usage and more
  - `/stream <stream_code>` : Information about a Twitch channel
- - `/follow <stream_code>` : Get notified when a channel starts streaming
+ - `/follow <stream_code>` : Follow a channel and get notified when it starts streaming
  - `/unfollow <stream_code>` : Stops following a channel
  - `/following` : Lists all channels currently followed on the server
 

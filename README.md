@@ -6,11 +6,7 @@ Uses modern features like [Slash Commands](https://blog.discord.com/slash-comman
 
 ## [Add it to your server](https://discord.com/api/oauth2/authorize?client_id=814896826569195561&permissions=2048&scope=bot%20applications.commands)
 
-<<<<<<< Updated upstream
-![image](https://user-images.githubusercontent.com/15659967/121256832-5bb82d80-c883-11eb-8346-44cf02c37ceb.png)
-=======
 ![image](https://user-images.githubusercontent.com/15659967/121437344-89bb7180-c958-11eb-9d2f-034cf8b5f179.png)
->>>>>>> Stashed changes
 
 ## Slash Commands
 

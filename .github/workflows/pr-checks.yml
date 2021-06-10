@@ -7,91 +7,122 @@ env:
   OTP_VER: 23
 
 jobs:
-  check-format:
-    name: Check formatting
-    runs-on: ubuntu-18.04
+  push_to_registry:
+    name: Push image to DockerHub
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
 
+      - name: Push to Docker Hub
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: lucapasquale094/botchini
+          tag_with_ref: true
+          tag_with_sha: true
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-18.04
+    needs: push_to_registry
     steps:
     - uses: actions/checkout@v2
-    - name: Setup elixir
-      uses: actions/setup-elixir@v1
+
+    - uses: floms/action-caprover@v1
       with:
-        elixir-version: ${{ env.ELIXIR_VER }}
-        otp-version: ${{ env.OTP_VER }}
-    - id: mix-cache
-      name: Retrieve Mix Dependencies Cache
-      uses: actions/cache@v1
-      with:
-        path: deps
-        key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
-    - name: Install Mix Dependencies
-      if: steps.mix-cache.outputs.cache-hit != 'true'
-      run: |
-        mix local.rebar --force
-        mix local.hex --force
-        mix deps.get
+        app: 'botchini'
+        host: 'https://captain.lucapasquale.dev'
+        password: '${{ secrets.CAPROVER_PASSWORD }}'
+        image: 'lucapasquale094/botchini:sha-${GITHUB_SHA::8}'
+  # check-format:
+  #   name: Check formatting
+  #   runs-on: ubuntu-18.04
 
-    - run: mix format --check-formatted
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - name: Setup elixir
+  #     uses: actions/setup-elixir@v1
+  #     with:
+  #       elixir-version: ${{ env.ELIXIR_VER }}
+  #       otp-version: ${{ env.OTP_VER }}
+  #   - id: mix-cache
+  #     name: Retrieve Mix Dependencies Cache
+  #     uses: actions/cache@v1
+  #     with:
+  #       path: deps
+  #       key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+  #   - name: Install Mix Dependencies
+  #     if: steps.mix-cache.outputs.cache-hit != 'true'
+  #     run: |
+  #       mix local.rebar --force
+  #       mix local.hex --force
+  #       mix deps.get
 
-  credo:
-    name: Run Credo
-    runs-on: ubuntu-18.04
+  #   - run: mix format --check-formatted
 
-    steps:
-    - uses: actions/checkout@v2
-    - name: Setup elixir
-      uses: actions/setup-elixir@v1
-      with:
-        elixir-version: ${{ env.ELIXIR_VER }}
-        otp-version: ${{ env.OTP_VER }}
-    - id: mix-cache
-      name: Retrieve Mix Dependencies Cache
-      uses: actions/cache@v1
-      with:
-        path: deps
-        key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
-    - name: Install Mix Dependencies
-      if: steps.mix-cache.outputs.cache-hit != 'true'
-      run: |
-        mix local.rebar --force
-        mix local.hex --force
-        mix deps.get
+  # credo:
+  #   name: Run Credo
+  #   runs-on: ubuntu-18.04
 
-    - run: mix credo --strict
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - name: Setup elixir
+  #     uses: actions/setup-elixir@v1
+  #     with:
+  #       elixir-version: ${{ env.ELIXIR_VER }}
+  #       otp-version: ${{ env.OTP_VER }}
+  #   - id: mix-cache
+  #     name: Retrieve Mix Dependencies Cache
+  #     uses: actions/cache@v1
+  #     with:
+  #       path: deps
+  #       key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+  #   - name: Install Mix Dependencies
+  #     if: steps.mix-cache.outputs.cache-hit != 'true'
+  #     run: |
+  #       mix local.rebar --force
+  #       mix local.hex --force
+  #       mix deps.get
 
-  test:
-    name: Run Tests
-    runs-on: ubuntu-18.04
-    services:
-      db:
-        image: postgres:11
-        ports: ['5432:5432']
-        env:
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+  #   - run: mix credo --strict
 
-    steps:
-    - uses: actions/checkout@v2
-    - name: Setup elixir
-      uses: actions/setup-elixir@v1
-      with:
-        elixir-version: ${{ env.ELIXIR_VER }}
-        otp-version: ${{ env.OTP_VER }}
-    - id: mix-cache
-      name: Retrieve Mix Dependencies Cache
-      uses: actions/cache@v1
-      with:
-        path: deps
-        key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
-    - name: Install Mix Dependencies
-      if: steps.mix-cache.outputs.cache-hit != 'true'
-      run: |
-        mix local.rebar --force
-        mix local.hex --force
-        mix deps.get
+  # test:
+  #   name: Run Tests
+  #   runs-on: ubuntu-18.04
+  #   services:
+  #     db:
+  #       image: postgres:11
+  #       ports: ['5432:5432']
+  #       env:
+  #         POSTGRES_PASSWORD: postgres
+  #       options: >-
+  #         --health-cmd pg_isready
+  #         --health-interval 10s
+  #         --health-timeout 5s
+  #         --health-retries 5
 
-    - run: mix test
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - name: Setup elixir
+  #     uses: actions/setup-elixir@v1
+  #     with:
+  #       elixir-version: ${{ env.ELIXIR_VER }}
+  #       otp-version: ${{ env.OTP_VER }}
+  #   - id: mix-cache
+  #     name: Retrieve Mix Dependencies Cache
+  #     uses: actions/cache@v1
+  #     with:
+  #       path: deps
+  #       key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+  #   - name: Install Mix Dependencies
+  #     if: steps.mix-cache.outputs.cache-hit != 'true'
+  #     run: |
+  #       mix local.rebar --force
+  #       mix local.hex --force
+  #       mix deps.get
+
+  #   - run: mix test

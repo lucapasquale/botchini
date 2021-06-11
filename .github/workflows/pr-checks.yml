@@ -40,7 +40,7 @@ jobs:
         app: 'botchini'
         host: 'https://captain.lucapasquale.dev'
         password: '${{ secrets.CAPROVER_PASSWORD }}'
-        image: lucapasquale094/botchini:sha-${{ SHORT_SHA }}
+        image: lucapasquale094/botchini:sha-${{ env.SHORT_SHA }}
   # check-format:
   #   name: Check formatting
   #   runs-on: ubuntu-18.04

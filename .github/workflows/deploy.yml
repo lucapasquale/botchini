@@ -29,9 +29,12 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Add SHORT_SHA env property with commit short sha
+      run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-7`" >> $GITHUB_ENV
+
     - uses: floms/action-caprover@v1
       with:
         app: 'botchini'
         host: 'https://captain.lucapasquale.dev'
         password: '${{ secrets.CAPROVER_PASSWORD }}'
-        image: lucapasquale094/botchini:main
+        image: lucapasquale094/botchini:sha-${{ env.SHORT_SHA }}

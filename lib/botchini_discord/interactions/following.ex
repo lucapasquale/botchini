@@ -1,4 +1,6 @@
-defmodule BotchiniDiscord.SlashCommands.Following do
+defmodule BotchiniDiscord.Interactions.Following do
+  @behaviour BotchiniDiscord.Interaction
+
   @moduledoc """
   Handles /following slash command
   """
@@ -8,6 +10,7 @@ defmodule BotchiniDiscord.SlashCommands.Following do
 
   alias Botchini.{Discord, Twitch}
 
+  @impl BotchiniDiscord.Interaction
   @spec get_command() :: map()
   def get_command,
     do: %{
@@ -15,26 +18,39 @@ defmodule BotchiniDiscord.SlashCommands.Following do
       description: "List followed streams by channel"
     }
 
-  @spec handle_interaction(Interaction.t()) :: map()
-  def handle_interaction(interaction) when is_nil(interaction.guild_id) do
+  @impl BotchiniDiscord.Interaction
+  @spec handle_interaction(Interaction.t(), map()) :: map()
+  def handle_interaction(interaction, _payload) when is_nil(interaction.guild_id) do
     case Twitch.channel_following_list(Integer.to_string(interaction.channel_id)) do
       {:ok, following} when following == [] ->
-        %{content: "Not following any stream!"}
+        %{
+          type: 4,
+          data: %{content: "Not following any stream!"}
+        }
 
       {:ok, following} ->
-        %{content: "Following streams:\n#{Enum.join(following, "\n")}"}
+        %{
+          type: 4,
+          data: %{content: "Following streams:\n#{Enum.join(following, "\n")}"}
+        }
     end
   end
 
-  def handle_interaction(interaction) do
+  def handle_interaction(interaction, _payload) do
     {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
 
     case Twitch.guild_following_list(guild) do
       {:ok, following} when following == [] ->
-        %{content: "Not following any stream!"}
+        %{
+          type: 4,
+          data: %{content: "Not following any stream!"}
+        }
 
       {:ok, following} ->
-        %{embeds: [guild_following_embed(following)]}
+        %{
+          type: 4,
+          data: %{embeds: [guild_following_embed(following)]}
+        }
     end
   end
 

@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.SlashCommands.Follow do
+defmodule BotchiniDiscord.Interactions.Follow do
   @moduledoc """
   Handles /follow slash command
   """
@@ -34,19 +34,28 @@ defmodule BotchiniDiscord.SlashCommands.Follow do
 
     case Twitch.follow_stream(format_code(stream_code), guild, follow_info) do
       {:error, :invalid_stream} ->
-        %{content: "Invalid Twitch stream!"}
+        %{
+          type: 4,
+          data: %{content: "Invalid Twitch stream!"}
+        }
 
       {:error, :already_following} ->
-        %{content: "Already following!"}
+        %{
+          type: 4,
+          data: %{content: "Already following!"}
+        }
 
       {:ok, stream} ->
         spawn(fn ->
           # Waits for the slash command response so it shows message after it
-          :timer.sleep(500)
+          :timer.sleep(200)
           send_stream_online_message(interaction.channel_id, stream)
         end)
 
-        %{content: "Following the stream #{stream.code}!"}
+        %{
+          type: 4,
+          data: %{content: "Following the stream #{stream.code}!"}
+        }
     end
   end
 

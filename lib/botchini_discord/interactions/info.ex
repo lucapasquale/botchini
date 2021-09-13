@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.SlashCommands.Info do
+defmodule BotchiniDiscord.Interactions.Info do
   @moduledoc """
   Handles /info slash command
   """
@@ -24,7 +24,10 @@ defmodule BotchiniDiscord.SlashCommands.Info do
       |> put_field("Processes", "#{length(:erlang.processes())}", true)
       |> put_field("Memory Usage", "#{div(:erlang.memory(:total), 1_000_000)} MB", true)
 
-    %{embeds: [embed]}
+    %{
+      type: 4,
+      data: %{embeds: [embed]}
+    }
   end
 
   defp uptime do

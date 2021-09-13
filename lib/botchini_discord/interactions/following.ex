@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.SlashCommands.Following do
+defmodule BotchiniDiscord.Interactions.Following do
   @moduledoc """
   Handles /following slash command
   """
@@ -19,10 +19,16 @@ defmodule BotchiniDiscord.SlashCommands.Following do
   def handle_interaction(interaction) when is_nil(interaction.guild_id) do
     case Twitch.channel_following_list(Integer.to_string(interaction.channel_id)) do
       {:ok, following} when following == [] ->
-        %{content: "Not following any stream!"}
+        %{
+          type: 4,
+          data: %{content: "Not following any stream!"}
+        }
 
       {:ok, following} ->
-        %{content: "Following streams:\n#{Enum.join(following, "\n")}"}
+        %{
+          type: 4,
+          data: %{content: "Following streams:\n#{Enum.join(following, "\n")}"}
+        }
     end
   end
 
@@ -31,10 +37,16 @@ defmodule BotchiniDiscord.SlashCommands.Following do
 
     case Twitch.guild_following_list(guild) do
       {:ok, following} when following == [] ->
-        %{content: "Not following any stream!"}
+        %{
+          type: 4,
+          data: %{content: "Not following any stream!"}
+        }
 
       {:ok, following} ->
-        %{embeds: [guild_following_embed(following)]}
+        %{
+          type: 4,
+          data: %{embeds: [guild_following_embed(following)]}
+        }
     end
   end
 

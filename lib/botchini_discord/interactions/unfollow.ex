@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.SlashCommands.Unfollow do
+defmodule BotchiniDiscord.Interactions.Unfollow do
   @moduledoc """
   Handles /unfollow slash command
   """
@@ -30,10 +30,16 @@ defmodule BotchiniDiscord.SlashCommands.Unfollow do
 
     case Twitch.unfollow(format_code(stream_code), follow_info) do
       {:error, :not_found} ->
-        %{content: "Stream #{stream_code} was not being followed"}
+        %{
+          type: 4,
+          data: %{content: "Stream #{stream_code} was not being followed"}
+        }
 
       {:ok} ->
-        %{content: "Removed #{stream_code} from your following streams"}
+        %{
+          type: 4,
+          data: %{content: "Removed #{stream_code} from your following streams"}
+        }
     end
   end
 

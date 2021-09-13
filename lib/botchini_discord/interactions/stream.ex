@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.SlashCommands.Stream do
+defmodule BotchiniDiscord.Interactions.Stream do
   @moduledoc """
   Handles /stream slash command
   """
@@ -27,12 +27,18 @@ defmodule BotchiniDiscord.SlashCommands.Stream do
   def handle_interaction(_interaction, stream_code) do
     case Twitch.stream_info(stream_code) do
       {:error, :not_found} ->
-        %{content: "Invalid Twitch stream!"}
+        %{
+          type: 4,
+          data: %{content: "Invalid Twitch stream!"}
+        }
 
       {:ok, {user, _}} ->
         %{
-          embeds: [Embeds.twitch_user(user)],
-          components: [Components.follow_stream(stream_code)]
+          type: 4,
+          data: %{
+            embeds: [Embeds.twitch_user(user)],
+            components: [Components.follow_stream(stream_code)]
+          }
         }
     end
   end

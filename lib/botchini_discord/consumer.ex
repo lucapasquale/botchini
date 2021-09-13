@@ -7,14 +7,14 @@ defmodule BotchiniDiscord.Consumer do
   use Nostrum.Consumer
 
   alias Botchini.Discord
-  alias BotchiniDiscord.SlashCommands
+  alias BotchiniDiscord.Interactions
 
   def start_link do
     Consumer.start_link(__MODULE__)
   end
 
   def handle_event({:READY, _data, _ws_state}) do
-    SlashCommands.register_commands()
+    Interactions.register_commands()
 
     version = to_string(Application.spec(:botchini, :vsn))
     Nostrum.Api.update_status(:online, "on v#{version}")
@@ -27,7 +27,7 @@ defmodule BotchiniDiscord.Consumer do
   end
 
   def handle_event({:INTERACTION_CREATE, interaction, _ws_state}) do
-    SlashCommands.handle_interaction(interaction)
+    Interactions.handle_interaction(interaction)
   end
 
   def handle_event(_event) do

@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.SlashCommands do
+defmodule BotchiniDiscord.Interactions do
   @moduledoc """
   Register slash commands and handles interactions
   """
@@ -7,7 +7,14 @@ defmodule BotchiniDiscord.SlashCommands do
   alias Nostrum.Api
   alias Nostrum.Struct.Interaction
 
-  alias BotchiniDiscord.SlashCommands.{Follow, Following, Info, Stream, Unfollow}
+  alias BotchiniDiscord.Interactions.{
+    ConfirmUnfollow,
+    Follow,
+    Following,
+    Info,
+    Stream,
+    Unfollow
+  }
 
   @spec register_commands() :: :ok
   def register_commands do
@@ -44,10 +51,8 @@ defmodule BotchiniDiscord.SlashCommands do
     Logger.info("Interaction received")
 
     try do
-      Nostrum.Api.create_interaction_response(interaction, %{
-        type: 4,
-        data: interaction_response(interaction)
-      })
+      interaction
+      |> Nostrum.Api.create_interaction_response(interaction_response(interaction))
     rescue
       err ->
         Logger.error(err)
@@ -69,6 +74,12 @@ defmodule BotchiniDiscord.SlashCommands do
 
       {_, ["follow", stream_code]} ->
         Follow.handle_interaction(interaction, stream_code)
+
+      {:component, ["confirm_unfollow", type, stream_code]} ->
+        ConfirmUnfollow.handle_interaction(interaction, %{
+          type: String.to_atom(type),
+          stream_code: stream_code
+        })
 
       {_, ["unfollow", stream_code]} ->
         Unfollow.handle_interaction(interaction, stream_code)

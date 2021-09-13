@@ -1,4 +1,6 @@
 defmodule BotchiniDiscord.Interactions.Stream do
+  @behaviour BotchiniDiscord.Interaction
+
   @moduledoc """
   Handles /stream slash command
   """
@@ -8,6 +10,7 @@ defmodule BotchiniDiscord.Interactions.Stream do
   alias Botchini.Twitch
   alias BotchiniDiscord.Responses.{Components, Embeds}
 
+  @impl BotchiniDiscord.Interaction
   @spec get_command() :: map()
   def get_command,
     do: %{
@@ -23,8 +26,9 @@ defmodule BotchiniDiscord.Interactions.Stream do
       ]
     }
 
-  @spec handle_interaction(Interaction.t(), String.t()) :: map()
-  def handle_interaction(_interaction, stream_code) do
+  @impl BotchiniDiscord.Interaction
+  @spec handle_interaction(Interaction.t(), %{stream_code: String.t()}) :: map()
+  def handle_interaction(_interaction, %{stream_code: stream_code}) do
     case Twitch.stream_info(stream_code) do
       {:error, :not_found} ->
         %{

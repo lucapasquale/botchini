@@ -1,10 +1,13 @@
 defmodule BotchiniDiscord.Interactions.Info do
+  @behaviour BotchiniDiscord.Interaction
+
   @moduledoc """
   Handles /info slash command
   """
 
   import Nostrum.Struct.Embed
 
+  @impl BotchiniDiscord.Interaction
   @spec get_command() :: map()
   def get_command,
     do: %{
@@ -12,8 +15,9 @@ defmodule BotchiniDiscord.Interactions.Info do
       description: "Information about the bot"
     }
 
-  @spec handle_interaction(Interaction.t()) :: map()
-  def handle_interaction(_interaction) do
+  @impl BotchiniDiscord.Interaction
+  @spec handle_interaction(Interaction.t(), map()) :: map()
+  def handle_interaction(_interaction, _payload) do
     embed =
       %Nostrum.Struct.Embed{}
       |> put_title("Botchini information")

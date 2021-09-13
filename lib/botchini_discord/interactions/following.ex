@@ -1,4 +1,6 @@
 defmodule BotchiniDiscord.Interactions.Following do
+  @behaviour BotchiniDiscord.Interaction
+
   @moduledoc """
   Handles /following slash command
   """
@@ -8,6 +10,7 @@ defmodule BotchiniDiscord.Interactions.Following do
 
   alias Botchini.{Discord, Twitch}
 
+  @impl BotchiniDiscord.Interaction
   @spec get_command() :: map()
   def get_command,
     do: %{
@@ -15,8 +18,9 @@ defmodule BotchiniDiscord.Interactions.Following do
       description: "List followed streams by channel"
     }
 
-  @spec handle_interaction(Interaction.t()) :: map()
-  def handle_interaction(interaction) when is_nil(interaction.guild_id) do
+  @impl BotchiniDiscord.Interaction
+  @spec handle_interaction(Interaction.t(), map()) :: map()
+  def handle_interaction(interaction, _payload) when is_nil(interaction.guild_id) do
     case Twitch.channel_following_list(Integer.to_string(interaction.channel_id)) do
       {:ok, following} when following == [] ->
         %{
@@ -32,7 +36,7 @@ defmodule BotchiniDiscord.Interactions.Following do
     end
   end
 
-  def handle_interaction(interaction) do
+  def handle_interaction(interaction, _payload) do
     {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
 
     case Twitch.guild_following_list(guild) do

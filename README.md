@@ -25,7 +25,7 @@ Run `mix deps.get` to install all dependencies, and `mix ecto.migrate` to run th
 To run this bot, you'll need the following env_vars:
 
  - `PORT` : Port to run on. Defaults to 3010
- - `HOST` : The url your bot is running on, so ir can receive webhooks from Twitch. For local development, you can use [ngrok](https://ngrok.com/)
+ - `HOST` : The url your bot is running on, so ir can receive webhooks from Twitch. For local development, you can use [ngrok http $PORT](https://ngrok.com/)
  - `POSTGRES_URL` : The url to connect to your postgres db
  - `DISCORD_TOKEN` : Token for your Discord Bot
  - `TWITCH_CLIENT_ID` : Client ID for your Twitch application

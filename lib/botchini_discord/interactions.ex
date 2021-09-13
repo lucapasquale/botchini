@@ -18,13 +18,16 @@ defmodule BotchiniDiscord.Interactions do
 
   @spec register_commands() :: :ok
   def register_commands do
-    commands = [
-      Follow.get_command(),
-      Following.get_command(),
-      Info.get_command(),
-      Stream.get_command(),
-      Unfollow.get_command()
-    ]
+    commands =
+      [
+        ConfirmUnfollow.get_command(),
+        Follow.get_command(),
+        Following.get_command(),
+        Info.get_command(),
+        Stream.get_command(),
+        Unfollow.get_command()
+      ]
+      |> Enum.filter(&(!is_nil(&1)))
 
     commands
     |> Enum.each(fn command ->
@@ -51,8 +54,11 @@ defmodule BotchiniDiscord.Interactions do
     Logger.info("Interaction received")
 
     try do
-      interaction
-      |> Nostrum.Api.create_interaction_response(interaction_response(interaction))
+      response =
+        interaction
+        |> call_interaction(parse_interaction_data(interaction.data))
+
+      Nostrum.Api.create_interaction_response(interaction, response)
     rescue
       err ->
         Logger.error(err)
@@ -64,36 +70,8 @@ defmodule BotchiniDiscord.Interactions do
     end
   end
 
-  defp interaction_response(interaction) do
-    case parse_interaction(interaction.data) do
-      {:command, ["info"]} ->
-        Info.handle_interaction(interaction)
-
-      {:command, ["stream", stream_code]} ->
-        Stream.handle_interaction(interaction, stream_code)
-
-      {_, ["follow", stream_code]} ->
-        Follow.handle_interaction(interaction, stream_code)
-
-      {:component, ["confirm_unfollow", type, stream_code]} ->
-        ConfirmUnfollow.handle_interaction(interaction, %{
-          type: String.to_atom(type),
-          stream_code: stream_code
-        })
-
-      {_, ["unfollow", stream_code]} ->
-        Unfollow.handle_interaction(interaction, stream_code)
-
-      {:command, ["following"]} ->
-        Following.handle_interaction(interaction)
-
-      _ ->
-        %{content: "Unknown command"}
-    end
-  end
-
-  @spec parse_interaction(map()) :: {:command | :component, [String.t()]}
-  def parse_interaction(interaction_data) do
+  @spec parse_interaction_data(map()) :: {:command | :component, [String.t()]}
+  def parse_interaction_data(interaction_data) do
     case Map.get(interaction_data, :custom_id) do
       nil ->
         args =
@@ -107,4 +85,29 @@ defmodule BotchiniDiscord.Interactions do
         {:component, String.split(custom_id, ":")}
     end
   end
+
+  defp call_interaction(interaction, {:command, ["info"]}),
+    do: Info.handle_interaction(interaction, %{})
+
+  defp call_interaction(interaction, {:command, ["stream", stream_code]}),
+    do: Stream.handle_interaction(interaction, %{stream_code: stream_code})
+
+  defp call_interaction(interaction, {_, ["follow", stream_code]}),
+    do: Follow.handle_interaction(interaction, %{stream_code: stream_code})
+
+  defp call_interaction(interaction, {:component, ["confirm_unfollow", type, stream_code]}),
+    do:
+      ConfirmUnfollow.handle_interaction(interaction, %{
+        type: String.to_atom(type),
+        stream_code: stream_code
+      })
+
+  defp call_interaction(interaction, {_, ["unfollow", stream_code]}),
+    do: Unfollow.handle_interaction(interaction, %{stream_code: stream_code})
+
+  defp call_interaction(interaction, {:command, ["following"]}),
+    do: Following.handle_interaction(interaction, %{})
+
+  defp call_interaction(_interaction, _data),
+    do: raise("Unknown command")
 end

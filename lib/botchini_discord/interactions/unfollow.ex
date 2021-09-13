@@ -1,4 +1,6 @@
 defmodule BotchiniDiscord.Interactions.Unfollow do
+  @behaviour BotchiniDiscord.Interaction
+
   @moduledoc """
   Handles /unfollow slash command
   """
@@ -7,6 +9,7 @@ defmodule BotchiniDiscord.Interactions.Unfollow do
 
   alias Botchini.Twitch
 
+  @impl BotchiniDiscord.Interaction
   @spec get_command() :: map()
   def get_command,
     do: %{
@@ -22,8 +25,9 @@ defmodule BotchiniDiscord.Interactions.Unfollow do
       ]
     }
 
-  @spec handle_interaction(Interaction.t(), String.t()) :: map()
-  def handle_interaction(interaction, stream_code) do
+  @impl BotchiniDiscord.Interaction
+  @spec handle_interaction(Interaction.t(), %{stream_code: String.t()}) :: map()
+  def handle_interaction(interaction, %{stream_code: stream_code}) do
     follow_info = %{
       channel_id: Integer.to_string(interaction.channel_id)
     }

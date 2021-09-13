@@ -1,6 +1,8 @@
 defmodule BotchiniDiscord.Interactions.ConfirmUnfollow do
+  @behaviour BotchiniDiscord.Interaction
+
   @moduledoc """
-  Handles /unfollow slash command
+  Handles the confirmation before unfollowing a stream
   """
 
   alias Nostrum.Struct.Interaction
@@ -9,11 +11,15 @@ defmodule BotchiniDiscord.Interactions.ConfirmUnfollow do
 
   alias BotchiniDiscord.Responses.{Components}
 
+  @impl BotchiniDiscord.Interaction
+  @spec get_command() :: nil
+  def get_command, do: nil
+
+  @impl BotchiniDiscord.Interaction
   @spec handle_interaction(Interaction.t(), %{
           type: :ask | :cancel | :confirm,
           stream_code: String.t()
-        }) ::
-          map()
+        }) :: map()
   def handle_interaction(_interaction, %{type: :ask, stream_code: stream_code}) do
     case Twitch.stream_info(stream_code) do
       {:error, :not_found} ->

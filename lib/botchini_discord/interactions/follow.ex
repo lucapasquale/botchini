@@ -1,4 +1,6 @@
 defmodule BotchiniDiscord.Interactions.Follow do
+  @behaviour BotchiniDiscord.Interaction
+
   @moduledoc """
   Handles /follow slash command
   """
@@ -8,6 +10,7 @@ defmodule BotchiniDiscord.Interactions.Follow do
   alias Botchini.{Discord, Twitch}
   alias BotchiniDiscord.Responses.{Components, Embeds}
 
+  @impl BotchiniDiscord.Interaction
   @spec get_command() :: map()
   def get_command,
     do: %{
@@ -23,8 +26,9 @@ defmodule BotchiniDiscord.Interactions.Follow do
       ]
     }
 
-  @spec handle_interaction(Interaction.t(), String.t()) :: map()
-  def handle_interaction(interaction, stream_code) do
+  @impl BotchiniDiscord.Interaction
+  @spec handle_interaction(Interaction.t(), %{stream_code: String.t()}) :: map()
+  def handle_interaction(interaction, %{stream_code: stream_code}) do
     guild = get_guild(interaction)
 
     follow_info = %{

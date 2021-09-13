@@ -1,4 +1,8 @@
 defmodule BotchiniDiscord.Interaction do
+  @moduledoc """
+  Behaviour for handling Discord interactions, through slash commands or components
+  """
+
   alias Nostrum.Struct.Interaction
 
   @doc """

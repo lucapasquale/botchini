@@ -9,7 +9,7 @@ defmodule BotchiniDiscord.Interactions.ConfirmUnfollow do
 
   alias Botchini.Twitch
 
-  alias BotchiniDiscord.Responses.{Components}
+  alias BotchiniDiscord.Responses.Components
 
   @impl BotchiniDiscord.Interaction
   @spec get_command() :: nil

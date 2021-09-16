@@ -1,0 +1,25 @@
+version: '3.1'
+
+services:
+  postgres-dev:
+    image: postgres:13
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=botchini_dev
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  postgres-test:
+    image: postgres:13
+    ports:
+      - "5431:5432"
+    environment:
+      - POSTGRES_DB=botchini_test
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+volumes:
+  db_data:

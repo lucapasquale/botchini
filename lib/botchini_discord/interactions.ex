@@ -18,8 +18,7 @@ defmodule BotchiniDiscord.Interactions do
 
   @spec register_commands() :: :ok
   def register_commands do
-    commands =
-      [
+    [
         ConfirmUnfollow.get_command(),
         Follow.get_command(),
         Following.get_command(),
@@ -28,18 +27,20 @@ defmodule BotchiniDiscord.Interactions do
         Unfollow.get_command()
       ]
       |> Enum.filter(&(!is_nil(&1)))
+      |> Enum.each(fn command ->
+        register_command(command, Application.fetch_env!(:botchini, :environment))
+      end)
+  end
 
-    commands
-    |> Enum.each(fn command ->
-      if Application.fetch_env!(:botchini, :environment) === :prod do
-        Api.create_global_application_command(command)
-      else
-        case Application.fetch_env(:botchini, :test_guild_id) do
-          {:ok, guild_id} -> Api.create_guild_application_command(guild_id, command)
-          _ -> :noop
-        end
-      end
-    end)
+  defp register_command(command, :prod) do
+    Api.create_global_application_command(command)
+  end
+
+  defp register_command(command, _env) do
+    case Application.fetch_env(:botchini, :test_guild_id) do
+      {:ok, guild_id} -> Api.create_guild_application_command(guild_id, command)
+      _ -> :noop
+    end
   end
 
   @spec handle_interaction(Interaction.t()) :: any()

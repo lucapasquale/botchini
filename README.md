@@ -20,23 +20,25 @@ Uses modern features like [Slash Commands](https://blog.discord.com/slash-comman
 
 Run `mix deps.get` to install all dependencies, and `mix ecto.migrate` to run the database migrations
 
-## Running
+Then, copy the sample environment sample file into a secrets file:
 
-To run this bot, you'll need the following env_vars:
+```bash
+cat config/dev.secret-sample.exs > config/dev.secret.exs
+```
+
+## Running locally
+
+Start the local database with `docker-compose up`, it starts both the development and test databases. Start a proxy to your localhost by using [ngrok http $PORT](https://ngrok.com/), copy the url generated into the `:host` config. Add the other values on `config/dev.secret.exs`
+
+Then, run the bot with: `mix run --no-halt` or `iex -S mix`
+
+## Running in production
+
+The bot needs the following env_vars:
 
  - `PORT` : Port to run on. Defaults to 3010
- - `HOST` : The url your bot is running on, so ir can receive webhooks from Twitch. For local development, you can use [ngrok http $PORT](https://ngrok.com/)
+ - `HOST` : The url your bot is running on, so ir can receive webhooks from Twitch
  - `POSTGRES_URL` : The url to connect to your postgres db
  - `DISCORD_TOKEN` : Token for your Discord Bot
  - `TWITCH_CLIENT_ID` : Client ID for your Twitch application
  - `TWITCH_CLIENT_SECRET` : Client Secret for your Twitch application
-
-Then, run the bot with:
-
-`mix run --no-halt`
-
-Or, if you want to use Docker:
-
-`docker build -t botchini:latest .`
-
-`docker run --rm -p 3010:3010 botchini:latest`

@@ -19,17 +19,17 @@ defmodule BotchiniDiscord.Interactions do
   @spec register_commands() :: :ok
   def register_commands do
     [
-        ConfirmUnfollow.get_command(),
-        Follow.get_command(),
-        Following.get_command(),
-        Info.get_command(),
-        Stream.get_command(),
-        Unfollow.get_command()
-      ]
-      |> Enum.filter(&(!is_nil(&1)))
-      |> Enum.each(fn command ->
-        register_command(command, Application.fetch_env!(:botchini, :environment))
-      end)
+      ConfirmUnfollow.get_command(),
+      Follow.get_command(),
+      Following.get_command(),
+      Info.get_command(),
+      Stream.get_command(),
+      Unfollow.get_command()
+    ]
+    |> Enum.filter(&(!is_nil(&1)))
+    |> Enum.each(fn command ->
+      register_command(command, Application.fetch_env!(:botchini, :environment))
+    end)
   end
 
   defp register_command(command, :prod) do

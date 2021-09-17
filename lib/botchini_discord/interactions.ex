@@ -7,24 +7,19 @@ defmodule BotchiniDiscord.Interactions do
   alias Nostrum.Api
   alias Nostrum.Struct.Interaction
 
-  alias BotchiniDiscord.Interactions.{
-    ConfirmUnfollow,
-    Follow,
-    Following,
-    Info,
-    Stream,
-    Unfollow
-  }
+  alias BotchiniDiscord.Interactions
 
   @spec register_commands() :: :ok
   def register_commands do
     [
-      ConfirmUnfollow.get_command(),
-      Follow.get_command(),
-      Following.get_command(),
-      Info.get_command(),
-      Stream.get_command(),
-      Unfollow.get_command()
+      Interactions.ConfirmUnfollow.get_command(),
+      Interactions.Follow.get_command(),
+      Interactions.Following.get_command(),
+      Interactions.Info.get_command(),
+      Interactions.Play.get_command(),
+      Interactions.Stop.get_command(),
+      Interactions.Stream.get_command(),
+      Interactions.Unfollow.get_command()
     ]
     |> Enum.filter(&(!is_nil(&1)))
     |> Enum.each(fn command ->
@@ -88,26 +83,32 @@ defmodule BotchiniDiscord.Interactions do
   end
 
   defp call_interaction(interaction, {:command, ["info"]}),
-    do: Info.handle_interaction(interaction, %{})
+    do: Interactions.Info.handle_interaction(interaction, %{})
 
   defp call_interaction(interaction, {:command, ["stream", stream_code]}),
-    do: Stream.handle_interaction(interaction, %{stream_code: stream_code})
+    do: Interactions.Stream.handle_interaction(interaction, %{stream_code: stream_code})
 
   defp call_interaction(interaction, {_, ["follow", stream_code]}),
-    do: Follow.handle_interaction(interaction, %{stream_code: stream_code})
+    do: Interactions.Follow.handle_interaction(interaction, %{stream_code: stream_code})
 
   defp call_interaction(interaction, {:component, ["confirm_unfollow", type, stream_code]}),
     do:
-      ConfirmUnfollow.handle_interaction(interaction, %{
+      Interactions.ConfirmUnfollow.handle_interaction(interaction, %{
         type: String.to_atom(type),
         stream_code: stream_code
       })
 
   defp call_interaction(interaction, {_, ["unfollow", stream_code]}),
-    do: Unfollow.handle_interaction(interaction, %{stream_code: stream_code})
+    do: Interactions.Unfollow.handle_interaction(interaction, %{stream_code: stream_code})
 
   defp call_interaction(interaction, {:command, ["following"]}),
-    do: Following.handle_interaction(interaction, %{})
+    do: Interactions.Following.handle_interaction(interaction, %{})
+
+  defp call_interaction(interaction, {:command, ["play", url]}),
+    do: Interactions.Play.handle_interaction(interaction, %{url: url})
+
+  defp call_interaction(interaction, {:command, ["stop"]}),
+    do: Interactions.Stop.handle_interaction(interaction, %{})
 
   defp call_interaction(_interaction, _data),
     do: raise("Unknown command")

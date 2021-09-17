@@ -1,5 +1,5 @@
 # STEP 1 - BUILD RELEASE
-FROM hexpm/elixir:1.11.3-erlang-23.2.7-alpine-3.13.2 AS build
+FROM hexpm/elixir:1.12.3-erlang-24.0.1-alpine-3.13.3 AS build
 
 # Install build dependencies
 RUN apk update && \
@@ -32,7 +32,17 @@ RUN mix do compile, release
 ####################################################################################################
 # STEP 2 - FINAL
 FROM alpine:3.13.2 as app
-RUN apk add --no-cache openssl ncurses-libs
+RUN apk update && \
+  apk upgrade --no-cache && \
+  apk add --no-cache \
+  openssl \
+  ncurses-libs \
+  python3 \
+  py3-pip \
+  ffmpeg
+
+RUN wget https://yt-dl.org/downloads/latest/youtube-dl -O /usr/local/bin/youtube-dl && \
+  chmod a+rx /usr/local/bin/youtube-dl
 
 WORKDIR /app
 

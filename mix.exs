@@ -24,7 +24,7 @@ defmodule Botchini.MixProject do
   defp deps do
     [
       # Discord
-      {:nostrum, "~> 0.4.6", runtime: Mix.env() != :test},
+      {:nostrum, github: "Kraigie/nostrum", runtime: Mix.env() != :test},
       # Ecto
       {:ecto_sql, "~> 3.6"},
       {:postgrex, ">= 0.0.0"},

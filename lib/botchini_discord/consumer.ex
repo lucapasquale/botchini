@@ -32,11 +32,39 @@ defmodule BotchiniDiscord.Consumer do
 
   def handle_event({:VOICE_READY, event, _ws_state}) do
     IO.inspect(event, label: "voice ready")
-    Nostrum.Voice.play(event.guild_id, "https://www.youtube.com/watch?v=7ijMDQgvW0o", :ytdl)
+
+    {:ok, guild} = Discord.upsert_guild(Integer.to_string(event.guild_id))
+
+    case Botchini.Voice.start_next_track(guild) do
+      nil ->
+        Nostrum.Voice.stop(guild.discord_guild_id)
+
+      track ->
+        Nostrum.Voice.play(event.guild_id, track.play_url, :ytdl)
+    end
   end
 
-  def handle_event({event, _data, _ws}) do
-    IO.inspect(event, label: "new event")
+  def handle_event({:VOICE_SPEAKING_UPDATE, event, _ws_state}) do
+    IO.inspect(event, label: "voice speaking update")
+
+    case event.speaking do
+      true ->
+        :noop
+
+      false ->
+        {:ok, guild} = Discord.upsert_guild(Integer.to_string(event.guild_id))
+
+        case Botchini.Voice.start_next_track(guild) do
+          nil ->
+            Nostrum.Voice.leave_channel(event.guild_id)
+
+          track ->
+            Nostrum.Voice.play(event.guild_id, track.play_url, :ytdl)
+        end
+    end
+  end
+
+  def handle_event({_event, _data, _ws}) do
     :noop
   end
 end

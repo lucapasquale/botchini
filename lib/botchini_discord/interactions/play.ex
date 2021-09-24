@@ -5,6 +5,8 @@ defmodule BotchiniDiscord.Interactions.Play do
   Handles /play slash command
   """
 
+  alias Botchini.{Discord, Voice}
+
   @impl BotchiniDiscord.Interaction
   @spec get_command() :: map()
   def get_command,
@@ -23,20 +25,41 @@ defmodule BotchiniDiscord.Interactions.Play do
 
   @impl BotchiniDiscord.Interaction
   @spec handle_interaction(Interaction.t(), %{url: String.t()}) :: map()
+  def handle_interaction(interaction, _payload) when is_nil(interaction.guild_id) do
+    %{
+      type: 4,
+      data: %{content: "Cannot play from outside of a guild!"}
+    }
+  end
+
   def handle_interaction(interaction, %{url: url}) do
-    case get_voice_channel_of_msg(interaction) do
+    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
+
+    case Nostrum.Voice.get_channel_id(interaction.guild_id) do
       nil ->
+        case get_voice_channel_of_msg(interaction) do
+          nil ->
+            %{
+              type: 4,
+              data: %{content: "Please enter a voice channel first!"}
+            }
+
+          channel_id ->
+            Voice.insert_track(url, guild)
+            Nostrum.Voice.join_channel(interaction.guild_id, channel_id)
+
+            %{
+              type: 4,
+              data: %{content: "playing"}
+            }
+        end
+
+      _channel_id ->
+        Voice.insert_track(url, guild)
+
         %{
           type: 4,
-          data: %{content: "Please enter a voice channel first!"}
-        }
-
-      channel_id ->
-        Nostrum.Voice.join_channel(interaction.guild_id, channel_id)
-
-        %{
-          type: 4,
-          data: %{content: "playing"}
+          data: %{content: "playing2"}
         }
     end
   end

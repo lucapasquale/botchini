@@ -26,10 +26,10 @@ defmodule BotchiniDiscord.Interactions.Play do
   def handle_interaction(interaction, %{url: url}) do
     Nostrum.Voice.join_channel(
       interaction.guild_id,
-      get_voice_channel_of_msg(interaction)
+      459_166_748_432_924_695
     )
 
-    try_play(interaction.guild_id, url, :ytdl)
+    # try_play(interaction.guild_id, url, :ytdl)
 
     %{
       type: 4,

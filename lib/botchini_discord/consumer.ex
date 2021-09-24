@@ -30,7 +30,13 @@ defmodule BotchiniDiscord.Consumer do
     Interactions.handle_interaction(interaction)
   end
 
-  def handle_event(_event) do
+  def handle_event({:VOICE_READY, event, _ws_state}) do
+    IO.inspect(event, label: "voice ready")
+    Nostrum.Voice.play(event.guild_id, "https://www.youtube.com/watch?v=7ijMDQgvW0o", :ytdl)
+  end
+
+  def handle_event({event, _data, _ws}) do
+    IO.inspect(event, label: "new event")
     :noop
   end
 end

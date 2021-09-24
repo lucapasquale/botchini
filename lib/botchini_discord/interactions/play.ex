@@ -24,17 +24,21 @@ defmodule BotchiniDiscord.Interactions.Play do
   @impl BotchiniDiscord.Interaction
   @spec handle_interaction(Interaction.t(), %{url: String.t()}) :: map()
   def handle_interaction(interaction, %{url: url}) do
-    Nostrum.Voice.join_channel(
-      interaction.guild_id,
-      459_166_748_432_924_695
-    )
+    case get_voice_channel_of_msg(interaction) do
+      nil ->
+        %{
+          type: 4,
+          data: %{content: "Please enter a voice channel first!"}
+        }
 
-    # try_play(interaction.guild_id, url, :ytdl)
+      channel_id ->
+        Nostrum.Voice.join_channel(interaction.guild_id, channel_id)
 
-    %{
-      type: 4,
-      data: %{content: "playing"}
-    }
+        %{
+          type: 4,
+          data: %{content: "playing"}
+        }
+    end
   end
 
   defp get_voice_channel_of_msg(interaction) do
@@ -43,21 +47,5 @@ defmodule BotchiniDiscord.Interactions.Play do
     |> Map.get(:voice_states)
     |> Enum.find(%{}, fn v -> v.user_id == interaction.member.user.id end)
     |> Map.get(:channel_id)
-  end
-
-  defp try_play(guild_id, url, type, count \\ 0) do
-    if count > 5 do
-      :noop
-    else
-      case Nostrum.Voice.play(guild_id, url, type) do
-        {:error, msg} ->
-          IO.inspect(msg)
-          Process.sleep(100)
-          try_play(guild_id, url, type, count + 1)
-
-        _ ->
-          :ok
-      end
-    end
   end
 end

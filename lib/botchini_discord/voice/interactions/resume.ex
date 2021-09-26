@@ -27,7 +27,7 @@ defmodule BotchiniDiscord.Voice.Interactions.Resume do
 
   def handle_interaction(interaction, _payload) do
     {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
-    cur_track = Voice.get_current_track(guild)
+    {:ok, cur_track} = Voice.get_current_track(guild)
 
     if !is_nil(cur_track) && cur_track.status == :paused do
       Voice.resume(guild)

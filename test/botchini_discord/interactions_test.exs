@@ -7,7 +7,7 @@ defmodule BotchiniDiscordTest.InteractionsTest do
     test "parse interation data for command" do
       interaction_data = %{name: "command_name"}
 
-      {:command, ["command_name"]} = parse_interaction_data(interaction_data)
+      ["command_name"] = parse_interaction_data(interaction_data)
     end
 
     test "parse interation data with option" do
@@ -16,7 +16,7 @@ defmodule BotchiniDiscordTest.InteractionsTest do
         options: [%{value: "sub_command_value"}]
       }
 
-      {:command, ["command_name", "sub_command_value"]} = parse_interaction_data(interaction_data)
+      ["command_name", "sub_command_value"] = parse_interaction_data(interaction_data)
     end
 
     test "parse interation data for component" do
@@ -24,7 +24,7 @@ defmodule BotchiniDiscordTest.InteractionsTest do
         custom_id: "command:sub_command"
       }
 
-      {:component, ["command", "sub_command"]} = parse_interaction_data(interaction_data)
+      ["command", "sub_command"] = parse_interaction_data(interaction_data)
     end
   end
 end

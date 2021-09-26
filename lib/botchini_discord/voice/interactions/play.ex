@@ -46,7 +46,7 @@ defmodule BotchiniDiscord.Voice.Interactions.Play do
         }
 
       interaction_channel_id ->
-        Voice.insert_track(get_track_url(url), guild)
+        Voice.insert_track(%{play_url: get_track_url(url)}, guild)
 
         if Nostrum.Voice.get_channel_id(interaction.guild_id) != interaction_channel_id do
           Nostrum.Voice.join_channel(interaction.guild_id, interaction_channel_id)

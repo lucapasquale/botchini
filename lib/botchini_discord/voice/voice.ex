@@ -26,7 +26,7 @@ defmodule BotchiniDiscord.Voice do
   def handle_voice_update(event) do
     {:ok, guild} = Discord.upsert_guild(Integer.to_string(event.guild_id))
 
-    cur_track = Voice.get_current_track(guild)
+    {:ok, cur_track} = Voice.get_current_track(guild)
 
     if cur_track && cur_track.status == :paused do
       :noop

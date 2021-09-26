@@ -1,6 +1,6 @@
-defmodule BotchiniDiscord.Twitch.Responses.Components do
+defmodule BotchiniDiscord.Responses.Components do
   @moduledoc """
-  Generates component messages for twitch commands
+  Generates embed messages
   """
 
   @spec follow_stream(String.t()) :: map()

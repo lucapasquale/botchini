@@ -3,17 +3,8 @@ defmodule Botchini.Discord do
   Handles discord context
   """
 
-  require Ecto.Query
-  alias Ecto.Query
-
   alias Botchini.Discord.Schema.Guild
   alias Botchini.Repo
-
-  @spec fetch_guild(String.t()) :: Guild.t()
-  def fetch_guild(discord_guild_id) do
-    Query.from(g in Guild, where: g.discord_guild_id == ^discord_guild_id)
-    |> Repo.one!()
-  end
 
   @spec upsert_guild(String.t()) :: {:ok, Guild.t()}
   def upsert_guild(discord_guild_id) do

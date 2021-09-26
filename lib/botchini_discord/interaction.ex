@@ -15,5 +15,5 @@ defmodule BotchiniDiscord.Interaction do
   @doc """
   Parses the current interaction, returning the interaction response to be sent to Discord
   """
-  @callback handle_interaction(Interaction.t(), any()) :: map()
+  @callback handle_interaction(Interaction.t(), map()) :: map()
 end

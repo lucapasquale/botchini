@@ -9,7 +9,7 @@ defmodule BotchiniDiscord.Voice.Responses.Components do
       type: 1,
       components:
         [
-          # TODO: fix resume
+          # _TODO: fix resume
           # %{
           #   type: 2,
           #   style: 2,
@@ -26,7 +26,7 @@ defmodule BotchiniDiscord.Voice.Responses.Components do
       type: 1,
       components:
         [
-          # TODO: fix resume
+          # _TODO: fix resume
           # %{
           #   type: 2,
           #   style: 3,

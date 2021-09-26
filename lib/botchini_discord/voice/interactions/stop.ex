@@ -24,22 +24,23 @@ defmodule BotchiniDiscord.Voice.Interactions.Stop do
   end
 
   def handle_interaction(interaction, _payload) do
-    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
-    cur_track = Voice.get_current_track(guild)
+    guild = Discord.fetch_guild(Integer.to_string(interaction.guild_id))
 
-    if !is_nil(cur_track) do
-      Voice.clear_queue(guild)
-      Nostrum.Voice.stop(interaction.guild_id)
+    case Voice.get_current_track(guild) do
+      nil ->
+        %{
+          type: 4,
+          data: %{content: "No song in queue"}
+        }
 
-      %{
-        type: 4,
-        data: %{content: "Stopped playing"}
-      }
-    else
-      %{
-        type: 4,
-        data: %{content: "No song in queue"}
-      }
+      _track ->
+        Voice.clear_queue(guild)
+        Nostrum.Voice.stop(interaction.guild_id)
+
+        %{
+          type: 4,
+          data: %{content: "Stopped playing"}
+        }
     end
   end
 end

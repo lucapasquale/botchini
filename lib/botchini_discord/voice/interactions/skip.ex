@@ -26,29 +26,24 @@ defmodule BotchiniDiscord.Voice.Interactions.Skip do
   end
 
   def handle_interaction(interaction, _payload) do
-    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
+    guild = Discord.fetch_guild(Integer.to_string(interaction.guild_id))
+    next_song = Voice.get_next_track(guild)
 
-    Voice.pause(guild)
-    Nostrum.Voice.pause(interaction.guild_id)
+    :ok = Nostrum.Voice.stop(interaction.guild_id)
 
-    case Voice.start_next_track(guild) do
-      {:ok, nil} ->
-        %{
-          type: 4,
-          data: %{content: "No next song in queue"}
+    if is_nil(next_song) do
+      %{
+        type: 4,
+        data: %{content: "No song in queue, stopping"}
+      }
+    else
+      %{
+        type: 4,
+        data: %{
+          content: "Skipping to next song",
+          components: [Components.pause_controls()]
         }
-
-      {:ok, track} ->
-        IO.inspect(track)
-        Nostrum.Voice.play(interaction.guild_id, track.play_url, :ytdl)
-
-        %{
-          type: 4,
-          data: %{
-            content: "Skipping to next song",
-            components: [Components.pause_controls()]
-          }
-        }
+      }
     end
   end
 end

@@ -26,7 +26,7 @@ defmodule BotchiniDiscord.Voice.Interactions.Pause do
   end
 
   def handle_interaction(interaction, _payload) do
-    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
+    guild = Discord.fetch_guild(Integer.to_string(interaction.guild_id))
 
     if Nostrum.Voice.playing?(interaction.guild_id) do
       Voice.pause(guild)

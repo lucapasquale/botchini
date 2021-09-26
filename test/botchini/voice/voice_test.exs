@@ -56,6 +56,42 @@ defmodule BotchiniTest.Voice.VoiceTest do
     end
   end
 
+  describe "get_next_track" do
+    test "returns nil if no current track" do
+      guild = generate_guild()
+
+      nil = Voice.get_next_track(guild)
+    end
+
+    test "gets first track that is waiting" do
+      guild = generate_guild()
+
+      track = generate_track(%{guild_id: guild.id, status: :waiting})
+      generate_track(%{guild_id: guild.id, status: :waiting})
+
+      ^track = Voice.get_next_track(guild)
+    end
+
+    test "ignores :playing tracks" do
+      guild = generate_guild()
+
+      generate_track(%{guild_id: guild.id, status: :playing})
+      track = generate_track(%{guild_id: guild.id, status: :waiting})
+
+      ^track = Voice.get_next_track(guild)
+    end
+
+    test "ignores tracks from other guilds" do
+      other_guild = generate_guild()
+      generate_track(%{guild_id: other_guild.id, status: :waiting})
+
+      guild = generate_guild()
+      track = generate_track(%{guild_id: guild.id, status: :waiting})
+
+      ^track = Voice.get_next_track(guild)
+    end
+  end
+
   describe "insert_track" do
     test "inserts new track to queue" do
       guild = generate_guild()

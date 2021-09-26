@@ -19,6 +19,18 @@ defmodule Botchini.Voice do
     |> Repo.one()
   end
 
+  @spec get_next_track(Guild.t()) :: Track.t() | nil
+  def get_next_track(guild) do
+    Query.from(t in Track,
+      where: t.guild_id == ^guild.id,
+      where: t.status == :waiting,
+      order_by: t.inserted_at,
+      limit: 1
+    )
+    |> Repo.all()
+    |> List.first()
+  end
+
   @spec insert_track(%{play_url: String.t()}, Guild.t()) :: {:ok, Track.t()}
   def insert_track(%{play_url: play_url}, guild) do
     %Track{}
@@ -54,17 +66,6 @@ defmodule Botchini.Voice do
       where: t.status != :done
     )
     |> Repo.update_all(set: [status: :done])
-  end
-
-  defp get_next_track(guild) do
-    Query.from(t in Track,
-      where: t.guild_id == ^guild.id,
-      where: t.status == :waiting,
-      order_by: t.inserted_at,
-      limit: 1
-    )
-    |> Repo.all()
-    |> List.first()
   end
 
   defp update_track_status(track, _status) when is_nil(track), do: {:ok, nil}

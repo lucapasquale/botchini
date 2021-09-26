@@ -36,7 +36,7 @@ defmodule BotchiniDiscord.Voice.Interactions.Play do
   end
 
   def handle_interaction(interaction, %{url: url}) do
-    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
+    guild = Discord.fetch_guild(Integer.to_string(interaction.guild_id))
 
     case get_voice_channel_of_msg(interaction) do
       nil ->
@@ -45,11 +45,11 @@ defmodule BotchiniDiscord.Voice.Interactions.Play do
           data: %{content: "Please enter a voice channel first!"}
         }
 
-      interaction_channel_id ->
+      voice_channel_id ->
         Voice.insert_track(%{play_url: get_track_url(url)}, guild)
 
-        if Nostrum.Voice.get_channel_id(interaction.guild_id) != interaction_channel_id do
-          Nostrum.Voice.join_channel(interaction.guild_id, interaction_channel_id)
+        if Nostrum.Voice.get_channel_id(interaction.guild_id) != voice_channel_id do
+          Nostrum.Voice.join_channel(interaction.guild_id, voice_channel_id)
         end
 
         %{

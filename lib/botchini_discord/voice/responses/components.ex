@@ -4,7 +4,7 @@ defmodule BotchiniDiscord.Voice.Responses.Components do
   """
 
   @spec pause_controls() :: map()
-  def pause_controls() do
+  def pause_controls do
     %{
       type: 1,
       components:
@@ -21,7 +21,7 @@ defmodule BotchiniDiscord.Voice.Responses.Components do
   end
 
   @spec resume_controls() :: map()
-  def resume_controls() do
+  def resume_controls do
     %{
       type: 1,
       components:
@@ -37,7 +37,7 @@ defmodule BotchiniDiscord.Voice.Responses.Components do
     }
   end
 
-  defp skip_and_stop_buttons() do
+  defp skip_and_stop_buttons do
     [
       %{
         type: 2,

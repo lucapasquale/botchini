@@ -1,5 +1,5 @@
 # STEP 1 - BUILD RELEASE
-FROM hexpm/elixir:1.11.3-erlang-23.2.7-alpine-3.13.2 AS build
+FROM hexpm/elixir:1.12.3-erlang-24.0.1-alpine-3.13.3 AS build
 
 # Install build dependencies
 RUN apk update && \

@@ -7,7 +7,7 @@ defmodule BotchiniDiscord.Consumer do
   use Nostrum.Consumer
 
   alias Botchini.Discord
-  alias BotchiniDiscord.Interactions
+  alias BotchiniDiscord.{Interactions, Voice}
 
   def start_link do
     Consumer.start_link(__MODULE__)
@@ -31,37 +31,11 @@ defmodule BotchiniDiscord.Consumer do
   end
 
   def handle_event({:VOICE_READY, event, _ws_state}) do
-    IO.inspect(event, label: "voice ready")
-
-    {:ok, guild} = Discord.upsert_guild(Integer.to_string(event.guild_id))
-
-    case Botchini.Voice.start_next_track(guild) do
-      nil ->
-        Nostrum.Voice.stop(guild.discord_guild_id)
-
-      track ->
-        Nostrum.Voice.play(event.guild_id, track.play_url, :ytdl)
-    end
+    Voice.handle_voice_ready(event)
   end
 
   def handle_event({:VOICE_SPEAKING_UPDATE, event, _ws_state}) do
-    IO.inspect(event, label: "voice speaking update")
-
-    case event.speaking do
-      true ->
-        :noop
-
-      false ->
-        {:ok, guild} = Discord.upsert_guild(Integer.to_string(event.guild_id))
-
-        case Botchini.Voice.start_next_track(guild) do
-          nil ->
-            Nostrum.Voice.leave_channel(event.guild_id)
-
-          track ->
-            Nostrum.Voice.play(event.guild_id, track.play_url, :ytdl)
-        end
-    end
+    Voice.handle_voice_update(event)
   end
 
   def handle_event({_event, _data, _ws}) do

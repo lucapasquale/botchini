@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Interactions.Stream do
+defmodule BotchiniDiscord.Twitch.Interactions.Stream do
   @behaviour BotchiniDiscord.Interaction
 
   @moduledoc """

@@ -16,9 +16,10 @@ defmodule Botchini.Voice do
     |> Repo.insert()
   end
 
-  @spec find_next_track(Guild.t()) :: Track.t() | nil
-  def find_next_track(guild) do
-    next_track_in_queue(guild)
+  @spec clear_queue(Guild.t()) :: any()
+  def clear_queue(guild) do
+    Ecto.Query.from(t in Track, where: t.guild_id == ^guild.id)
+    |> Repo.update_all(set: [status: :done])
   end
 
   @spec start_next_track(Guild.t()) :: Track.t() | nil

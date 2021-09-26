@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Interactions.Play do
+defmodule BotchiniDiscord.Voice.Interactions.Play do
   @behaviour BotchiniDiscord.Interaction
 
   @moduledoc """
@@ -12,7 +12,7 @@ defmodule BotchiniDiscord.Interactions.Play do
   def get_command,
     do: %{
       name: "play",
-      description: "Information about the bot",
+      description: "Play a song",
       options: [
         %{
           type: 3,
@@ -28,7 +28,7 @@ defmodule BotchiniDiscord.Interactions.Play do
   def handle_interaction(interaction, _payload) when is_nil(interaction.guild_id) do
     %{
       type: 4,
-      data: %{content: "Cannot play from outside of a guild!"}
+      data: %{content: "Cannot use this command from outside a guild!"}
     }
   end
 

@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Responses.Embeds do
+defmodule BotchiniDiscord.Twitch.Responses.Embeds do
   @moduledoc """
   Generates embed messages
   """

@@ -5,21 +5,19 @@ defmodule BotchiniDiscord.Interactions do
 
   require Logger
   alias Nostrum.Api
-  alias Nostrum.Struct.Interaction
-
-  alias BotchiniDiscord.Interactions
+  alias Nostrum.Struct.{Interaction, ApplicationCommandInteractionData}
 
   @spec register_commands() :: :ok
   def register_commands do
     [
-      Interactions.ConfirmUnfollow.get_command(),
-      Interactions.Follow.get_command(),
-      Interactions.Following.get_command(),
-      Interactions.Info.get_command(),
-      Interactions.Play.get_command(),
-      Interactions.Stop.get_command(),
-      Interactions.Stream.get_command(),
-      Interactions.Unfollow.get_command()
+      BotchiniDiscord.Common.Interactions.Info.get_command(),
+      BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow.get_command(),
+      BotchiniDiscord.Twitch.Interactions.Follow.get_command(),
+      BotchiniDiscord.Twitch.Interactions.Following.get_command(),
+      BotchiniDiscord.Twitch.Interactions.Stream.get_command(),
+      BotchiniDiscord.Twitch.Interactions.Unfollow.get_command(),
+      BotchiniDiscord.Voice.Interactions.Play.get_command(),
+      BotchiniDiscord.Voice.Interactions.Stop.get_command()
     ]
     |> Enum.filter(&(!is_nil(&1)))
     |> Enum.each(fn command ->
@@ -66,14 +64,13 @@ defmodule BotchiniDiscord.Interactions do
     end
   end
 
-  @spec parse_interaction_data(map()) :: {:command | :component, [String.t()]}
+  @spec parse_interaction_data(ApplicationCommandInteractionData.t()) ::
+          {:command | :component, [String.t()]}
   def parse_interaction_data(interaction_data) do
     case Map.get(interaction_data, :custom_id) do
       nil ->
-        args =
-          interaction_data
-          |> Map.get(:options, [])
-          |> Enum.map(fn opt -> opt.value end)
+        options = Map.get(interaction_data, :options) || []
+        args = Enum.map(options, fn opt -> opt.value end)
 
         {:command, [interaction_data.name] ++ args}
 
@@ -83,32 +80,41 @@ defmodule BotchiniDiscord.Interactions do
   end
 
   defp call_interaction(interaction, {:command, ["info"]}),
-    do: Interactions.Info.handle_interaction(interaction, %{})
+    do: BotchiniDiscord.Common.Interactions.Info.handle_interaction(interaction, %{})
 
   defp call_interaction(interaction, {:command, ["stream", stream_code]}),
-    do: Interactions.Stream.handle_interaction(interaction, %{stream_code: stream_code})
+    do:
+      BotchiniDiscord.Twitch.Interactions.Stream.handle_interaction(interaction, %{
+        stream_code: stream_code
+      })
 
   defp call_interaction(interaction, {_, ["follow", stream_code]}),
-    do: Interactions.Follow.handle_interaction(interaction, %{stream_code: stream_code})
+    do:
+      BotchiniDiscord.Twitch.Interactions.Follow.handle_interaction(interaction, %{
+        stream_code: stream_code
+      })
 
   defp call_interaction(interaction, {:component, ["confirm_unfollow", type, stream_code]}),
     do:
-      Interactions.ConfirmUnfollow.handle_interaction(interaction, %{
+      BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow.handle_interaction(interaction, %{
         type: String.to_atom(type),
         stream_code: stream_code
       })
 
   defp call_interaction(interaction, {_, ["unfollow", stream_code]}),
-    do: Interactions.Unfollow.handle_interaction(interaction, %{stream_code: stream_code})
+    do:
+      BotchiniDiscord.Twitch.Interactions.Unfollow.handle_interaction(interaction, %{
+        stream_code: stream_code
+      })
 
   defp call_interaction(interaction, {:command, ["following"]}),
-    do: Interactions.Following.handle_interaction(interaction, %{})
+    do: BotchiniDiscord.Twitch.Interactions.Following.handle_interaction(interaction, %{})
 
   defp call_interaction(interaction, {:command, ["play", url]}),
-    do: Interactions.Play.handle_interaction(interaction, %{url: url})
+    do: BotchiniDiscord.Voice.Interactions.Play.handle_interaction(interaction, %{url: url})
 
   defp call_interaction(interaction, {:command, ["stop"]}),
-    do: Interactions.Stop.handle_interaction(interaction, %{})
+    do: BotchiniDiscord.Voice.Interactions.Stop.handle_interaction(interaction, %{})
 
   defp call_interaction(_interaction, _data),
     do: raise("Unknown command")

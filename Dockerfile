@@ -31,14 +31,12 @@ RUN mix do compile, release
 
 ####################################################################################################
 # STEP 2 - FINAL
-FROM alpine:3.13.2 as app
+FROM python:3-alpine as app
 RUN apk update && \
   apk upgrade --no-cache && \
   apk add --no-cache \
   openssl \
   ncurses-libs \
-  python3 \
-  py3-pip \
   ffmpeg
 
 RUN wget https://yt-dl.org/downloads/latest/youtube-dl -O /usr/local/bin/youtube-dl && \

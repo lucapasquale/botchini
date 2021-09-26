@@ -5,8 +5,8 @@ defmodule Botchini.Voice do
 
   require Ecto.Query
 
-  alias Botchini.Repo
   alias Botchini.Discord.Schema.Guild
+  alias Botchini.Repo
   alias Botchini.Voice.Schema.Track
 
   @spec insert_track(String.t(), Guild.t()) :: {:ok, Track.t()}

@@ -7,8 +7,8 @@ defmodule Botchini.Voice.Schema.Track do
   require Ecto.Query
   import Ecto.Changeset
 
-  alias Botchini.Voice.Schema.Track
   alias Botchini.Discord.Schema.Guild
+  alias Botchini.Voice.Schema.Track
 
   @type t :: %__MODULE__{
           guild_id: String.t(),

@@ -5,6 +5,8 @@ defmodule BotchiniDiscord.Voice.Interactions.Play do
   Handles /play slash command
   """
 
+  alias Nostrum.Cache.GuildCache
+
   alias Botchini.{Discord, Voice}
 
   @impl BotchiniDiscord.Interaction
@@ -66,7 +68,7 @@ defmodule BotchiniDiscord.Voice.Interactions.Play do
 
   defp get_voice_channel_of_msg(interaction) do
     interaction.guild_id
-    |> Nostrum.Cache.GuildCache.get!()
+    |> GuildCache.get!()
     |> Map.get(:voice_states)
     |> Enum.find(%{}, fn v -> v.user_id == interaction.member.user.id end)
     |> Map.get(:channel_id)

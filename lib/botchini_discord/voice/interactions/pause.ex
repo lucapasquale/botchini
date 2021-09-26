@@ -6,6 +6,7 @@ defmodule BotchiniDiscord.Voice.Interactions.Pause do
   """
 
   alias Botchini.{Discord, Voice}
+  alias BotchiniDiscord.Voice.Responses.Components
 
   @impl BotchiniDiscord.Interaction
   @spec get_command() :: map()
@@ -33,7 +34,10 @@ defmodule BotchiniDiscord.Voice.Interactions.Pause do
 
       %{
         type: 4,
-        data: %{content: "Paused current song"}
+        data: %{
+          content: "Paused current song",
+          components: [Components.resume_controls()]
+        }
       }
     else
       %{

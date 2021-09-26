@@ -8,6 +8,7 @@ defmodule BotchiniDiscord.Voice.Interactions.Play do
   alias Nostrum.Cache.GuildCache
 
   alias Botchini.{Discord, Voice}
+  alias BotchiniDiscord.Voice.Responses.Components
 
   @impl BotchiniDiscord.Interaction
   @spec get_command() :: map()
@@ -53,7 +54,10 @@ defmodule BotchiniDiscord.Voice.Interactions.Play do
 
         %{
           type: 4,
-          data: %{content: "Added #{url} to queue"}
+          data: %{
+            content: "Added #{url} to queue",
+            components: [Components.pause_controls()]
+          }
         }
     end
   end

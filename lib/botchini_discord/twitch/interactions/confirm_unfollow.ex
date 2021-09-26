@@ -41,10 +41,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
   def handle_interaction(_interaction, %{type: :cancel, stream_code: stream_code}) do
     %{
       type: 7,
-      data: %{
-        content: "You are still following #{stream_code}",
-        components: []
-      }
+      data: %{content: "You are still following #{stream_code}"}
     }
   end
 
@@ -57,19 +54,13 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
       {:error, :not_found} ->
         %{
           type: 7,
-          data: %{
-            content: "Stream #{stream_code} was not being followed",
-            components: []
-          }
+          data: %{content: "Stream #{stream_code} was not being followed"}
         }
 
       {:ok} ->
         %{
           type: 7,
-          data: %{
-            content: "Removed #{stream_code} from your following streams",
-            components: []
-          }
+          data: %{content: "Removed #{stream_code} from your following streams"}
         }
     end
   end

@@ -11,7 +11,7 @@ defmodule BotchiniDiscord.Voice.Interactions.Stop do
   def get_command,
     do: %{
       name: "stop",
-      description: "Stop playing"
+      description: "Stop playing and clears queue"
     }
 
   @impl BotchiniDiscord.Interaction

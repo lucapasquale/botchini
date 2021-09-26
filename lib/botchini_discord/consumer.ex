@@ -7,7 +7,7 @@ defmodule BotchiniDiscord.Consumer do
   use Nostrum.Consumer
 
   alias Botchini.Discord
-  alias BotchiniDiscord.{Interactions, Voice}
+  alias BotchiniDiscord.Interactions
 
   def start_link do
     Consumer.start_link(__MODULE__)
@@ -30,15 +30,7 @@ defmodule BotchiniDiscord.Consumer do
     Interactions.handle_interaction(interaction)
   end
 
-  def handle_event({:VOICE_READY, event, _ws_state}) do
-    Voice.handle_voice_ready(event)
-  end
-
-  def handle_event({:VOICE_SPEAKING_UPDATE, event, _ws_state}) do
-    Voice.handle_voice_update(event)
-  end
-
-  def handle_event({_event, _data, _ws}) do
+  def handle_event(_event) do
     :noop
   end
 end

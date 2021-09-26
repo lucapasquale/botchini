@@ -6,7 +6,7 @@ defmodule Botchini.Twitch.Routes.WebhookCallback do
   require Logger
 
   alias Botchini.Twitch
-  alias BotchiniDiscord.Twitch.Responses.{Components, Embeds}
+  alias BotchiniDiscord.Responses.{Components, Embeds}
 
   @spec call(Plug.Conn.t()) :: {:ok, any()} | {:error, :not_found}
   def call(conn) do

@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Twitch.Interactions.Unfollow do
+defmodule BotchiniDiscord.Interactions.Unfollow do
   @behaviour BotchiniDiscord.Interaction
 
   @moduledoc """

@@ -1,6 +1,6 @@
-defmodule BotchiniDiscord.Twitch.Responses.Embeds do
+defmodule BotchiniDiscord.Responses.Embeds do
   @moduledoc """
-  Generates embed messages for twitch commands
+  Generates embed messages
   """
 
   alias Nostrum.Struct.Embed

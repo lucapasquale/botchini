@@ -4,7 +4,7 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "4.0.0",
+      version: "3.3.2",
       elixir: "~> 1.12",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -16,13 +16,10 @@ defmodule Botchini.MixProject do
 
   def application do
     [
-      extra_applications: extra_applications(Mix.env()),
+      extra_applications: [:logger],
       mod: {Botchini.Application, []}
     ]
   end
-
-  defp extra_applications(:dev), do: extra_applications(:all) ++ [:remix]
-  defp extra_applications(_all), do: [:logger]
 
   defp deps do
     [

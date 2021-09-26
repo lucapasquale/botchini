@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Twitch.Interactions.Stream do
+defmodule BotchiniDiscord.Interactions.Stream do
   @behaviour BotchiniDiscord.Interaction
 
   @moduledoc """
@@ -8,7 +8,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.Stream do
   alias Nostrum.Struct.Interaction
 
   alias Botchini.Twitch
-  alias BotchiniDiscord.Twitch.Responses.{Components, Embeds}
+  alias BotchiniDiscord.Responses.{Components, Embeds}
 
   @impl BotchiniDiscord.Interaction
   @spec get_command() :: map()

@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Twitch.Interactions.Following do
+defmodule BotchiniDiscord.Interactions.Following do
   @behaviour BotchiniDiscord.Interaction
 
   @moduledoc """

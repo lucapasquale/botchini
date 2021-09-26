@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
+defmodule BotchiniDiscord.Interactions.ConfirmUnfollow do
   @behaviour BotchiniDiscord.Interaction
 
   @moduledoc """
@@ -8,7 +8,8 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
   alias Nostrum.Struct.Interaction
 
   alias Botchini.Twitch
-  alias BotchiniDiscord.Twitch.Responses.Components
+
+  alias BotchiniDiscord.Responses.Components
 
   @impl BotchiniDiscord.Interaction
   @spec get_command() :: nil
@@ -41,7 +42,10 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
   def handle_interaction(_interaction, %{type: :cancel, stream_code: stream_code}) do
     %{
       type: 7,
-      data: %{content: "You are still following #{stream_code}"}
+      data: %{
+        content: "You are still following #{stream_code}",
+        components: []
+      }
     }
   end
 
@@ -54,13 +58,19 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
       {:error, :not_found} ->
         %{
           type: 7,
-          data: %{content: "Stream #{stream_code} was not being followed"}
+          data: %{
+            content: "Stream #{stream_code} was not being followed",
+            components: []
+          }
         }
 
       {:ok} ->
         %{
           type: 7,
-          data: %{content: "Removed #{stream_code} from your following streams"}
+          data: %{
+            content: "Removed #{stream_code} from your following streams",
+            components: []
+          }
         }
     end
   end

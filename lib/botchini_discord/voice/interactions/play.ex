@@ -37,44 +37,24 @@ defmodule BotchiniDiscord.Voice.Interactions.Play do
   def handle_interaction(interaction, %{url: url}) do
     {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
 
-    cur_track = Voice.get_current_track(guild)
+    case get_voice_channel_of_msg(interaction) do
+      nil ->
+        %{
+          type: 4,
+          data: %{content: "Please enter a voice channel first!"}
+        }
 
-    if !is_nil(cur_track) and cur_track.status == :paused do
-      Voice.resume(guild)
-      Nostrum.Voice.resume(interaction.guild_id)
+      interaction_channel_id ->
+        Voice.insert_track(url, guild)
 
-      %{
-        type: 4,
-        data: %{content: "Resumed play"}
-      }
-    else
-      case Nostrum.Voice.get_channel_id(interaction.guild_id) do
-        nil ->
-          case get_voice_channel_of_msg(interaction) do
-            nil ->
-              %{
-                type: 4,
-                data: %{content: "Please enter a voice channel first!"}
-              }
+        if Nostrum.Voice.get_channel_id(interaction.guild_id) != interaction_channel_id do
+          Nostrum.Voice.join_channel(interaction.guild_id, interaction_channel_id)
+        end
 
-            channel_id ->
-              Voice.insert_track(url, guild)
-              Nostrum.Voice.join_channel(interaction.guild_id, channel_id)
-
-              %{
-                type: 4,
-                data: %{content: "playing"}
-              }
-          end
-
-        _channel_id ->
-          Voice.insert_track(url, guild)
-
-          %{
-            type: 4,
-            data: %{content: "playing2"}
-          }
-      end
+        %{
+          type: 4,
+          data: %{content: "Added #{url} to queue"}
+        }
     end
   end
 

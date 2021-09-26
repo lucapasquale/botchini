@@ -3,6 +3,8 @@ defmodule BotchiniDiscord.Interaction do
   Behaviour for handling Discord interactions, through slash commands or components
   """
 
+  alias Nostrum.Struct.Interaction
+
   @doc """
   Returns the object defining the slash command to be created.
 
@@ -13,5 +15,5 @@ defmodule BotchiniDiscord.Interaction do
   @doc """
   Parses the current interaction, returning the interaction response to be sent to Discord
   """
-  @callback handle_interaction(Nostrum.Struct.Interaction.t(), map()) :: map()
+  @callback handle_interaction(Interaction.t(), any()) :: map()
 end

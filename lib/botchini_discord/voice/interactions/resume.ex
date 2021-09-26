@@ -29,18 +29,18 @@ defmodule BotchiniDiscord.Voice.Interactions.Resume do
 
     cur_track = Voice.get_current_track(guild)
 
-    if cur_track && cur_track.status == :paused do
+    if !is_nil(cur_track) && cur_track.status == :paused do
       Voice.resume(guild)
       Nostrum.Voice.resume(interaction.guild_id)
 
       %{
         type: 4,
-        data: %{content: "Resumed current song"}
+        data: %{content: "Resuming current song"}
       }
     else
       %{
         type: 4,
-        data: %{content: "No current song playing"}
+        data: %{content: "No song paused"}
       }
     end
   end

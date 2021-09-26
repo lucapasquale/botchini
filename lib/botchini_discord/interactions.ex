@@ -35,15 +35,15 @@ defmodule BotchiniDiscord.Interactions do
     Api.create_global_application_command(command)
   end
 
-  defp register_command(command, _env) do
-    case Application.fetch_env(:botchini, :test_guild_id) do
-      {:ok, guild_id} ->
-        IO.inspect("adding command")
-        Api.create_guild_application_command(guild_id, command)
+  defp register_command(_command, _env) do
+    # case Application.fetch_env(:botchini, :test_guild_id) do
+    #   {:ok, guild_id} ->
+    #     IO.inspect("adding command")
+    #     Api.create_guild_application_command(guild_id, command)
 
-      _ ->
-        :noop
-    end
+    #   _ ->
+    #     :noop
+    # end
   end
 
   @spec handle_interaction(Interaction.t()) :: any()

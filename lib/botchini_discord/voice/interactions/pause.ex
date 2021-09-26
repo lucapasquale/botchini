@@ -30,11 +30,16 @@ defmodule BotchiniDiscord.Voice.Interactions.Pause do
     if Nostrum.Voice.playing?(interaction.guild_id) do
       Voice.pause(guild)
       Nostrum.Voice.pause(interaction.guild_id)
-    end
 
-    %{
-      type: 4,
-      data: %{content: "Paused current song"}
-    }
+      %{
+        type: 4,
+        data: %{content: "Paused current song"}
+      }
+    else
+      %{
+        type: 4,
+        data: %{content: "Not currently playing"}
+      }
+    end
   end
 end

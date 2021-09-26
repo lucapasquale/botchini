@@ -29,14 +29,17 @@ defmodule BotchiniDiscord.Voice.Interactions.Skip do
     guild = Discord.fetch_guild(Integer.to_string(interaction.guild_id))
     next_song = Voice.get_next_track(guild)
 
-    :ok = Nostrum.Voice.stop(interaction.guild_id)
-
     if is_nil(next_song) do
+      Voice.clear_queue(guild)
+      :ok = Nostrum.Voice.stop(interaction.guild_id)
+
       %{
         type: 4,
         data: %{content: "No song in queue, stopping"}
       }
     else
+      :ok = Nostrum.Voice.stop(interaction.guild_id)
+
       %{
         type: 4,
         data: %{

@@ -9,12 +9,14 @@ defmodule BotchiniDiscord.Voice.Interactions.Resume do
   alias BotchiniDiscord.Voice.Responses.Components
 
   @impl BotchiniDiscord.Interaction
-  @spec get_command() :: map()
-  def get_command,
-    do: %{
-      name: "resume",
-      description: "Resumes current song"
-    }
+  @spec get_command() :: map() | nil
+  def get_command, do: nil
+  # TODO: fix resume
+  # def get_command,
+  #   do: %{
+  #     name: "resume",
+  #     description: "Resumes current song"
+  #   }
 
   @impl BotchiniDiscord.Interaction
   @spec handle_interaction(Interaction.t(), map()) :: map()
@@ -29,12 +31,14 @@ defmodule BotchiniDiscord.Voice.Interactions.Resume do
     guild = Discord.fetch_guild(Integer.to_string(interaction.guild_id))
     cur_track = Voice.get_current_track(guild)
 
-    if !is_nil(cur_track) && cur_track.status == :paused do
+    if is_nil(cur_track) || cur_track.status != :paused do
+      %{
+        type: 4,
+        data: %{content: "No song to resume!"}
+      }
+    else
       Voice.resume(guild)
-
-      if !Nostrum.Voice.playing?(interaction.guild_id) do
-        Nostrum.Voice.resume(interaction.guild_id)
-      end
+      :ok = Nostrum.Voice.resume(interaction.guild_id)
 
       %{
         type: 4,
@@ -42,11 +46,6 @@ defmodule BotchiniDiscord.Voice.Interactions.Resume do
           content: "Resuming current song",
           components: [Components.pause_controls()]
         }
-      }
-    else
-      %{
-        type: 4,
-        data: %{content: "No song in queue"}
       }
     end
   end

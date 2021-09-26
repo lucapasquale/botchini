@@ -9,7 +9,7 @@ defmodule BotchiniDiscord.Interactions do
 
   alias BotchiniDiscord.Common.Interactions.Info
   alias BotchiniDiscord.Twitch.Interactions.{ConfirmUnfollow, Follow, Following, Stream, Unfollow}
-  alias BotchiniDiscord.Voice.Interactions.{Play, Stop}
+  alias BotchiniDiscord.Voice.Interactions.{Pause, Play, Resume, Stop}
 
   @spec register_commands() :: :ok
   def register_commands do
@@ -20,7 +20,9 @@ defmodule BotchiniDiscord.Interactions do
       Following.get_command(),
       Stream.get_command(),
       Unfollow.get_command(),
+      Pause.get_command(),
       Play.get_command(),
+      Resume.get_command(),
       Stop.get_command()
     ]
     |> Enum.filter(&(!is_nil(&1)))
@@ -35,8 +37,12 @@ defmodule BotchiniDiscord.Interactions do
 
   defp register_command(command, _env) do
     case Application.fetch_env(:botchini, :test_guild_id) do
-      {:ok, guild_id} -> Api.create_guild_application_command(guild_id, command)
-      _ -> :noop
+      {:ok, guild_id} ->
+        IO.inspect("adding command")
+        Api.create_guild_application_command(guild_id, command)
+
+      _ ->
+        :noop
     end
   end
 
@@ -119,6 +125,12 @@ defmodule BotchiniDiscord.Interactions do
 
   defp call_interaction(interaction, {:command, ["stop"]}),
     do: Stop.handle_interaction(interaction, %{})
+
+  defp call_interaction(interaction, {:command, ["resume"]}),
+    do: Resume.handle_interaction(interaction, %{})
+
+  defp call_interaction(interaction, {:command, ["pause"]}),
+    do: Pause.handle_interaction(interaction, %{})
 
   defp call_interaction(_interaction, _data),
     do: raise("Unknown command")

@@ -13,12 +13,12 @@ defmodule Botchini.Voice.Schema.Track do
   @type t :: %__MODULE__{
           guild_id: String.t(),
           play_url: String.t(),
-          status: :waiting | :playing | :done
+          status: :waiting | :playing | :paused | :done
         }
 
   schema "voice_tracks" do
     field(:play_url, :string, null: false)
-    field(:status, Ecto.Enum, values: [:waiting, :playing, :done], null: false)
+    field(:status, Ecto.Enum, values: [:waiting, :playing, :paused, :done], null: false)
 
     belongs_to(:guild, Guild)
 

@@ -1,17 +1,18 @@
-defmodule BotchiniDiscord.Voice.Interactions.Stop do
+defmodule BotchiniDiscord.Voice.Interactions.Pause do
   @behaviour BotchiniDiscord.Interaction
 
   @moduledoc """
-  Handles /stop slash command
+  Handles /pause slash command
   """
+
   alias Botchini.{Discord, Voice}
 
   @impl BotchiniDiscord.Interaction
   @spec get_command() :: map()
   def get_command,
     do: %{
-      name: "stop",
-      description: "Stop playing"
+      name: "pause",
+      description: "Pause current song"
     }
 
   @impl BotchiniDiscord.Interaction
@@ -25,13 +26,15 @@ defmodule BotchiniDiscord.Voice.Interactions.Stop do
 
   def handle_interaction(interaction, _payload) do
     {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
-    Voice.clear_queue(guild)
 
-    Nostrum.Voice.stop(interaction.guild_id)
+    if Nostrum.Voice.playing?(interaction.guild_id) do
+      Voice.pause(guild)
+      Nostrum.Voice.pause(interaction.guild_id)
+    end
 
     %{
       type: 4,
-      data: %{content: "Stopped playing"}
+      data: %{content: "Paused current song"}
     }
   end
 end

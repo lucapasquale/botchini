@@ -8,8 +8,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
   alias Nostrum.Struct.Interaction
 
   alias Botchini.Twitch
-
-  alias BotchiniDiscord.Responses.Components
+  alias BotchiniDiscord.Twitch.Responses.Components
 
   @impl BotchiniDiscord.Interaction
   @spec get_command() :: nil

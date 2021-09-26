@@ -25,7 +25,7 @@ defmodule BotchiniDiscord.Voice.Interactions.Stop do
 
   def handle_interaction(interaction, _payload) do
     {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
-    {:ok, cur_track} = Voice.get_current_track(guild)
+    cur_track = Voice.get_current_track(guild)
 
     if !is_nil(cur_track) do
       Voice.clear_queue(guild)

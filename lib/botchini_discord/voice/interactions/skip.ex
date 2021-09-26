@@ -32,13 +32,13 @@ defmodule BotchiniDiscord.Voice.Interactions.Skip do
     Nostrum.Voice.pause(interaction.guild_id)
 
     case Voice.start_next_track(guild) do
-      nil ->
+      {:ok, nil} ->
         %{
           type: 4,
           data: %{content: "No next song in queue"}
         }
 
-      track ->
+      {:ok, track} ->
         IO.inspect(track)
         Nostrum.Voice.play(interaction.guild_id, track.play_url, :ytdl)
 

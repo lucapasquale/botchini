@@ -10,10 +10,10 @@ defmodule BotchiniDiscord.Voice do
     {:ok, guild} = Discord.upsert_guild(Integer.to_string(event.guild_id))
 
     case Voice.start_next_track(guild) do
-      nil ->
+      {:ok, nil} ->
         Nostrum.Voice.stop(guild.discord_guild_id)
 
-      track ->
+      {:ok, track} ->
         Nostrum.Voice.play(event.guild_id, track.play_url, :ytdl)
     end
   end
@@ -25,17 +25,16 @@ defmodule BotchiniDiscord.Voice do
 
   def handle_voice_update(event) do
     {:ok, guild} = Discord.upsert_guild(Integer.to_string(event.guild_id))
-
-    {:ok, cur_track} = Voice.get_current_track(guild)
+    cur_track = Voice.get_current_track(guild)
 
     if cur_track && cur_track.status == :paused do
       :noop
     else
       case Voice.start_next_track(guild) do
-        nil ->
+        {:ok, nil} ->
           Nostrum.Voice.leave_channel(event.guild_id)
 
-        track ->
+        {:ok, track} ->
           Nostrum.Voice.play(event.guild_id, track.play_url, :ytdl)
       end
     end

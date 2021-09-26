@@ -5,26 +5,26 @@ defmodule BotchiniDiscord.Interactions do
 
   require Logger
   alias Nostrum.Api
-  alias Nostrum.Struct.Interaction
+  alias Nostrum.Struct.{ApplicationCommandInteractionData, Interaction}
 
-  alias BotchiniDiscord.Interactions.{
-    ConfirmUnfollow,
-    Follow,
-    Following,
-    Info,
-    Stream,
-    Unfollow
-  }
+  alias BotchiniDiscord.Common.Interactions.Info
+  alias BotchiniDiscord.Twitch.Interactions.{ConfirmUnfollow, Follow, Following, Stream, Unfollow}
+  alias BotchiniDiscord.Voice.Interactions.{Pause, Play, Resume, Skip, Stop}
 
   @spec register_commands() :: :ok
   def register_commands do
     [
+      Info.get_command(),
       ConfirmUnfollow.get_command(),
       Follow.get_command(),
       Following.get_command(),
-      Info.get_command(),
       Stream.get_command(),
-      Unfollow.get_command()
+      Unfollow.get_command(),
+      Pause.get_command(),
+      Play.get_command(),
+      Resume.get_command(),
+      Skip.get_command(),
+      Stop.get_command()
     ]
     |> Enum.filter(&(!is_nil(&1)))
     |> Enum.each(fn command ->
@@ -36,11 +36,11 @@ defmodule BotchiniDiscord.Interactions do
     Api.create_global_application_command(command)
   end
 
-  defp register_command(command, _env) do
-    case Application.fetch_env(:botchini, :test_guild_id) do
-      {:ok, guild_id} -> Api.create_guild_application_command(guild_id, command)
-      _ -> :noop
-    end
+  defp register_command(_command, _env) do
+    # case Application.fetch_env(:botchini, :test_guild_id) do
+    #   {:ok, guild_id} -> Api.create_guild_application_command(guild_id, command)
+    #   _ -> :noop
+    # end
   end
 
   @spec handle_interaction(Interaction.t()) :: any()
@@ -71,43 +71,65 @@ defmodule BotchiniDiscord.Interactions do
     end
   end
 
-  @spec parse_interaction_data(map()) :: {:command | :component, [String.t()]}
+  @spec parse_interaction_data(ApplicationCommandInteractionData.t()) :: [String.t()]
   def parse_interaction_data(interaction_data) do
     case Map.get(interaction_data, :custom_id) do
       nil ->
-        args =
-          interaction_data
-          |> Map.get(:options, [])
-          |> Enum.map(fn opt -> opt.value end)
+        options = Map.get(interaction_data, :options) || []
+        args = Enum.map(options, fn opt -> opt.value end)
 
-        {:command, [interaction_data.name] ++ args}
+        [interaction_data.name] ++ args
 
       custom_id ->
-        {:component, String.split(custom_id, ":")}
+        String.split(custom_id, ":")
     end
   end
 
-  defp call_interaction(interaction, {:command, ["info"]}),
+  defp call_interaction(interaction, ["info"]),
     do: Info.handle_interaction(interaction, %{})
 
-  defp call_interaction(interaction, {:command, ["stream", stream_code]}),
-    do: Stream.handle_interaction(interaction, %{stream_code: stream_code})
+  defp call_interaction(interaction, ["stream", stream_code]),
+    do:
+      Stream.handle_interaction(interaction, %{
+        stream_code: stream_code
+      })
 
-  defp call_interaction(interaction, {_, ["follow", stream_code]}),
-    do: Follow.handle_interaction(interaction, %{stream_code: stream_code})
+  defp call_interaction(interaction, ["follow", stream_code]),
+    do:
+      Follow.handle_interaction(interaction, %{
+        stream_code: stream_code
+      })
 
-  defp call_interaction(interaction, {:component, ["confirm_unfollow", type, stream_code]}),
+  defp call_interaction(interaction, ["confirm_unfollow", type, stream_code]),
     do:
       ConfirmUnfollow.handle_interaction(interaction, %{
         type: String.to_atom(type),
         stream_code: stream_code
       })
 
-  defp call_interaction(interaction, {_, ["unfollow", stream_code]}),
-    do: Unfollow.handle_interaction(interaction, %{stream_code: stream_code})
+  defp call_interaction(interaction, ["unfollow", stream_code]),
+    do:
+      Unfollow.handle_interaction(interaction, %{
+        stream_code: stream_code
+      })
 
-  defp call_interaction(interaction, {:command, ["following"]}),
+  defp call_interaction(interaction, ["following"]),
     do: Following.handle_interaction(interaction, %{})
+
+  defp call_interaction(interaction, ["play", url]),
+    do: Play.handle_interaction(interaction, %{url: url})
+
+  defp call_interaction(interaction, ["stop"]),
+    do: Stop.handle_interaction(interaction, %{})
+
+  defp call_interaction(interaction, ["resume"]),
+    do: Resume.handle_interaction(interaction, %{})
+
+  defp call_interaction(interaction, ["skip"]),
+    do: Skip.handle_interaction(interaction, %{})
+
+  defp call_interaction(interaction, ["pause"]),
+    do: Pause.handle_interaction(interaction, %{})
 
   defp call_interaction(_interaction, _data),
     do: raise("Unknown command")

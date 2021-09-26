@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Interactions.Follow do
+defmodule BotchiniDiscord.Twitch.Interactions.Follow do
   @behaviour BotchiniDiscord.Interaction
 
   @moduledoc """
@@ -8,7 +8,7 @@ defmodule BotchiniDiscord.Interactions.Follow do
   alias Nostrum.Struct.Interaction
 
   alias Botchini.{Discord, Twitch}
-  alias BotchiniDiscord.Responses.{Components, Embeds}
+  alias BotchiniDiscord.Twitch.Responses.{Components, Embeds}
 
   @impl BotchiniDiscord.Interaction
   @spec get_command() :: map()
@@ -36,7 +36,7 @@ defmodule BotchiniDiscord.Interactions.Follow do
       user_id: interaction.member && Integer.to_string(interaction.member.user.id)
     }
 
-    case Twitch.follow_stream(format_code(stream_code), guild, follow_info) do
+    case Twitch.follow_stream(BotchiniDiscord.Twitch.format_code(stream_code), guild, follow_info) do
       {:error, :invalid_stream} ->
         %{
           type: 4,
@@ -70,12 +70,6 @@ defmodule BotchiniDiscord.Interactions.Follow do
       {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
       guild
     end
-  end
-
-  defp format_code(code) do
-    code
-    |> String.trim()
-    |> String.downcase()
   end
 
   defp send_stream_online_message(channel_id, stream) do

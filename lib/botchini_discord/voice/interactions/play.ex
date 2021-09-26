@@ -46,7 +46,7 @@ defmodule BotchiniDiscord.Voice.Interactions.Play do
         }
 
       interaction_channel_id ->
-        Voice.insert_track(url, guild)
+        Voice.insert_track(get_track_url(url), guild)
 
         if Nostrum.Voice.get_channel_id(interaction.guild_id) != interaction_channel_id do
           Nostrum.Voice.join_channel(interaction.guild_id, interaction_channel_id)
@@ -68,5 +68,13 @@ defmodule BotchiniDiscord.Voice.Interactions.Play do
     |> Map.get(:voice_states)
     |> Enum.find(%{}, fn v -> v.user_id == interaction.member.user.id end)
     |> Map.get(:channel_id)
+  end
+
+  defp get_track_url(url) do
+    if String.starts_with?(url, "http") do
+      url
+    else
+      "ytsearch:#{url}"
+    end
   end
 end

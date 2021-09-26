@@ -1,8 +1,8 @@
-defmodule BotchiniDiscord.Voice.Interactions.Resume do
+defmodule BotchiniDiscord.Voice.Interactions.Skip do
   @behaviour BotchiniDiscord.Interaction
 
   @moduledoc """
-  Handles /resume slash command
+  Handles /skip slash command
   """
 
   alias Botchini.{Discord, Voice}
@@ -12,8 +12,8 @@ defmodule BotchiniDiscord.Voice.Interactions.Resume do
   @spec get_command() :: map()
   def get_command,
     do: %{
-      name: "resume",
-      description: "Resumes current song"
+      name: "skip",
+      description: "Skips current song"
     }
 
   @impl BotchiniDiscord.Interaction
@@ -27,27 +27,28 @@ defmodule BotchiniDiscord.Voice.Interactions.Resume do
 
   def handle_interaction(interaction, _payload) do
     {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
-    cur_track = Voice.get_current_track(guild)
 
-    if !is_nil(cur_track) && cur_track.status == :paused do
-      Voice.resume(guild)
+    Voice.pause(guild)
+    Nostrum.Voice.pause(interaction.guild_id)
 
-      if !Nostrum.Voice.playing?(interaction.guild_id) do
-        Nostrum.Voice.resume(interaction.guild_id)
-      end
-
-      %{
-        type: 4,
-        data: %{
-          content: "Resuming current song",
-          components: [Components.pause_controls()]
+    case Voice.start_next_track(guild) do
+      nil ->
+        %{
+          type: 4,
+          data: %{content: "No next song in queue"}
         }
-      }
-    else
-      %{
-        type: 4,
-        data: %{content: "No song in queue"}
-      }
+
+      track ->
+        IO.inspect(track)
+        Nostrum.Voice.play(interaction.guild_id, track.play_url, :ytdl)
+
+        %{
+          type: 4,
+          data: %{
+            content: "Skipping to next song",
+            components: [Components.pause_controls()]
+          }
+        }
     end
   end
 end

@@ -17,12 +17,6 @@ Uses modern features like [Slash Commands](https://blog.discord.com/slash-comman
     - `/follow <stream_code>` : Follow a channel and get notified when it starts streaming
     - `/unfollow <stream_code>` : Stops following a channel
     - `/following` : Lists all channels currently followed on the server
- - Voice
-    - `/play <url or term>` : Adds song to queue, and starts playing on current voice channel. Can receive a youtube url or a term to be searched
-    - `/pause` : Pauses current song
-    - `/resume` : Resumes paused song
-    - `/skip` : Starts playing the next song
-    - `/stop` : Stop playing and clears the queue
 
 ## Installation
 
@@ -41,10 +35,6 @@ Grab your bot's token from [https://discord.com/developers/applications](Discord
 ### Twitch commands
 
 For receiving and registering webhooks with Twitch, you need a url for the webhook to reach your machine. Locally you can use start a proxy with [ngrok http $PORT](https://ngrok.com/), then copy the url generated into the `:host` config.
-
-### Voice commands
-
-To be able to play sounds, you need to install [https://www.ffmpeg.org/](FFMpeg) and [YouTube-dl](https://youtube-dl.org/). Check both websites on how to install it to your machine.
 
 ## Running locally
 

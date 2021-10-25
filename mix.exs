@@ -4,7 +4,7 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "4.0.0",
+      version: "4.0.1",
       elixir: "~> 1.12",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -27,9 +27,7 @@ defmodule Botchini.MixProject do
   defp deps do
     [
       # Discord
-      {:nostrum, github: "Kraigie/nostrum", runtime: Mix.env() != :test},
-      {:gun, "== 2.0.0-rc.2", override: true},
-      {:certifi, "~> 2.8", override: true},
+      {:nostrum, "~> 0.4.6", runtime: Mix.env() != :test},
       # Ecto
       {:ecto_sql, "~> 3.6"},
       {:postgrex, ">= 0.0.0"},
@@ -39,7 +37,6 @@ defmodule Botchini.MixProject do
       {:jason, ">= 1.0.0"},
       {:exconstructor, "~> 1.1.0"},
       # HTTP Server
-      {:cowlib, ">= 2.11.0", override: true},
       {:plug_cowboy, "~> 2.0"},
       # Logging
       {:ink, "~> 1.0"},

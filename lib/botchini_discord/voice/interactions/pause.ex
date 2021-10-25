@@ -10,13 +10,11 @@ defmodule BotchiniDiscord.Voice.Interactions.Pause do
 
   @impl BotchiniDiscord.Interaction
   @spec get_command() :: map() | nil
-  def get_command, do: nil
-  # _TODO: fix resume
-  # def get_command,
-  #   do: %{
-  #     name: "pause",
-  #     description: "Pause current song"
-  #   }
+  def get_command,
+    do: %{
+      name: "pause",
+      description: "Pause current song"
+    }
 
   @impl BotchiniDiscord.Interaction
   @spec handle_interaction(Interaction.t(), map()) :: map()

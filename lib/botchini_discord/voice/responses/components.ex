@@ -9,13 +9,12 @@ defmodule BotchiniDiscord.Voice.Responses.Components do
       type: 1,
       components:
         [
-          # _TODO: fix resume
-          # %{
-          #   type: 2,
-          #   style: 2,
-          #   label: "Pause",
-          #   custom_id: "pause"
-          # }
+          %{
+            type: 2,
+            style: 2,
+            label: "Pause",
+            custom_id: "pause"
+          }
         ] ++ skip_and_stop_buttons()
     }
   end
@@ -26,13 +25,12 @@ defmodule BotchiniDiscord.Voice.Responses.Components do
       type: 1,
       components:
         [
-          # _TODO: fix resume
-          # %{
-          #   type: 2,
-          #   style: 3,
-          #   label: "Resume",
-          #   custom_id: "resume"
-          # }
+          %{
+            type: 2,
+            style: 3,
+            label: "Resume",
+            custom_id: "resume"
+          }
         ] ++ skip_and_stop_buttons()
     }
   end

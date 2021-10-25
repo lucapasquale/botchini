@@ -14,7 +14,7 @@ defmodule BotchiniDiscord.Voice do
         Nostrum.Voice.stop(guild.discord_guild_id)
 
       {:ok, track} ->
-        Nostrum.Voice.play(event.guild_id, track.play_url, :ytdl)
+        Nostrum.Voice.play(event.guild_id, track.play_url, :ytdl, realtime: false)
     end
   end
 
@@ -35,7 +35,7 @@ defmodule BotchiniDiscord.Voice do
           Nostrum.Voice.leave_channel(event.guild_id)
 
         {:ok, track} ->
-          Nostrum.Voice.play(event.guild_id, track.play_url, :ytdl)
+          Nostrum.Voice.play(event.guild_id, track.play_url, :ytdl, realtime: false)
       end
     end
   end

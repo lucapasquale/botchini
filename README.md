@@ -18,13 +18,13 @@ Uses modern features like [Slash Commands](https://blog.discord.com/slash-comman
 
 ## Installation
 
-Run `mix deps.get` to install all dependencies, and `mix ecto.migrate` to run the database migrations
-
-Then, copy the sample environment sample file into a secrets file:
+Copy the sample environment sample file into a secrets file:
 
 ```bash
 cat config/dev.secret-sample.exs > config/dev.secret.exs
 ```
+
+Then, run `mix deps.get` to install all dependencies, and `mix ecto.migrate` to run the database migrations
 
 ## Running locally
 

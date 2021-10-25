@@ -10,13 +10,11 @@ defmodule BotchiniDiscord.Voice.Interactions.Resume do
 
   @impl BotchiniDiscord.Interaction
   @spec get_command() :: map() | nil
-  def get_command, do: nil
-  # _TODO: fix resume
-  # def get_command,
-  #   do: %{
-  #     name: "resume",
-  #     description: "Resumes current song"
-  #   }
+  def get_command,
+    do: %{
+      name: "resume",
+      description: "Resumes current song"
+    }
 
   @impl BotchiniDiscord.Interaction
   @spec handle_interaction(Interaction.t(), map()) :: map()

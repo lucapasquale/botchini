@@ -29,6 +29,7 @@ defmodule Botchini.MixProject do
       # Discord
       {:nostrum, github: "Kraigie/nostrum", runtime: Mix.env() != :test},
       {:gun, "== 2.0.0-rc.2", override: true},
+      {:certifi, "~> 2.8", override: true},
       # Ecto
       {:ecto_sql, "~> 3.6"},
       {:postgrex, ">= 0.0.0"},

@@ -37,6 +37,7 @@ RUN apk update && \
   apk add --no-cache \
   openssl \
   ncurses-libs \
+  libstdc++ \
   ffmpeg
 
 RUN wget https://yt-dl.org/downloads/latest/youtube-dl -O /usr/local/bin/youtube-dl && \

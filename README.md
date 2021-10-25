@@ -10,11 +10,19 @@ Uses modern features like [Slash Commands](https://blog.discord.com/slash-comman
 
 ## Slash Commands
 
- - `/info` : Bot status with uptime, memory usage and more
- - `/stream <stream_code>` : Information about a Twitch channel
- - `/follow <stream_code>` : Follow a channel and get notified when it starts streaming
- - `/unfollow <stream_code>` : Stops following a channel
- - `/following` : Lists all channels currently followed on the server
+ - Common
+    - `/info` : Bot status with uptime, memory usage and more
+ - Twitch
+    - `/stream <stream_code>` : Information about a Twitch channel
+    - `/follow <stream_code>` : Follow a channel and get notified when it starts streaming
+    - `/unfollow <stream_code>` : Stops following a channel
+    - `/following` : Lists all channels currently followed on the server
+ - Voice
+    - `/play <url or term>` : Adds song to queue, and starts playing on current voice channel. Can receive a youtube url or a term to be searched
+    - `/pause` : Pauses current song
+    - `/resume` : Resumes paused song
+    - `/skip` : Starts playing the next song
+    - `/stop` : Stop playing and clears the queue
 
 ## Installation
 
@@ -24,13 +32,23 @@ Copy the sample environment sample file into a secrets file:
 cat config/dev.secret-sample.exs > config/dev.secret.exs
 ```
 
-Then, run `mix deps.get` to install all dependencies, and `mix ecto.migrate` to run the database migrations
+Run `mix deps.get` to install all dependencies, and `mix ecto.migrate` to run the database migrations
+
+### Discord
+
+Grab your bot's token from [https://discord.com/developers/applications](Discord Applications) on `Your application > Bot > Click to reveal token`
+
+### Twitch commands
+
+For receiving and registering webhooks with Twitch, you need a url for the webhook to reach your machine. Locally you can use start a proxy with [ngrok http $PORT](https://ngrok.com/), then copy the url generated into the `:host` config.
+
+### Voice commands
+
+To be able to play sounds, you need to install [https://www.ffmpeg.org/](FFMpeg) and [YouTube-dl](https://youtube-dl.org/). Check both websites on how to install it to your machine.
 
 ## Running locally
 
-Start the local database with `docker-compose up`, it starts both the development and test databases. Start a proxy to your localhost by using [ngrok http $PORT](https://ngrok.com/), copy the url generated into the `:host` config. Add the other values on `config/dev.secret.exs`
-
-Then, run the bot with: `mix run --no-halt` or `iex -S mix`
+After all necessary values are on `config/dev.secret.exs`, run the bot with: `mix run --no-halt` or `iex -S mix`. It will reload automatically when you update a file.
 
 ## Running in production
 

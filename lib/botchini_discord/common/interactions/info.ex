@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Interactions.Info do
+defmodule BotchiniDiscord.Common.Interactions.Info do
   @behaviour BotchiniDiscord.Interaction
 
   @moduledoc """
@@ -16,7 +16,7 @@ defmodule BotchiniDiscord.Interactions.Info do
     }
 
   @impl BotchiniDiscord.Interaction
-  @spec handle_interaction(Interaction.t(), map()) :: map()
+  @spec handle_interaction(Nostrum.Struct.Interaction.t(), map()) :: map()
   def handle_interaction(_interaction, _payload) do
     embed =
       %Nostrum.Struct.Embed{}

@@ -9,6 +9,7 @@ defmodule Botchini.Discord.Schema.Guild do
 
   alias Botchini.Discord.Schema.Guild
   alias Botchini.Twitch.Schema.Follower
+  alias Botchini.Voice.Schema.Track
 
   @type t :: %__MODULE__{
           discord_guild_id: String.t()
@@ -18,6 +19,7 @@ defmodule Botchini.Discord.Schema.Guild do
     field(:discord_guild_id, :string, null: false)
 
     has_many(:stream_followers, Follower)
+    has_many(:voice_tracks, Track)
 
     timestamps()
   end

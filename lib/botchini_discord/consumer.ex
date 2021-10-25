@@ -7,7 +7,7 @@ defmodule BotchiniDiscord.Consumer do
   use Nostrum.Consumer
 
   alias Botchini.Discord
-  alias BotchiniDiscord.{Interactions, Voice}
+  alias BotchiniDiscord.{Interactions}
 
   def start_link do
     Consumer.start_link(__MODULE__)

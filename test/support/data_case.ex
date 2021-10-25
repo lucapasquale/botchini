@@ -8,7 +8,6 @@ defmodule Botchini.DataCase do
 
   alias Botchini.Discord.Schema.Guild
   alias Botchini.Repo
-  alias Botchini.Voice.Schema.Track
   alias Botchini.Twitch.Schema.{Follower, Stream}
 
   using do
@@ -78,22 +77,5 @@ defmodule Botchini.DataCase do
       |> Repo.insert()
 
     follower
-  end
-
-  @spec generate_track(map()) :: Track.t()
-  def generate_track(attrs \\ %{}) do
-    payload =
-      %{
-        play_url: Faker.String.base64(),
-        status: :waiting
-      }
-      |> Map.merge(attrs)
-
-    {:ok, track} =
-      %Track{}
-      |> Track.changeset(payload)
-      |> Repo.insert()
-
-    track
   end
 end

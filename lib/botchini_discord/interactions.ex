@@ -19,12 +19,13 @@ defmodule BotchiniDiscord.Interactions do
       Follow.get_command(),
       Following.get_command(),
       Stream.get_command(),
-      Unfollow.get_command(),
-      Pause.get_command(),
-      Play.get_command(),
-      Resume.get_command(),
-      Skip.get_command(),
-      Stop.get_command()
+      Unfollow.get_command()
+      # Not registering voice commands globally for now
+      # Pause.get_command(),
+      # Play.get_command(),
+      # Resume.get_command(),
+      # Skip.get_command(),
+      # Stop.get_command()
     ]
     |> Enum.filter(&(!is_nil(&1)))
     |> Enum.each(fn command ->

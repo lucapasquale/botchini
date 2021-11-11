@@ -8,14 +8,9 @@ jobs:
     name: Deploy
     runs-on: ubuntu-18.04
     steps:
-    - uses: actions/checkout@v2
-
-    - uses: actions/setup-python@v2
-      with:
-        python-version: 3.8.1
-
-    - uses: mhanberg/gigalixir-action@0.6.1
-      with:
-        GIGALIXIR_APP: botchini
-        GIGALIXIR_USERNAME: ${{ secrets.GIGALIXIR_USERNAME }}
-        GIGALIXIR_PASSWORD: ${{ secrets.GIGALIXIR_PASSWORD }}
+      - uses: actions/checkout@v1
+      - run: sudo pip3 install --upgrade pip
+      - run: sudo pip install gigalixir --ignore-installed six
+      - run: gigalixir login -e "${{ secrets.GIGALIXIR_EMAIL }}" -y -p "${{ secrets.GIGALIXIR_PASSWORD }}"
+      - run: gigalixir git:remote ${{ secrets.GIGALIXIR_APP_NAME }}
+      - run: git push -f gigalixir HEAD:refs/heads/master

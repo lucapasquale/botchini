@@ -22,9 +22,11 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 botchini-*.tar
 
-
 # Temporary files for e.g. tests
 /tmp
 
 # Secrets
 config/*.secret.exs
+
+# ElixirLS
+.elixir_ls

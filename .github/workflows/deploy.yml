@@ -16,5 +16,5 @@ jobs:
       - run: sudo pip install --upgrade setuptools
       - run: sudo pip install gigalixir --ignore-installed six
       - run: gigalixir login -e "${{ secrets.GIGALIXIR_EMAIL }}" -y -p "${{ secrets.GIGALIXIR_PASSWORD }}"
-      - run: gigalixir git:remote ${{ secrets.GIGALIXIR_APP_NAME }}
+      - run: gigalixir git:remote botchini
       - run: git push -f gigalixir HEAD:refs/heads/master

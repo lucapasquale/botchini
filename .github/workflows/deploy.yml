@@ -4,24 +4,6 @@ on:
     branches:
       - main
 jobs:
-  push_to_registry:
-    name: Push image to DockerHub
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Push to Docker Hub
-        uses: docker/build-push-action@v1
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          repository: lucapasquale094/botchini
-          tag_with_ref: true
-          tag_with_sha: true
-
   deploy:
     name: Deploy
     runs-on: ubuntu-18.04
@@ -29,12 +11,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Add SHORT_SHA env property with commit short sha
-      run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-7`" >> $GITHUB_ENV
-
-    - uses: floms/action-caprover@v1
-      with:
-        app: 'botchini'
-        host: 'https://captain.lucapasquale.dev'
-        password: '${{ secrets.CAPROVER_PASSWORD }}'
-        image: lucapasquale094/botchini:sha-${{ env.SHORT_SHA }}
+    - run: sudo pip install gigalixir --ignore-installed six
+    - run: gigalixir login -e "${{ secrets.GIGALIXIR_EMAIL }}" -y -p "${{ secrets.GIGALIXIR_PASSWORD }}"
+    - run: gigalixir git:remote botchini
+    - run: git push -f gigalixir HEAD:refs/heads/master

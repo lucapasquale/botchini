@@ -19,5 +19,5 @@ jobs:
       - uses: mhanberg/gigalixir-action@v0.4.0
         with:
           GIGALIXIR_APP: botchini
-          GIGALIXIR_USERNAME: ${{ secrets.GIGALIXIR_USERNAME }}
+          GIGALIXIR_USERNAME: ${{ secrets.GIGALIXIR_EMAIL }}
           GIGALIXIR_PASSWORD: ${{ secrets.GIGALIXIR_PASSWORD }}

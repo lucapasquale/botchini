@@ -14,10 +14,10 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.x'
+          python-version: 3.10.0
 
-      - run: sudo pip install --upgrade setuptools
-      - run: sudo pip install gigalixir --ignore-installed six
-      - run: gigalixir login -e "${{ secrets.GIGALIXIR_EMAIL }}" -y -p "${{ secrets.GIGALIXIR_PASSWORD }}"
-      - run: gigalixir git:remote botchini
-      - run: git push -f gigalixir HEAD:refs/heads/main
+      - uses: mhanberg/gigalixir-action@v0.4.0
+        with:
+          GIGALIXIR_APP: botchini
+          GIGALIXIR_USERNAME: ${{ secrets.GIGALIXIR_USERNAME }}
+          GIGALIXIR_PASSWORD: ${{ secrets.GIGALIXIR_PASSWORD }}

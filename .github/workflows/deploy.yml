@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: 3.8.1
 
-      - uses: mhanberg/gigalixir-action@v0.4.0
+      - uses: mhanberg/gigalixir-action@v0.6.1
         with:
           GIGALIXIR_APP: botchini
           GIGALIXIR_USERNAME: ${{ secrets.GIGALIXIR_EMAIL }}

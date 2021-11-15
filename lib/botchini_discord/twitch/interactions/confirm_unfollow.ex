@@ -19,19 +19,23 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
           type: :ask | :cancel | :confirm,
           stream_code: String.t()
         }) :: map()
-  def handle_interaction(_interaction, %{type: :ask, stream_code: stream_code}) do
-    case Twitch.stream_info(stream_code) do
+  def handle_interaction(interaction, %{type: :ask, stream_code: stream_code}) do
+    follow_info = %{
+      channel_id: Integer.to_string(interaction.channel_id)
+    }
+
+    case Twitch.channel_follower(BotchiniDiscord.Twitch.format_code(stream_code), follow_info) do
       {:error, :not_found} ->
         %{
           type: 4,
-          data: %{content: "Invalid Twitch stream!"}
+          data: %{content: "Not following #{stream_code}"}
         }
 
       {:ok, _} ->
         %{
           type: 4,
           data: %{
-            content: "Are you sure you want to unfollow #{stream_code}?",
+            content: "Are you sure you want to unfollow **#{stream_code}**?",
             components: [Components.confirm_unfollow_stream(stream_code)]
           }
         }
@@ -41,7 +45,13 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
   def handle_interaction(_interaction, %{type: :cancel, stream_code: stream_code}) do
     %{
       type: 7,
-      data: %{content: "You are still following #{stream_code}"}
+      data: %{
+        content: """
+        Are you sure you want to unfollow **#{stream_code}**?
+        - Canceled unfollowing
+        """,
+        components: []
+      }
     }
   end
 
@@ -54,13 +64,25 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
       {:error, :not_found} ->
         %{
           type: 7,
-          data: %{content: "Stream #{stream_code} was not being followed"}
+          data: %{
+            content: """
+            Are you sure you want to unfollow **#{stream_code}**?
+            - Stream was not being followed
+            """,
+            components: []
+          }
         }
 
       {:ok} ->
         %{
           type: 7,
-          data: %{content: "Removed #{stream_code} from your following streams"}
+          data: %{
+            content: """
+            Are you sure you want to unfollow #{stream_code}?
+            - Stream unfollowed
+            """,
+            components: []
+          }
         }
     end
   end

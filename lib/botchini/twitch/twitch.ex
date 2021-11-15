@@ -105,6 +105,24 @@ defmodule Botchini.Twitch do
     {:ok, follow_list}
   end
 
+  @spec channel_follower(String.t(), %{channel_id: String.t()}) ::
+          {:error, :not_found} | {:ok, Follower.t()}
+  def channel_follower(code, %{channel_id: channel_id}) do
+    case Repo.get_by(Stream, code: code) do
+      nil ->
+        {:error, :not_found}
+
+      stream ->
+        case Repo.get_by(Follower, stream_id: stream.id, discord_channel_id: channel_id) do
+          nil ->
+            {:error, :not_found}
+
+          follower ->
+            {:ok, follower}
+        end
+    end
+  end
+
   @spec stream_info(String.t()) ::
           {:error, :not_found} | {:ok, {Structs.User.t(), Structs.Stream.t() | nil}}
   def stream_info(code) do

@@ -6,6 +6,40 @@ defmodule BotchiniTest.Twitch.TwitchTest do
   alias Botchini.{Repo, Twitch}
   alias Botchini.Twitch.Schema.{Follower, Stream}
 
+  describe "find_stream_by_twitch_user_id" do
+    test "find stream by its twitch_user_id" do
+      stream = generate_stream(%{twitch_user_id: Faker.String.base64()})
+
+      ^stream = Twitch.find_stream_by_twitch_user_id(stream.twitch_user_id)
+    end
+
+    test "return nil of not found" do
+      nil = Twitch.find_stream_by_twitch_user_id(Faker.String.base64())
+    end
+  end
+
+  describe "find_followers_for_stream" do
+    test "find stream by its twitch_user_id" do
+      stream = generate_stream()
+      guild = generate_guild()
+
+      follower_1 = generate_follower(%{stream_id: stream.id, guild_id: guild.id})
+      follower_2 = generate_follower(%{stream_id: stream.id, guild_id: guild.id})
+
+      following_list = Twitch.find_followers_for_stream(stream)
+
+      assert length(following_list) == 2
+      assert Enum.find(following_list, &(&1.id == follower_1.id))
+      assert Enum.find(following_list, &(&1.id == follower_2.id))
+    end
+
+    test "find empty list if none found" do
+      stream = generate_stream()
+
+      [] = Twitch.find_followers_for_stream(stream)
+    end
+  end
+
   describe "follow" do
     test "create stream, guild and follower, calls twitch API" do
       twitch_id = Faker.String.base64()
@@ -240,6 +274,41 @@ defmodule BotchiniTest.Twitch.TwitchTest do
 
       {:ok, following_list} = Twitch.channel_following_list(discord_channel_id)
       assert following_list == [stream.code]
+    end
+  end
+
+  describe "channel_follower" do
+    test "find follower for stream code by channel_id" do
+      stream = generate_stream()
+      guild = generate_guild()
+
+      follower = generate_follower(%{stream_id: stream.id, guild_id: guild.id})
+
+      {:ok, ^follower} =
+        Twitch.channel_follower(stream.code, %{
+          channel_id: follower.discord_channel_id
+        })
+    end
+
+    test "not_found if no stream by that code" do
+      stream = generate_stream()
+      guild = generate_guild()
+
+      follower = generate_follower(%{stream_id: stream.id, guild_id: guild.id})
+
+      {:error, :not_found} =
+        Twitch.channel_follower(Faker.String.base64(), %{
+          channel_id: follower.discord_channel_id
+        })
+    end
+
+    test "not_found if no follower for that channel_id by that code" do
+      stream = generate_stream()
+
+      {:error, :not_found} =
+        Twitch.channel_follower(stream.code, %{
+          channel_id: Faker.String.base64()
+        })
     end
   end
 end

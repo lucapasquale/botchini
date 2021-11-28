@@ -33,7 +33,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.Stream do
       {:error, :not_found} ->
         %{
           type: 4,
-          data: %{content: "Invalid Twitch stream!"}
+          data: %{content: "Twitch stream **#{stream_code}** not found!"}
         }
 
       {:ok, {user, _}} ->

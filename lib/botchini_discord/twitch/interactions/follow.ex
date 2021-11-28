@@ -40,7 +40,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.Follow do
       {:error, :invalid_stream} ->
         %{
           type: 4,
-          data: %{content: "Invalid Twitch stream!"}
+          data: %{content: "Twitch stream **#{stream_code}** not found!"}
         }
 
       {:error, :already_following} ->
@@ -58,7 +58,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.Follow do
 
         %{
           type: 4,
-          data: %{content: "Following the stream #{stream.code}!"}
+          data: %{content: "Following the stream **#{stream.code}**!"}
         }
     end
   end

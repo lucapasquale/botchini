@@ -36,13 +36,13 @@ defmodule BotchiniDiscord.Twitch.Interactions.Unfollow do
       {:error, :not_found} ->
         %{
           type: 4,
-          data: %{content: "Stream #{stream_code} was not being followed"}
+          data: %{content: "Stream **#{stream_code}** was not being followed"}
         }
 
       {:ok} ->
         %{
           type: 4,
-          data: %{content: "Removed #{stream_code} from your following streams"}
+          data: %{content: "Removed **#{stream_code}** from your following streams"}
         }
     end
   end

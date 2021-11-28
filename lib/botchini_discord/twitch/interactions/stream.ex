@@ -5,13 +5,13 @@ defmodule BotchiniDiscord.Twitch.Interactions.Stream do
   Handles /stream slash command
   """
 
-  alias Nostrum.Struct.Interaction
+  alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias Botchini.Twitch
   alias BotchiniDiscord.Twitch.Responses.{Components, Embeds}
 
   @impl BotchiniDiscord.InteractionBehaviour
-  @spec get_command() :: map()
+  @spec get_command() :: ApplicationCommand.application_command_map()
   def get_command,
     do: %{
       name: "stream",

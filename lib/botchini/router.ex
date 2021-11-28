@@ -5,7 +5,7 @@ defmodule Botchini.Router do
 
   plug(Plug.Logger)
   plug(:match)
-  plug(Plug.Parsers, parsers: [:json], json_decoder: Poison)
+  plug(Plug.Parsers, parsers: [:json], json_decoder: Jason)
   plug(:dispatch)
 
   get "/status" do

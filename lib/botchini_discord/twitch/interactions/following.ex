@@ -6,12 +6,12 @@ defmodule BotchiniDiscord.Twitch.Interactions.Following do
   """
 
   alias Nostrum.Cache.ChannelCache
-  alias Nostrum.Struct.{Embed, Interaction}
+  alias Nostrum.Struct.{ApplicationCommand, Embed, Interaction}
 
   alias Botchini.{Discord, Twitch}
 
   @impl BotchiniDiscord.InteractionBehaviour
-  @spec get_command() :: map()
+  @spec get_command() :: ApplicationCommand.application_command_map()
   def get_command,
     do: %{
       name: "following",

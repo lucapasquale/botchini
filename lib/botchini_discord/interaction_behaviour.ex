@@ -3,14 +3,14 @@ defmodule BotchiniDiscord.InteractionBehaviour do
   Behaviour for handling Discord interactions, through slash commands or components
   """
 
-  alias Nostrum.Struct.Interaction
+  alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   @doc """
   Returns the object defining the slash command to be created.
 
   If the interaction only responds to components, returns nil
   """
-  @callback get_command() :: map() | nil
+  @callback get_command() :: ApplicationCommand.application_command_map() | nil
 
   @doc """
   Parses the current interaction, returning the interaction response to be sent to Discord

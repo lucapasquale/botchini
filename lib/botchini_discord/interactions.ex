@@ -10,7 +10,7 @@ defmodule BotchiniDiscord.Interactions do
   alias BotchiniDiscord.Common.Interactions.Info
   alias BotchiniDiscord.Twitch.Interactions.{ConfirmUnfollow, Follow, Following, Stream, Unfollow}
 
-  @spec register_commands() :: :ok
+  @spec register_commands() :: any()
   def register_commands do
     [
       Info.get_command(),
@@ -21,18 +21,16 @@ defmodule BotchiniDiscord.Interactions do
       Unfollow.get_command()
     ]
     |> Enum.filter(&(!is_nil(&1)))
-    |> Enum.each(fn command ->
-      register_command(command, Application.fetch_env!(:botchini, :environment))
-    end)
+    |> register_commands(Application.fetch_env!(:botchini, :environment))
   end
 
-  defp register_command(command, :prod) do
-    Api.create_global_application_command(command)
+  defp register_commands(commands, :prod) do
+    Api.bulk_overwrite_global_application_commands(commands)
   end
 
-  defp register_command(command, _env) do
+  defp register_commands(commands, _env) do
     case Application.fetch_env(:botchini, :test_guild_id) do
-      {:ok, guild_id} -> Api.create_guild_application_command(guild_id, command)
+      {:ok, guild_id} -> Api.bulk_overwrite_guild_application_commands(guild_id, commands)
       _ -> :noop
     end
   end

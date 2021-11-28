@@ -5,12 +5,12 @@ defmodule BotchiniDiscord.Twitch.Interactions.Unfollow do
   Handles /unfollow slash command
   """
 
-  alias Nostrum.Struct.Interaction
+  alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias Botchini.Twitch
 
   @impl BotchiniDiscord.InteractionBehaviour
-  @spec get_command() :: map()
+  @spec get_command() :: ApplicationCommand.application_command_map()
   def get_command,
     do: %{
       name: "unfollow",

@@ -6,9 +6,10 @@ defmodule BotchiniDiscord.Common.Interactions.Info do
   """
 
   import Nostrum.Struct.Embed
+  alias Nostrum.Struct.ApplicationCommand
 
   @impl BotchiniDiscord.InteractionBehaviour
-  @spec get_command() :: map()
+  @spec get_command() :: ApplicationCommand.application_command_map()
   def get_command,
     do: %{
       name: "info",

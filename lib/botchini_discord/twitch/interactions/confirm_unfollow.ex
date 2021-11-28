@@ -1,5 +1,5 @@
 defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
-  @behaviour BotchiniDiscord.Interaction
+  @behaviour BotchiniDiscord.InteractionBehaviour
 
   @moduledoc """
   Handles the confirmation before unfollowing a stream
@@ -10,11 +10,11 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
   alias Botchini.Twitch
   alias BotchiniDiscord.Twitch.Responses.Components
 
-  @impl BotchiniDiscord.Interaction
+  @impl BotchiniDiscord.InteractionBehaviour
   @spec get_command() :: nil
   def get_command, do: nil
 
-  @impl BotchiniDiscord.Interaction
+  @impl BotchiniDiscord.InteractionBehaviour
   @spec handle_interaction(Interaction.t(), %{
           type: :ask | :cancel | :confirm,
           stream_code: String.t()
@@ -35,19 +35,19 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
         %{
           type: 4,
           data: %{
-            content: "Are you sure you want to unfollow **#{stream_code}**?",
+            content: unfollow_message(interaction, stream_code),
             components: [Components.confirm_unfollow_stream(stream_code)]
           }
         }
     end
   end
 
-  def handle_interaction(_interaction, %{type: :cancel, stream_code: stream_code}) do
+  def handle_interaction(interaction, %{type: :cancel, stream_code: stream_code}) do
     %{
       type: 7,
       data: %{
         content: """
-        Are you sure you want to unfollow **#{stream_code}**?
+        #{unfollow_message(interaction, stream_code)}
         - Canceled unfollowing
         """,
         components: []
@@ -60,13 +60,13 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
       channel_id: Integer.to_string(interaction.channel_id)
     }
 
-    case Twitch.unfollow(format_code(stream_code), follow_info) do
+    case Twitch.unfollow(BotchiniDiscord.Twitch.format_code(stream_code), follow_info) do
       {:error, :not_found} ->
         %{
           type: 7,
           data: %{
             content: """
-            Are you sure you want to unfollow **#{stream_code}**?
+            #{unfollow_message(interaction, stream_code)}
             - Stream was not being followed
             """,
             components: []
@@ -78,7 +78,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
           type: 7,
           data: %{
             content: """
-            Are you sure you want to unfollow #{stream_code}?
+            #{unfollow_message(interaction, stream_code)}
             - Stream unfollowed
             """,
             components: []
@@ -87,9 +87,11 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
     end
   end
 
-  defp format_code(code) do
-    code
-    |> String.trim()
-    |> String.downcase()
+  defp unfollow_message(interaction, stream_code) do
+    if is_nil(interaction.member) do
+      "Are you sure you want to unfollow **#{stream_code}**?"
+    else
+      "<@#{interaction.member.user.id}> are you sure you want to unfollow **#{stream_code}**?"
+    end
   end
 end

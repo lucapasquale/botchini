@@ -1,24 +1,24 @@
 defmodule BotchiniDiscord.Twitch.Interactions.Following do
-  @behaviour BotchiniDiscord.Interaction
+  @behaviour BotchiniDiscord.InteractionBehaviour
 
   @moduledoc """
   Handles /following slash command
   """
 
   alias Nostrum.Cache.ChannelCache
-  alias Nostrum.Struct.{Embed, Interaction}
+  alias Nostrum.Struct.{ApplicationCommand, Embed, Interaction}
 
   alias Botchini.{Discord, Twitch}
 
-  @impl BotchiniDiscord.Interaction
-  @spec get_command() :: map()
+  @impl BotchiniDiscord.InteractionBehaviour
+  @spec get_command() :: ApplicationCommand.application_command_map()
   def get_command,
     do: %{
       name: "following",
       description: "List followed streams by channel"
     }
 
-  @impl BotchiniDiscord.Interaction
+  @impl BotchiniDiscord.InteractionBehaviour
   @spec handle_interaction(Interaction.t(), map()) :: map()
   def handle_interaction(interaction, _payload) when is_nil(interaction.guild_id) do
     case Twitch.channel_following_list(Integer.to_string(interaction.channel_id)) do

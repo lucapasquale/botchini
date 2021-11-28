@@ -1,16 +1,16 @@
 defmodule BotchiniDiscord.Twitch.Interactions.Unfollow do
-  @behaviour BotchiniDiscord.Interaction
+  @behaviour BotchiniDiscord.InteractionBehaviour
 
   @moduledoc """
   Handles /unfollow slash command
   """
 
-  alias Nostrum.Struct.Interaction
+  alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias Botchini.Twitch
 
-  @impl BotchiniDiscord.Interaction
-  @spec get_command() :: map()
+  @impl BotchiniDiscord.InteractionBehaviour
+  @spec get_command() :: ApplicationCommand.application_command_map()
   def get_command,
     do: %{
       name: "unfollow",
@@ -25,7 +25,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.Unfollow do
       ]
     }
 
-  @impl BotchiniDiscord.Interaction
+  @impl BotchiniDiscord.InteractionBehaviour
   @spec handle_interaction(Interaction.t(), %{stream_code: String.t()}) :: map()
   def handle_interaction(interaction, %{stream_code: stream_code}) do
     follow_info = %{
@@ -36,13 +36,13 @@ defmodule BotchiniDiscord.Twitch.Interactions.Unfollow do
       {:error, :not_found} ->
         %{
           type: 4,
-          data: %{content: "Stream #{stream_code} was not being followed"}
+          data: %{content: "Stream **#{stream_code}** was not being followed"}
         }
 
       {:ok} ->
         %{
           type: 4,
-          data: %{content: "Removed #{stream_code} from your following streams"}
+          data: %{content: "Removed **#{stream_code}** from your following streams"}
         }
     end
   end

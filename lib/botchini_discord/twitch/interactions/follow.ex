@@ -1,17 +1,17 @@
 defmodule BotchiniDiscord.Twitch.Interactions.Follow do
-  @behaviour BotchiniDiscord.Interaction
+  @behaviour BotchiniDiscord.InteractionBehaviour
 
   @moduledoc """
   Handles /follow slash command
   """
 
-  alias Nostrum.Struct.Interaction
+  alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias Botchini.{Discord, Twitch}
   alias BotchiniDiscord.Twitch.Responses.{Components, Embeds}
 
-  @impl BotchiniDiscord.Interaction
-  @spec get_command() :: map()
+  @impl BotchiniDiscord.InteractionBehaviour
+  @spec get_command() :: ApplicationCommand.application_command_map()
   def get_command,
     do: %{
       name: "follow",
@@ -26,7 +26,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.Follow do
       ]
     }
 
-  @impl BotchiniDiscord.Interaction
+  @impl BotchiniDiscord.InteractionBehaviour
   @spec handle_interaction(Interaction.t(), %{stream_code: String.t()}) :: map()
   def handle_interaction(interaction, %{stream_code: stream_code}) do
     guild = get_guild(interaction)
@@ -40,7 +40,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.Follow do
       {:error, :invalid_stream} ->
         %{
           type: 4,
-          data: %{content: "Invalid Twitch stream!"}
+          data: %{content: "Twitch stream **#{stream_code}** not found!"}
         }
 
       {:error, :already_following} ->
@@ -58,7 +58,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.Follow do
 
         %{
           type: 4,
-          data: %{content: "Following the stream #{stream.code}!"}
+          data: %{content: "Following the stream **#{stream.code}**!"}
         }
     end
   end

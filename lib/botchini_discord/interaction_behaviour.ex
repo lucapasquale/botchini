@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Interaction do
+defmodule BotchiniDiscord.InteractionBehaviour do
   @moduledoc """
   Behaviour for handling Discord interactions, through slash commands or components
   """

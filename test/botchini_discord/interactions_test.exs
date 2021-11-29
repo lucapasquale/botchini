@@ -1,30 +1,44 @@
 defmodule BotchiniDiscordTest.InteractionsTest do
   use ExUnit.Case
 
-  import BotchiniDiscord.Interactions
+  alias BotchiniDiscord.Helpers
 
   describe "parse_interaction_data" do
     test "parse interation data for command" do
-      interaction_data = %{name: "command_name"}
+      interaction_data = %{name: "command", custom_id: nil, options: []}
 
-      ["command_name"] = parse_interaction_data(interaction_data)
+      {"command", []} = Helpers.parse_interaction_data(interaction_data)
     end
 
-    test "parse interation data with option" do
+    test "parse interation data with options" do
       interaction_data = %{
-        name: "command_name",
-        options: [%{value: "sub_command_value"}]
+        name: "command",
+        custom_id: nil,
+        options: [
+          %{name: "option1", value: "value1"},
+          %{name: "option2", value: "value2"}
+        ]
       }
 
-      ["command_name", "sub_command_value"] = parse_interaction_data(interaction_data)
+      assert Helpers.parse_interaction_data(interaction_data) ==
+               {"command",
+                [
+                  %{name: "option1", value: "value1", focused: false},
+                  %{name: "option2", value: "value2", focused: false}
+                ]}
     end
 
-    test "parse interation data for component" do
+    test "parse interation data for component with custom_id" do
       interaction_data = %{
-        custom_id: "command:sub_command"
+        custom_id: "command|option1:value1:option2:value2"
       }
 
-      ["command", "sub_command"] = parse_interaction_data(interaction_data)
+      assert Helpers.parse_interaction_data(interaction_data) ==
+               {"command",
+                [
+                  %{name: "option1", value: "value1", focused: false},
+                  %{name: "option2", value: "value2", focused: false}
+                ]}
     end
   end
 end

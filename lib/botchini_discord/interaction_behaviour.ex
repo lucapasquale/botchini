@@ -5,6 +5,9 @@ defmodule BotchiniDiscord.InteractionBehaviour do
 
   alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
+  @type interaction_options :: list(%{name: String.t(), value: any(), focused: bool()})
+  @type interaction_input :: {String.t(), interaction_options()}
+
   @doc """
   Returns the object defining the slash command to be created.
 
@@ -15,5 +18,5 @@ defmodule BotchiniDiscord.InteractionBehaviour do
   @doc """
   Parses the current interaction, returning the interaction response to be sent to Discord
   """
-  @callback handle_interaction(Interaction.t(), any()) :: map()
+  @callback handle_interaction(Interaction.t(), interaction_options()) :: map()
 end

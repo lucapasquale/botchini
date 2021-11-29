@@ -5,8 +5,9 @@ defmodule BotchiniDiscord.Interactions do
 
   require Logger
   alias Nostrum.Api
-  alias Nostrum.Struct.{ApplicationCommandInteractionData, Interaction}
+  alias Nostrum.Struct.Interaction
 
+  alias BotchiniDiscord.Helpers
   alias BotchiniDiscord.Common.Interactions.Info
   alias BotchiniDiscord.Twitch.Interactions.{ConfirmUnfollow, Follow, Following, Stream, Unfollow}
 
@@ -45,11 +46,11 @@ defmodule BotchiniDiscord.Interactions do
     )
 
     Logger.info("Interaction received")
+    IO.inspect(interaction)
 
     try do
-      response =
-        interaction
-        |> call_interaction(parse_interaction_data(interaction.data))
+      data = Helpers.parse_interaction_data(interaction.data)
+      response = call_interaction(interaction, data)
 
       Nostrum.Api.create_interaction_response(interaction, response)
     rescue
@@ -63,50 +64,23 @@ defmodule BotchiniDiscord.Interactions do
     end
   end
 
-  @spec parse_interaction_data(ApplicationCommandInteractionData.t()) :: [String.t()]
-  def parse_interaction_data(interaction_data) do
-    case Map.get(interaction_data, :custom_id) do
-      nil ->
-        options = Map.get(interaction_data, :options) || []
-        args = Enum.map(options, fn opt -> opt.value end)
+  defp call_interaction(interaction, {"info", opt}),
+    do: Info.handle_interaction(interaction, opt)
 
-        [interaction_data.name] ++ args
+  defp call_interaction(interaction, {"stream", opt}),
+    do: Stream.handle_interaction(interaction, opt)
 
-      custom_id ->
-        String.split(custom_id, ":")
-    end
-  end
+  defp call_interaction(interaction, {"follow", opt}),
+    do: Follow.handle_interaction(interaction, opt)
 
-  defp call_interaction(interaction, ["info"]),
-    do: Info.handle_interaction(interaction, %{})
+  defp call_interaction(interaction, {"confirm_unfollow", opt}),
+    do: ConfirmUnfollow.handle_interaction(interaction, opt)
 
-  defp call_interaction(interaction, ["stream", stream_code]),
-    do:
-      Stream.handle_interaction(interaction, %{
-        stream_code: stream_code
-      })
+  defp call_interaction(interaction, {"unfollow", opt}),
+    do: Unfollow.handle_interaction(interaction, opt)
 
-  defp call_interaction(interaction, ["follow", stream_code]),
-    do:
-      Follow.handle_interaction(interaction, %{
-        stream_code: stream_code
-      })
-
-  defp call_interaction(interaction, ["confirm_unfollow", type, stream_code]),
-    do:
-      ConfirmUnfollow.handle_interaction(interaction, %{
-        type: String.to_atom(type),
-        stream_code: stream_code
-      })
-
-  defp call_interaction(interaction, ["unfollow", stream_code]),
-    do:
-      Unfollow.handle_interaction(interaction, %{
-        stream_code: stream_code
-      })
-
-  defp call_interaction(interaction, ["following"]),
-    do: Following.handle_interaction(interaction, %{})
+  defp call_interaction(interaction, {"following", opt}),
+    do: Following.handle_interaction(interaction, opt)
 
   defp call_interaction(_interaction, _data),
     do: raise("Unknown command")

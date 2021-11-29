@@ -27,7 +27,7 @@ defmodule BotchiniDiscord.Twitch.Responses.Components do
           type: 2,
           style: 4,
           label: "Unfollow stream",
-          custom_id: "confirm_unfollow:ask:#{stream_code}"
+          custom_id: "confirm_unfollow|type:ask:stream_code:#{stream_code}"
         }
       ]
     }
@@ -42,13 +42,13 @@ defmodule BotchiniDiscord.Twitch.Responses.Components do
           type: 2,
           style: 2,
           label: "No, cancel",
-          custom_id: "confirm_unfollow:cancel:#{stream_code}"
+          custom_id: "confirm_unfollow|type:cancel:stream_code:#{stream_code}"
         },
         %{
           type: 2,
           style: 4,
           label: "Yes, unfollow",
-          custom_id: "confirm_unfollow:confirm:#{stream_code}"
+          custom_id: "confirm_unfollow|type:confirm:stream_code:#{stream_code}"
         }
       ]
     }

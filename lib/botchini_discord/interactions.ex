@@ -7,8 +7,8 @@ defmodule BotchiniDiscord.Interactions do
   alias Nostrum.Api
   alias Nostrum.Struct.Interaction
 
-  alias BotchiniDiscord.Helpers
   alias BotchiniDiscord.Common.Interactions.Info
+  alias BotchiniDiscord.Helpers
   alias BotchiniDiscord.Twitch.Interactions.{ConfirmUnfollow, Follow, Following, Stream, Unfollow}
 
   @spec register_commands() :: any()
@@ -49,7 +49,6 @@ defmodule BotchiniDiscord.Interactions do
 
     try do
       data = Helpers.parse_interaction_data(interaction.data)
-      IO.inspect(data)
       response = call_interaction(interaction, data)
 
       Nostrum.Api.create_interaction_response(interaction, response)

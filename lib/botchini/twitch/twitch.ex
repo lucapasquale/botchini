@@ -3,7 +3,8 @@ defmodule Botchini.Twitch do
   Handles twitch context
   """
 
-  require Ecto.Query
+  import Ecto.Query
+  import Ecto.Query.API, only: [ilike: 2]
 
   alias Botchini.Discord.Schema.Guild
   alias Botchini.Repo
@@ -20,6 +21,22 @@ defmodule Botchini.Twitch do
   def find_followers_for_stream(stream) do
     Follower
     |> Ecto.Query.where(stream_id: ^stream.id)
+    |> Repo.all()
+  end
+
+  @spec search_streams_by_term(String.t(), %{channel_id: String.t()}) :: [Stream.t()]
+  def search_streams_by_term(term, %{channel_id: channel_id}) do
+    term = "%#{term}%"
+
+    from(
+      s in Stream,
+      join: sf in Follower,
+      on: sf.stream_id == s.id,
+      where: ilike(s.code, ^term),
+      where: sf.discord_channel_id == ^channel_id,
+      select: s.code,
+      limit: 5
+    )
     |> Repo.all()
   end
 
@@ -78,7 +95,7 @@ defmodule Botchini.Twitch do
   @spec guild_following_list(Guild.t()) :: {:ok, [{String.t(), String.t()}]}
   def guild_following_list(guild) do
     follow_list =
-      Ecto.Query.from(
+      from(
         s in Stream,
         join: sf in Follower,
         on: sf.stream_id == s.id,
@@ -93,7 +110,7 @@ defmodule Botchini.Twitch do
   @spec channel_following_list(String.t()) :: {:ok, [String.t()]}
   def channel_following_list(channel_id) do
     follow_list =
-      Ecto.Query.from(
+      from(
         s in Stream,
         join: sf in Follower,
         on: sf.stream_id == s.id,

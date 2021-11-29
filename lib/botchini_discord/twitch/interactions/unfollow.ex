@@ -30,10 +30,33 @@ defmodule BotchiniDiscord.Twitch.Interactions.Unfollow do
   @impl InteractionBehaviour
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, options) do
-    {stream_code, _} = Helpers.get_option(options, "stream")
+    {stream_code, is_autocomplete} = Helpers.get_option(options, "stream")
     stream_code = Helpers.cleanup_stream_code(stream_code)
 
-    case Twitch.unfollow(stream_code, %{channel_id: Integer.to_string(interaction.channel_id)}) do
+    follow_info = %{channel_id: Integer.to_string(interaction.channel_id)}
+
+    if is_autocomplete do
+      search_streams_to_unfollow(stream_code, follow_info)
+    else
+      unfollow_stream(stream_code, follow_info)
+    end
+  end
+
+  defp search_streams_to_unfollow(term, follow_info) do
+    choices =
+      Twitch.search_streams_by_term(term, follow_info)
+      |> Enum.map(fn code ->
+        %{name: code, value: code}
+      end)
+
+    %{
+      type: 8,
+      data: %{choices: choices}
+    }
+  end
+
+  defp unfollow_stream(stream_code, follow_info) do
+    case Twitch.unfollow(stream_code, follow_info) do
       {:error, :not_found} ->
         %{
           type: 4,

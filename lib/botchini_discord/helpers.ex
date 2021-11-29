@@ -11,7 +11,7 @@ defmodule BotchiniDiscord.Helpers do
           InteractionBehaviour.interaction_input()
   def parse_interaction_data(interaction_data) when is_nil(interaction_data.custom_id) do
     options =
-      Map.get(interaction_data, :options, [])
+      (interaction_data.options || [])
       |> Enum.map(fn opt ->
         %{name: opt.name, value: opt.value, focused: Map.get(opt, :focused, false)}
       end)
@@ -25,8 +25,8 @@ defmodule BotchiniDiscord.Helpers do
     options =
       String.split(options_string, ":")
       |> Enum.chunk_every(2)
-      |> Enum.reduce([], fn [key, value], acc ->
-        acc ++ [%{name: key, value: value, focused: false}]
+      |> Enum.reduce([], fn [name, value], acc ->
+        acc ++ [%{name: name, value: value, focused: false}]
       end)
 
     {name, options}

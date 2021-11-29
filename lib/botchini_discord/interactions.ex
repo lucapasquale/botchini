@@ -46,10 +46,10 @@ defmodule BotchiniDiscord.Interactions do
     )
 
     Logger.info("Interaction received")
-    IO.inspect(interaction)
 
     try do
       data = Helpers.parse_interaction_data(interaction.data)
+      IO.inspect(data)
       response = call_interaction(interaction, data)
 
       Nostrum.Api.create_interaction_response(interaction, response)

@@ -19,7 +19,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, options) do
     {type, _} = Helpers.get_option(options, "type")
-    {stream_code, _} = Helpers.get_option(options, "stream_code")
+    {stream_code, _} = Helpers.get_option(options, "stream")
     stream_code = Helpers.cleanup_stream_code(stream_code)
 
     confirm_unfollow(interaction, type, stream_code)

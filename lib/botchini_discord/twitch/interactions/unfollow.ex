@@ -30,7 +30,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.Unfollow do
   @impl InteractionBehaviour
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, options) do
-    {stream_code, _} = Helpers.get_option(options, "stream_code")
+    {stream_code, _} = Helpers.get_option(options, "stream")
     stream_code = Helpers.cleanup_stream_code(stream_code)
 
     case Twitch.unfollow(stream_code, %{channel_id: Integer.to_string(interaction.channel_id)}) do

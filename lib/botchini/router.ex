@@ -1,6 +1,11 @@
 defmodule Botchini.Router do
   use Plug.Router
 
+  use Ecto.Migration
+  import Ecto.Query
+
+  alias Botchini.Repo
+  alias Botchini.Twitch.Schema.Stream
   alias Botchini.Twitch.Routes.WebhookCallback
 
   plug(Plug.Logger)
@@ -9,6 +14,22 @@ defmodule Botchini.Router do
   plug(:dispatch)
 
   get "/status" do
+    send_resp(conn, 200, "ok")
+  end
+
+  get "/custom" do
+    all_streams = from(s in Stream) |> Repo.stream()
+
+    Repo.transaction(fn ->
+      Enum.to_list(all_streams)
+      |> Enum.map(fn stream ->
+        user = Botchini.Twitch.API.get_user(stream.code)
+
+        Stream.changeset(stream, %{name: user.display_name})
+        |> Repo.update!()
+      end)
+    end)
+
     send_resp(conn, 200, "ok")
   end
 

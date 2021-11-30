@@ -16,7 +16,7 @@ defmodule Botchini.Twitch.Schema.Stream do
 
   schema "streams" do
     field(:code, :string, null: false)
-    field(:name, :string, null: true)
+    field(:name, :string, null: false)
     field(:twitch_user_id, :string, null: false)
     field(:twitch_subscription_id, :string, null: false)
 

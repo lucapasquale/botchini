@@ -25,7 +25,7 @@ defmodule Botchini.Router do
 
   defp update_streams(offset \\ 0) do
     streams =
-      from(s in Stream, limit: 20, offset: ^offset, order_by: s.id)
+      from(s in Stream, where: is_nil(s.name), limit: 20, offset: ^offset, order_by: s.id)
       |> Repo.all()
       |> Enum.map(fn stream ->
         user = Botchini.Twitch.API.get_user(stream.code)

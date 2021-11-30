@@ -34,7 +34,6 @@ defmodule Botchini.Twitch do
       on: sf.stream_id == s.id,
       where: ilike(s.code, ^term),
       where: sf.discord_channel_id == ^channel_id,
-      select: s.code,
       limit: 5
     )
     |> Repo.all()
@@ -168,6 +167,7 @@ defmodule Botchini.Twitch do
             %Stream{}
             |> Stream.changeset(%{
               code: code,
+              name: user.display_name,
               twitch_user_id: user.id,
               twitch_subscription_id: event_subscription["id"]
             })

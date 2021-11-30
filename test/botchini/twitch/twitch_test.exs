@@ -50,7 +50,8 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       stream_2 = generate_stream(%{code: "myTest2"})
       generate_follower(%{stream_id: stream_2.id, discord_channel_id: channel_id})
 
-      ["myTest1", "myTest2"] = Twitch.search_streams_by_term("test", %{channel_id: channel_id})
+      response = Twitch.search_streams_by_term("test", %{channel_id: channel_id})
+      assert response == [stream_1, stream_2]
     end
 
     test "should return everything if term is empty string" do
@@ -65,7 +66,8 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       stream_3 = generate_stream(%{code: "zxcv"})
       generate_follower(%{stream_id: stream_3.id, discord_channel_id: channel_id})
 
-      ["qwer", "asdf", "zxcv"] = Twitch.search_streams_by_term("", %{channel_id: channel_id})
+      response = Twitch.search_streams_by_term("", %{channel_id: channel_id})
+      assert response == [stream_1, stream_2, stream_3]
     end
 
     test "should empty if term does not match" do
@@ -74,11 +76,13 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       stream = generate_stream(%{code: "qwer"})
       generate_follower(%{stream_id: stream.id, discord_channel_id: channel_id})
 
-      [] = Twitch.search_streams_by_term("asdf", %{channel_id: channel_id})
+      response = Twitch.search_streams_by_term("asdf", %{channel_id: channel_id})
+      assert response == []
     end
 
     test "should empty if no stream in channel" do
-      [] = Twitch.search_streams_by_term("test", %{channel_id: Faker.String.base64()})
+      response = Twitch.search_streams_by_term("test", %{channel_id: Faker.String.base64()})
+      assert response == []
     end
 
     test "should ignore stream if term does not match" do
@@ -90,7 +94,8 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       invalid_stream = generate_stream(%{code: "somethingElse"})
       generate_follower(%{stream_id: invalid_stream.id, discord_channel_id: channel_id})
 
-      ["valid"] = Twitch.search_streams_by_term("valid", %{channel_id: channel_id})
+      response = Twitch.search_streams_by_term("valid", %{channel_id: channel_id})
+      assert response == [stream]
     end
 
     test "should ignore stream if its from different channel_id" do
@@ -102,7 +107,8 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       invalid_stream = generate_stream(%{code: "myTest2"})
       generate_follower(%{stream_id: invalid_stream.id})
 
-      ["myTest1"] = Twitch.search_streams_by_term("test", %{channel_id: channel_id})
+      response = Twitch.search_streams_by_term("test", %{channel_id: channel_id})
+      assert response == [stream]
     end
   end
 
@@ -112,11 +118,12 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       twitch_sub_id = Faker.String.base64()
 
       code = Faker.String.base64()
+      name = Faker.String.base64()
       guild = generate_guild()
       message = generate_message()
 
       with_mock Twitch.API,
-        get_user: fn _code -> %{id: twitch_id} end,
+        get_user: fn _code -> %{id: twitch_id, display_name: name} end,
         add_stream_webhook: fn _twitch_id -> %{"id" => twitch_sub_id} end do
         {:ok, stream} = Twitch.follow_stream(code, guild, message)
 
@@ -125,6 +132,7 @@ defmodule BotchiniTest.Twitch.TwitchTest do
 
         assert stream != nil
         assert stream.code == code
+        assert stream.name == name
         assert stream.twitch_user_id == twitch_id
         assert stream.twitch_subscription_id == twitch_sub_id
 

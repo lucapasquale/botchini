@@ -49,6 +49,7 @@ defmodule Botchini.DataCase do
     payload =
       %{
         code: String.downcase(Faker.String.base64()),
+        name: Faker.String.base64(),
         twitch_user_id: Faker.String.base64(),
         twitch_subscription_id: Faker.String.base64()
       }

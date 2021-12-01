@@ -69,3 +69,37 @@ defmodule Botchini.Twitch.API.Structs.Stream do
 
   use ExConstructor
 end
+
+defmodule Botchini.Twitch.API.Structs.Channel do
+  @moduledoc """
+  Channel from Twitch API
+  """
+
+  defstruct id: "",
+            display_name: "",
+            broadcaster_login: "",
+            broadcaster_language: "",
+            game_id: "",
+            game_name: "",
+            title: "",
+            thumbnail_url: "",
+            is_live: false,
+            started_at: "",
+            tag_id: []
+
+  @type t :: %__MODULE__{
+          id: String.t(),
+          display_name: String.t(),
+          broadcaster_login: String.t(),
+          broadcaster_language: String.t(),
+          game_id: String.t(),
+          game_name: String.t(),
+          title: String.t(),
+          thumbnail_url: String.t(),
+          is_live: boolean(),
+          started_at: String.t(),
+          tag_id: [String.t()]
+        }
+
+  use ExConstructor
+end

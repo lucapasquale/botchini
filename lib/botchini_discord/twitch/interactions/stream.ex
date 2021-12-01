@@ -22,7 +22,8 @@ defmodule BotchiniDiscord.Twitch.Interactions.Stream do
           type: 3,
           name: "stream",
           description: "Twitch stream code",
-          required: true
+          required: true,
+          autocomplete: true
         }
       ]
     }
@@ -30,9 +31,28 @@ defmodule BotchiniDiscord.Twitch.Interactions.Stream do
   @impl InteractionBehaviour
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(_interaction, options) do
-    {stream_code, _} = Helpers.get_option(options, "stream")
+    {stream_code, is_autocomplete} = Helpers.get_option(options, "stream")
     stream_code = Helpers.cleanup_stream_code(stream_code)
 
+    if is_autocomplete do
+      search_twitch_streams(stream_code)
+    else
+      get_stream_info(stream_code)
+    end
+  end
+
+  defp search_twitch_streams(term) do
+    choices =
+      Twitch.search_twitch_streams(term)
+      |> Enum.map(fn {code, name} -> %{value: code, name: name} end)
+
+    %{
+      type: 8,
+      data: %{choices: choices}
+    }
+  end
+
+  defp get_stream_info(stream_code) do
     case Twitch.stream_info(stream_code) do
       {:error, :not_found} ->
         %{

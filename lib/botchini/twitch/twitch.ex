@@ -24,8 +24,19 @@ defmodule Botchini.Twitch do
     |> Repo.all()
   end
 
-  @spec search_streams_by_term(String.t(), %{channel_id: String.t()}) :: [Stream.t()]
-  def search_streams_by_term(term, %{channel_id: channel_id}) do
+  @spec search_twitch_streams(String.t()) :: [{String.t(), String.t()}]
+  def search_twitch_streams(term) do
+    if String.length(term) <= 2 do
+      API.top_live_streams()
+      |> Enum.map(fn stream -> {stream.user_login, stream.user_name} end)
+    else
+      API.search_channels(term)
+      |> Enum.map(fn channel -> {channel.broadcaster_login, channel.display_name} end)
+    end
+  end
+
+  @spec search_following_streams(String.t(), %{channel_id: String.t()}) :: [Stream.t()]
+  def search_following_streams(term, %{channel_id: channel_id}) do
     term = "%#{term}%"
 
     from(

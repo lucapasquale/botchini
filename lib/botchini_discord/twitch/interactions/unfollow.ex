@@ -44,7 +44,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.Unfollow do
 
   defp search_streams_to_unfollow(term, follow_info) do
     choices =
-      Twitch.search_streams_by_term(term, follow_info)
+      Twitch.search_following_streams(term, follow_info)
       |> Enum.map(fn stream ->
         %{name: stream.name, value: stream.code}
       end)

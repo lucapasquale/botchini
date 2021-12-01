@@ -17,7 +17,7 @@ defmodule Botchini.Twitch.API do
   ])
 
   @spec top_live_streams() :: [Stream.t()]
-  def top_live_streams() do
+  def top_live_streams do
     {:ok, %{body: body}} = get("/streams", query: [first: 10])
 
     body

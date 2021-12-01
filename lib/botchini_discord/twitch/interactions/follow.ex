@@ -22,7 +22,8 @@ defmodule BotchiniDiscord.Twitch.Interactions.Follow do
           type: 3,
           name: "stream",
           description: "Twitch stream code",
-          required: true
+          required: true,
+          autocomplete: true
         }
       ]
     }
@@ -30,9 +31,28 @@ defmodule BotchiniDiscord.Twitch.Interactions.Follow do
   @impl InteractionBehaviour
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, options) do
-    {stream_code, _} = Helpers.get_option(options, "stream")
+    {stream_code, autocomplete} = Helpers.get_option(options, "stream")
     stream_code = Helpers.cleanup_stream_code(stream_code)
 
+    if autocomplete do
+      search_twitch_streams(stream_code)
+    else
+      follow_stream(interaction, stream_code)
+    end
+  end
+
+  defp search_twitch_streams(term) do
+    choices =
+      Twitch.search_twitch_streams(term)
+      |> Enum.map(fn {code, name} -> %{value: code, name: name} end)
+
+    %{
+      type: 8,
+      data: %{choices: choices}
+    }
+  end
+
+  defp follow_stream(interaction, stream_code) do
     guild = get_guild(interaction)
 
     follow_info = %{

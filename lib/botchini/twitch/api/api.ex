@@ -5,7 +5,7 @@ defmodule Botchini.Twitch.API do
 
   use Tesla
 
-  alias Botchini.Twitch.API.Structs.{Stream, User}
+  alias Botchini.Twitch.API.Structs.{Channel, Stream, User}
 
   plug(Tesla.Middleware.JSON)
   plug(Tesla.Middleware.Logger)
@@ -15,6 +15,24 @@ defmodule Botchini.Twitch.API do
   plug(Tesla.Middleware.Headers, [
     {"Client-ID", Application.fetch_env!(:botchini, :twitch_client_id)}
   ])
+
+  @spec top_live_streams() :: [Stream.t()]
+  def top_live_streams do
+    {:ok, %{body: body}} = get("/streams", query: [first: 10])
+
+    body
+    |> Map.get("data")
+    |> Enum.map(&Stream.new/1)
+  end
+
+  @spec search_channels(String.t()) :: [Channel.t()]
+  def search_channels(term) do
+    {:ok, %{body: body}} = get("/search/channels", query: [query: term, first: 10])
+
+    body
+    |> Map.get("data")
+    |> Enum.map(&Channel.new/1)
+  end
 
   @spec get_user(String.t()) :: User.t() | nil
   def get_user(stream_code) do

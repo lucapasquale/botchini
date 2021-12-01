@@ -40,7 +40,54 @@ defmodule BotchiniTest.Twitch.TwitchTest do
     end
   end
 
-  describe "search_streams_by_term" do
+  describe "search_twitch_streams" do
+    test "should get top streams if term is empty" do
+      term = ""
+
+      with_mock Twitch.API,
+        top_live_streams: fn -> [%{user_login: "1", user_name: "2"}] end,
+        search_channels: fn _ -> [%{broadcaster_login: "3", display_name: "4"}] end do
+        streams = Twitch.search_twitch_streams(term)
+
+        assert_called(Twitch.API.top_live_streams())
+        assert_not_called(Twitch.API.search_channels(term))
+
+        assert streams == [{"1", "2"}]
+      end
+    end
+
+    test "should get top streams if term is 2 or smaller" do
+      term = "12"
+
+      with_mock Twitch.API,
+        top_live_streams: fn -> [%{user_login: "1", user_name: "2"}] end,
+        search_channels: fn _ -> [%{broadcaster_login: "3", display_name: "4"}] end do
+        streams = Twitch.search_twitch_streams(term)
+
+        assert_called(Twitch.API.top_live_streams())
+        assert_not_called(Twitch.API.search_channels(term))
+
+        assert streams == [{"1", "2"}]
+      end
+    end
+
+    test "should search channels if term is 3 or bigger" do
+      term = "123"
+
+      with_mock Twitch.API,
+        top_live_streams: fn -> [%{user_login: "1", user_name: "2"}] end,
+        search_channels: fn _ -> [%{broadcaster_login: "3", display_name: "4"}] end do
+        streams = Twitch.search_twitch_streams(term)
+
+        assert_not_called(Twitch.API.top_live_streams())
+        assert_called(Twitch.API.search_channels(term))
+
+        assert streams == [{"3", "4"}]
+      end
+    end
+  end
+
+  describe "search_following_streams" do
     test "should find followed streams by similar term" do
       channel_id = Faker.String.base64()
 
@@ -50,7 +97,7 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       stream_2 = generate_stream(%{code: "myTest2"})
       generate_follower(%{stream_id: stream_2.id, discord_channel_id: channel_id})
 
-      response = Twitch.search_streams_by_term("test", %{channel_id: channel_id})
+      response = Twitch.search_following_streams("test", %{channel_id: channel_id})
       assert response == [stream_1, stream_2]
     end
 
@@ -66,7 +113,7 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       stream_3 = generate_stream(%{code: "zxcv"})
       generate_follower(%{stream_id: stream_3.id, discord_channel_id: channel_id})
 
-      response = Twitch.search_streams_by_term("", %{channel_id: channel_id})
+      response = Twitch.search_following_streams("", %{channel_id: channel_id})
       assert response == [stream_1, stream_2, stream_3]
     end
 
@@ -76,12 +123,12 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       stream = generate_stream(%{code: "qwer"})
       generate_follower(%{stream_id: stream.id, discord_channel_id: channel_id})
 
-      response = Twitch.search_streams_by_term("asdf", %{channel_id: channel_id})
+      response = Twitch.search_following_streams("asdf", %{channel_id: channel_id})
       assert response == []
     end
 
     test "should empty if no stream in channel" do
-      response = Twitch.search_streams_by_term("test", %{channel_id: Faker.String.base64()})
+      response = Twitch.search_following_streams("test", %{channel_id: Faker.String.base64()})
       assert response == []
     end
 
@@ -94,7 +141,7 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       invalid_stream = generate_stream(%{code: "somethingElse"})
       generate_follower(%{stream_id: invalid_stream.id, discord_channel_id: channel_id})
 
-      response = Twitch.search_streams_by_term("valid", %{channel_id: channel_id})
+      response = Twitch.search_following_streams("valid", %{channel_id: channel_id})
       assert response == [stream]
     end
 
@@ -107,7 +154,7 @@ defmodule BotchiniTest.Twitch.TwitchTest do
       invalid_stream = generate_stream(%{code: "myTest2"})
       generate_follower(%{stream_id: invalid_stream.id})
 
-      response = Twitch.search_streams_by_term("test", %{channel_id: channel_id})
+      response = Twitch.search_following_streams("test", %{channel_id: channel_id})
       assert response == [stream]
     end
   end

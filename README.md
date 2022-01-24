@@ -30,7 +30,7 @@ Run `mix deps.get` to install all dependencies, and `mix ecto.migrate` to run th
 
 ### Discord
 
-Grab your bot's token from [https://discord.com/developers/applications](Discord Applications) on `Your application > Bot > Click to reveal token`
+Grab your bot's token from [Discord Applications](https://discord.com/developers/applications) on `Your application > Bot > Click to reveal token`
 
 ### Twitch commands
 

@@ -11,6 +11,4 @@ config :logger, :console,
 
 config :tesla, adapter: Tesla.Adapter.Hackney
 
-config :porcelain, driver: Porcelain.Driver.Basic
-
 import_config "#{Mix.env()}.exs"

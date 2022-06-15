@@ -15,7 +15,7 @@ defmodule Botchini.Discord.Schema.Guild do
         }
 
   schema "guilds" do
-    field(:discord_guild_id, :string, null: false)
+    field(:discord_guild_id, :string)
 
     has_many(:stream_followers, Follower)
 

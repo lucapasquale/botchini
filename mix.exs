@@ -27,7 +27,7 @@ defmodule Botchini.MixProject do
   defp deps do
     [
       # Discord
-      {:nostrum, "~> 0.6"},
+      {:nostrum, "~> 0.6", runtime: Mix.env() != :test},
       {:cowlib, "~> 2.11", hex: :remedy_cowlib, override: true},
       # {:gun, "== 2.0.0-rc.2", override: true},
       # Phoenix

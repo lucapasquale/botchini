@@ -5,8 +5,6 @@ config :botchini,
   ecto_repos: [Botchini.Repo],
   port: System.get_env("PORT", "3010") |> String.to_integer()
 
-# config :tesla, adapter: Tesla.Adapter.Hackney
-
 # Configures the endpoint
 config :botchini, BotchiniWeb.Endpoint,
   url: [host: "localhost"],

@@ -65,11 +65,11 @@ if config_env() == :prod do
 
   config :botchini,
     host: "https://#{host}",
-    twitch_client_id: System.get_env!("TWITCH_CLIENT_ID"),
-    twitch_client_secret: System.get_env!("TWITCH_CLIENT_SECRET")
+    twitch_client_id: System.get_env("TWITCH_CLIENT_ID"),
+    twitch_client_secret: System.get_env("TWITCH_CLIENT_SECRET")
 
   config :nostrum,
-    token: System.get_env!("DISCORD_TOKEN")
+    token: System.get_env("DISCORD_TOKEN")
 
   # ## Configuring the mailer
   #

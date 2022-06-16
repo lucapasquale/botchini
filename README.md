@@ -44,8 +44,8 @@ After all necessary values are on `config/dev.secret.exs`, run the bot with: `mi
 
 The bot needs the following env_vars:
 
- - `PORT` : Port to run on. Defaults to 3010
- - `HOST` : The url your bot is running on, so ir can receive webhooks from Twitch
+ - `PORT` : Port to run on. Defaults to 4000
+ - `PHX_HOST` : The url your bot is running on, so ir can receive webhooks from Twitch
  - `POSTGRES_URL` : The url to connect to your postgres db
  - `DISCORD_TOKEN` : Token for your Discord Bot
  - `TWITCH_CLIENT_ID` : Client ID for your Twitch application

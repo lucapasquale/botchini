@@ -762,6 +762,10 @@ select {
   position: static;
 }
 
+.relative {
+  position: relative;
+}
+
 .contents {
   display: contents;
 }

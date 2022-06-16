@@ -3,9 +3,10 @@ defmodule BotchiniWeb.TwitchController do
 
   require Logger
 
-  # alias Botchini.Twitch
+  alias Botchini.Twitch
   alias BotchiniDiscord.Twitch.Responses.{Components, Embeds}
 
+  @spec callback(Plug.Conn.t(), any) :: Plug.Conn.t()
   def callback(conn, _params) do
     case get_event_type(conn.body_params) do
       {:unknown, _} ->
@@ -20,14 +21,16 @@ defmodule BotchiniWeb.TwitchController do
         twitch_user_id = subscription["condition"]["broadcaster_user_id"]
         Logger.info("twitch_user_id: #{twitch_user_id}")
 
-        # case Twitch.find_stream_by_twitch_user_id(twitch_user_id) do
-        #   nil ->
-        #     {:error, :not_found}
+        case Twitch.find_stream_by_twitch_user_id(twitch_user_id) do
+          nil ->
+            conn
+            |> put_status(:not_found)
+            |> render(:"404")
 
-        #   stream ->
-        #     send_stream_online_messages(stream)
-        #     {:ok, "ok"}
-        # end
+          stream ->
+            send_stream_online_messages(stream)
+            text(conn, "ok")
+        end
     end
   end
 

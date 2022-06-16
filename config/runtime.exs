@@ -63,8 +63,7 @@ if config_env() == :prod do
     secret_key_base: secret_key_base
 
   config :botchini,
-    host: System.get_env("PHX_HOST"),
-    port: System.get_env("PORT", "3010") |> String.to_integer(),
+    host: "https://#{host}",
     twitch_client_id: System.get_env("TWITCH_CLIENT_ID"),
     twitch_client_secret: System.get_env("TWITCH_CLIENT_SECRET")
 

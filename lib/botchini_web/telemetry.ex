@@ -1,4 +1,8 @@
 defmodule BotchiniWeb.Telemetry do
+  @moduledoc """
+  Handles Phoenix telemetry
+  """
+
   use Supervisor
   import Telemetry.Metrics
 

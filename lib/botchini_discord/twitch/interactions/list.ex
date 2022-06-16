@@ -1,6 +1,6 @@
-defmodule BotchiniDiscord.Twitch.Interactions.Following do
+defmodule BotchiniDiscord.Twitch.Interactions.List do
   @moduledoc """
-  Handles /following slash command
+  Handles /list slash command
   """
 
   alias Nostrum.Cache.ChannelCache
@@ -15,7 +15,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.Following do
   @spec get_command() :: ApplicationCommand.application_command_map()
   def get_command,
     do: %{
-      name: "following",
+      name: "list",
       description: "List followed streams by channel"
     }
 

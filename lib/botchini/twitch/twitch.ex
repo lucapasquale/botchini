@@ -4,7 +4,6 @@ defmodule Botchini.Twitch do
   """
 
   import Ecto.Query
-  import Ecto.Query.API, only: [ilike: 2]
 
   alias Botchini.Discord.Schema.Guild
   alias Botchini.Repo

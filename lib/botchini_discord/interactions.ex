@@ -9,15 +9,15 @@ defmodule BotchiniDiscord.Interactions do
 
   alias BotchiniDiscord.Common.Interactions.Info
   alias BotchiniDiscord.Helpers
-  alias BotchiniDiscord.Twitch.Interactions.{ConfirmUnfollow, Follow, Following, Stream, Unfollow}
+  alias BotchiniDiscord.Twitch.Interactions.{ConfirmUnfollow, Follow, List, Stream, Unfollow}
 
   @spec register_commands() :: any()
   def register_commands do
     [
       Info.get_command(),
       ConfirmUnfollow.get_command(),
+      List.get_command(),
       Follow.get_command(),
-      Following.get_command(),
       Stream.get_command(),
       Unfollow.get_command()
     ]
@@ -78,8 +78,8 @@ defmodule BotchiniDiscord.Interactions do
   defp call_interaction(interaction, {"unfollow", opt}),
     do: Unfollow.handle_interaction(interaction, opt)
 
-  defp call_interaction(interaction, {"following", opt}),
-    do: Following.handle_interaction(interaction, opt)
+  defp call_interaction(interaction, {"list", opt}),
+    do: List.handle_interaction(interaction, opt)
 
   defp call_interaction(_interaction, _data),
     do: raise("Unknown command")

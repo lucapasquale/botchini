@@ -10,10 +10,13 @@ defmodule Botchini.Application do
     children =
       [
         Botchini.Repo,
-        {Plug.Cowboy,
-         scheme: :http,
-         plug: Botchini.Router,
-         options: [port: Application.fetch_env!(:botchini, :port)]},
+        # Start the Telemetry supervisor
+        BotchiniWeb.Telemetry,
+        # Start the PubSub system
+        {Phoenix.PubSub, name: Botchini.PubSub},
+        # Start the Endpoint (http/https)
+        BotchiniWeb.Endpoint,
+        # Auth middleware
         Botchini.Twitch.AuthMiddleware
       ] ++
         if Application.fetch_env!(:botchini, :environment) != :test,

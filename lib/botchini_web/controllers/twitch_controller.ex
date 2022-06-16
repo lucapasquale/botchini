@@ -1,32 +1,35 @@
-defmodule Botchini.Twitch.Routes.WebhookCallback do
-  @moduledoc """
-  Routes for twitch events callback
-  """
+defmodule BotchiniWeb.TwitchController do
+  use BotchiniWeb, :controller
 
   require Logger
 
   alias Botchini.Twitch
   alias BotchiniDiscord.Twitch.Responses.{Components, Embeds}
 
-  @spec call(Plug.Conn.t()) :: {:ok, any()} | {:error, :not_found}
-  def call(conn) do
+  @spec callback(Plug.Conn.t(), any) :: Plug.Conn.t()
+  def callback(conn, _params) do
     case get_event_type(conn.body_params) do
       {:unknown, _} ->
-        {:error, :not_found}
+        conn
+        |> put_status(:not_found)
+        |> render(:"404")
 
       {:confirm_subscription, challenge} ->
-        {:ok, challenge}
+        text(conn, challenge)
 
       {:stream_online, subscription} ->
         twitch_user_id = subscription["condition"]["broadcaster_user_id"]
+        Logger.info("twitch_user_id: #{twitch_user_id}")
 
         case Twitch.find_stream_by_twitch_user_id(twitch_user_id) do
           nil ->
-            {:error, :not_found}
+            conn
+            |> put_status(:not_found)
+            |> render(:"404")
 
           stream ->
             send_stream_online_messages(stream)
-            {:ok, "ok"}
+            text(conn, "ok")
         end
     end
   end

@@ -18,8 +18,8 @@ defmodule Botchini.Twitch.Schema.Follower do
         }
 
   schema "stream_followers" do
-    field(:discord_channel_id, :string, null: false)
-    field(:discord_user_id, :string, null: true)
+    field(:discord_channel_id, :string)
+    field(:discord_user_id, :string)
 
     belongs_to(:stream, Stream)
     belongs_to(:guild, Guild)

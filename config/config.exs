@@ -3,7 +3,7 @@ import Config
 config :botchini,
   environment: Mix.env(),
   ecto_repos: [Botchini.Repo],
-  port: System.get_env("PORT", "3010") |> String.to_integer()
+  port: System.get_env("PORT", "4000") |> String.to_integer()
 
 # Configures the endpoint
 config :botchini, BotchiniWeb.Endpoint,
@@ -46,10 +46,10 @@ config :tailwind,
   version: "3.1.2",
   default: [
     args: ~w(
-  --config=tailwind.config.js
-  --input=css/app.css
-  --output=../priv/static/assets/app.css
-),
+      --config=tailwind.config.js
+      --input=css/app.css
+      --output=../priv/static/assets/app.css
+    ),
     cd: Path.expand("../assets", __DIR__)
   ]
 

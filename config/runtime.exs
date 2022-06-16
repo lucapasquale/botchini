@@ -33,7 +33,7 @@ if config_env() == :prod do
   config :botchini, Botchini.Repo,
     ssl: false,
     url: database_url,
-    socket_options: maybe_ipv6
+    socket_options: maybe_ipv6,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10")
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
@@ -65,11 +65,11 @@ if config_env() == :prod do
 
   config :botchini,
     host: "https://#{host}",
-    twitch_client_id: System.get_env("TWITCH_CLIENT_ID"),
-    twitch_client_secret: System.get_env("TWITCH_CLIENT_SECRET")
+    twitch_client_id: System.get_env!("TWITCH_CLIENT_ID"),
+    twitch_client_secret: System.get_env!("TWITCH_CLIENT_SECRET")
 
   config :nostrum,
-    token: System.get_env("DISCORD_TOKEN")
+    token: System.get_env!("DISCORD_TOKEN")
 
   # ## Configuring the mailer
   #

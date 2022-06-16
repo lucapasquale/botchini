@@ -16,7 +16,7 @@ Uses modern features like [Slash Commands](https://blog.discord.com/slash-comman
     - `/stream <stream_code>` : Information about a Twitch channel
     - `/follow <stream_code>` : Follow a channel and get notified when it starts streaming
     - `/unfollow <stream_code>` : Stops following a channel
-    - `/following` : Lists all channels currently followed on the server
+    - `/list` : Lists all channels currently followed on the server
 
 ## Installation
 
@@ -46,7 +46,7 @@ The bot needs the following env_vars:
 
  - `PORT` : Port to run on. Defaults to 4000
  - `PHX_HOST` : The url your bot is running on, so ir can receive webhooks from Twitch
- - `POSTGRES_URL` : The url to connect to your postgres db
+ - `DATABASE_URL` : The url to connect to your postgres db
  - `DISCORD_TOKEN` : Token for your Discord Bot
  - `TWITCH_CLIENT_ID` : Client ID for your Twitch application
  - `TWITCH_CLIENT_SECRET` : Client Secret for your Twitch application

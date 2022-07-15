@@ -11,9 +11,6 @@ config :botchini, BotchiniWeb.Endpoint,
   secret_key_base: "vojhNbUnH62IJbsnFjMMEtcebSSeIXyEZNd77fkjc/EAUQS2LDn/vxgc5TDUtaUr",
   server: false
 
-# In test we don't send emails.
-config :botchini, Botchini.Mailer, adapter: Swoosh.Adapters.Test
-
 # Print only warnings and errors during test
 config :logger, level: :warn
 

@@ -4,12 +4,19 @@ defmodule Botchini.Twitch do
   """
 
   import Ecto.Query
+  alias Ecto.Query
 
   alias Botchini.Discord.Schema.Guild
   alias Botchini.Repo
   alias Botchini.Twitch.API
   alias Botchini.Twitch.API.Structs
   alias Botchini.Twitch.Schema.{Follower, Stream}
+
+  @spec count_streams() :: Integer.t()
+  def count_streams() do
+    Query.from(s in Stream, select: count())
+    |> Repo.one!()
+  end
 
   @spec find_stream_by_twitch_user_id(String.t()) :: nil | Stream.t()
   def find_stream_by_twitch_user_id(twitch_user_id) do

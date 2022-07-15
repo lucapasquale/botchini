@@ -9,6 +9,12 @@ defmodule Botchini.Discord do
   alias Botchini.Discord.Schema.Guild
   alias Botchini.Repo
 
+  @spec count_guilds() :: Integer.t()
+  def count_guilds() do
+    Query.from(g in Guild, select: count())
+    |> Repo.one!()
+  end
+
   @spec fetch_guild(String.t()) :: Guild.t()
   def fetch_guild(discord_guild_id) do
     Query.from(g in Guild, where: g.discord_guild_id == ^discord_guild_id)

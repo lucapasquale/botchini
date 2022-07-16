@@ -5,7 +5,7 @@ defmodule Botchini.Creators.Clients.Youtube do
 
   use Tesla
 
-  alias Botchini.Creators.Clients.Youtube
+  alias Botchini.Creators.Clients.Youtube.Structs
 
   plug(Tesla.Middleware.JSON)
   plug(Tesla.Middleware.Logger)
@@ -15,7 +15,7 @@ defmodule Botchini.Creators.Clients.Youtube do
     {"key", Application.fetch_env!(:botchini, :youtube_api_key)}
   ])
 
-  @spec get_channel(String.t()) :: Youtube.Structs.Channel.t() | nil
+  @spec get_channel(String.t()) :: Structs.Channel.t() | nil
   def get_channel(code) do
     {:ok, %{body: body}} =
       get("/channels",
@@ -31,7 +31,7 @@ defmodule Botchini.Creators.Clients.Youtube do
 
       items ->
         List.first(items)
-        |> Youtube.Structs.Channel.new()
+        |> Structs.Channel.new()
     end
   end
 end

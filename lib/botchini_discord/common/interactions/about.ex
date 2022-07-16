@@ -1,6 +1,6 @@
-defmodule BotchiniDiscord.Common.Interactions.Info do
+defmodule BotchiniDiscord.Common.Interactions.About do
   @moduledoc """
-  Handles /info slash command
+  Handles /about slash command
   """
 
   import Nostrum.Struct.Embed
@@ -14,7 +14,7 @@ defmodule BotchiniDiscord.Common.Interactions.Info do
   @spec get_command() :: ApplicationCommand.application_command_map()
   def get_command,
     do: %{
-      name: "info",
+      name: "about",
       description: "Information about the bot"
     }
 

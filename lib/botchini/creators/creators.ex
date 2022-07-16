@@ -6,11 +6,12 @@ defmodule Botchini.Creators do
   import Ecto.Query
   alias Ecto.Query
 
-  alias Botchini.Creators.Clients.Twitch
-  alias Botchini.Creators.Clients.Twitch.Structs
+  alias Botchini.Creators.Clients.{Twitch, Youtube}
   alias Botchini.Creators.Schema.{Creator, Follower}
   alias Botchini.Discord.Schema.Guild
   alias Botchini.Repo
+
+  @type creator_input :: {Creator.services(), String.t()}
 
   @spec count_creators() :: Integer.t()
   def count_creators do
@@ -49,7 +50,7 @@ defmodule Botchini.Creators do
     |> Repo.all()
   end
 
-  @spec follow_creator({:twitch | :youtube, String.t()}, Guild.t() | nil, %{
+  @spec follow_creator(creator_input, Guild.t() | nil, %{
           channel_id: String.t(),
           user_id: String.t() | nil
         }) ::
@@ -77,7 +78,7 @@ defmodule Botchini.Creators do
     end
   end
 
-  @spec unfollow({:twitch | :youtube, String.t()}, %{channel_id: String.t()}) ::
+  @spec unfollow(creator_input, %{channel_id: String.t()}) ::
           {:ok} | {:error, :not_found}
   def unfollow({service, code}, %{channel_id: channel_id}) do
     case Repo.get_by(Creator, service: service, code: code) do
@@ -132,7 +133,7 @@ defmodule Botchini.Creators do
     {:ok, follow_list}
   end
 
-  @spec channel_follower({:twitch | :youtube, String.t()}, %{channel_id: String.t()}) ::
+  @spec channel_follower(creator_input, %{channel_id: String.t()}) ::
           {:error, :not_found} | {:ok, Follower.t()}
   def channel_follower({service, code}, %{channel_id: channel_id}) do
     case Repo.get_by(Creator, service: service, code: code) do
@@ -150,15 +151,21 @@ defmodule Botchini.Creators do
     end
   end
 
-  @spec stream_info({:twitch | :youtube, String.t()}) ::
-          {:error, :not_found} | {:ok, {Structs.User.t(), Structs.Stream.t() | nil}}
-  def stream_info({_service, code}) do
+  @spec stream_info(String.t()) ::
+          {:error, :not_found} | {:ok, {Twitch.Structs.User.t(), Twitch.Structs.Stream.t() | nil}}
+  def stream_info(code) do
     case Twitch.get_user(code) do
-      nil ->
-        {:error, :not_found}
+      nil -> {:error, :not_found}
+      user -> {:ok, {user, Twitch.get_stream(code)}}
+    end
+  end
 
-      user ->
-        {:ok, {user, Twitch.get_stream(code)}}
+  @spec youtube_channel_info(String.t()) ::
+          {:error, :not_found} | {:ok, Youtube.Structs.Channel.t()}
+  def youtube_channel_info(code) do
+    case Youtube.get_channel(code) do
+      nil -> {:error, :not_found}
+      channel -> {:ok, channel}
     end
   end
 

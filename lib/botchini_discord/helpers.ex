@@ -5,6 +5,7 @@ defmodule BotchiniDiscord.Helpers do
 
   alias Nostrum.Struct.ApplicationCommandInteractionData
 
+  alias Botchini.Creators.Schema.Creator
   alias BotchiniDiscord.InteractionBehaviour
 
   @spec parse_interaction_data(ApplicationCommandInteractionData.t()) ::
@@ -44,10 +45,30 @@ defmodule BotchiniDiscord.Helpers do
     end
   end
 
+  @spec get_code(InteractionBehaviour.interaction_options()) :: {String.t(), boolean()}
+  def get_code(options) do
+    {code, autocomplete} = get_option(options, "code")
+    {cleanup_stream_code(code), autocomplete}
+  end
+
+  @spec get_service(InteractionBehaviour.interaction_options()) :: Creator.services()
+  def get_service(options) do
+    {service, _autocomplete} = get_option(options, "service")
+    map_service(service)
+  end
+
   @spec cleanup_stream_code(String.t()) :: String.t()
   def cleanup_stream_code(code) do
     code
     |> String.trim()
     |> String.downcase()
+  end
+
+  defp map_service(service) do
+    case String.downcase(service) do
+      "twitch" -> :twitch
+      "youtube" -> :youtube
+      _ -> raise("Invalid service received")
+    end
   end
 end

@@ -6,9 +6,9 @@ defmodule BotchiniDiscord.Creators.Responses.Embeds do
   alias Nostrum.Struct.Embed
   import Nostrum.Struct.Embed
 
-  alias Botchini.Creators.Clients.Twitch.Structs.{Stream, User}
+  alias Botchini.Creators.Clients.{Twitch, Youtube}
 
-  @spec twitch_user(User.t()) :: Embed.t()
+  @spec twitch_user(Twitch.Structs.User.t()) :: Embed.t()
   def twitch_user(user) do
     stream_url = "https://www.twitch.tv/" <> user.login
 
@@ -23,7 +23,26 @@ defmodule BotchiniDiscord.Creators.Responses.Embeds do
     |> put_timestamp(user.created_at)
   end
 
-  @spec stream_online(User.t(), Stream.t()) :: Embed.t()
+  @spec youtube_channel(Youtube.Structs.Channel.t()) :: Embed.t()
+  def youtube_channel(channel) do
+    channel_url = "https://www.youtube.com/channel/" <> channel.id
+
+    %Embed{}
+    |> put_author(
+      channel.snippet["title"],
+      channel_url,
+      channel.snippet["thumbnails"]["default"]["url"]
+    )
+    |> put_title(channel.snippet["title"])
+    |> put_description(channel.snippet["description"])
+    |> put_url(channel_url)
+    |> put_thumbnail(channel.snippet["thumbnails"]["high"]["url"])
+    |> put_color(16_711_680)
+    |> put_footer("Since")
+    |> put_timestamp(channel.snippet["publishedAt"])
+  end
+
+  @spec stream_online(Twitch.Structs.User.t(), Stream.t()) :: Embed.t()
   def stream_online(user, stream) do
     stream_url = "https://www.twitch.tv/" <> user.login
 

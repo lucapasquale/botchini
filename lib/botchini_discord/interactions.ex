@@ -7,18 +7,18 @@ defmodule BotchiniDiscord.Interactions do
   alias Nostrum.Api
   alias Nostrum.Struct.Interaction
 
-  alias BotchiniDiscord.Common.Interactions.Info
+  alias BotchiniDiscord.Common.Interactions.About
   alias BotchiniDiscord.Helpers
-  alias BotchiniDiscord.Creators.Interactions.{ConfirmUnfollow, Follow, List, Stream, Unfollow}
+  alias BotchiniDiscord.Creators.Interactions.{ConfirmUnfollow, Follow, Info, List, Unfollow}
 
   @spec register_commands() :: any()
   def register_commands do
     [
-      Info.get_command(),
+      About.get_command(),
       ConfirmUnfollow.get_command(),
-      List.get_command(),
       Follow.get_command(),
-      Stream.get_command(),
+      Info.get_command(),
+      List.get_command(),
       Unfollow.get_command()
     ]
     |> Enum.filter(&(!is_nil(&1)))
@@ -63,11 +63,11 @@ defmodule BotchiniDiscord.Interactions do
     end
   end
 
+  defp call_interaction(interaction, {"about", opt}),
+    do: About.handle_interaction(interaction, opt)
+
   defp call_interaction(interaction, {"info", opt}),
     do: Info.handle_interaction(interaction, opt)
-
-  defp call_interaction(interaction, {"stream", opt}),
-    do: Stream.handle_interaction(interaction, opt)
 
   defp call_interaction(interaction, {"follow", opt}),
     do: Follow.handle_interaction(interaction, opt)

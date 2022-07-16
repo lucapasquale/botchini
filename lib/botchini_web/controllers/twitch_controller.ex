@@ -3,8 +3,8 @@ defmodule BotchiniWeb.TwitchController do
 
   require Logger
 
-  alias Botchini.Twitch
-  alias BotchiniDiscord.Twitch.Responses.{Components, Embeds}
+  alias Botchini.Creators
+  alias BotchiniDiscord.Creators.Responses.{Components, Embeds}
 
   @spec callback(Plug.Conn.t(), any) :: Plug.Conn.t()
   def callback(conn, _params) do
@@ -21,14 +21,14 @@ defmodule BotchiniWeb.TwitchController do
         twitch_user_id = subscription["condition"]["broadcaster_user_id"]
         Logger.info("twitch_user_id: #{twitch_user_id}")
 
-        case Twitch.find_stream_by_twitch_user_id(twitch_user_id) do
+        case Creators.find_creator_by_twitch_user_id(twitch_user_id) do
           nil ->
             conn
             |> put_status(:not_found)
             |> render(:"404")
 
-          stream ->
-            send_stream_online_messages(stream)
+          creator ->
+            send_stream_online_messages(creator)
             text(conn, "ok")
         end
     end
@@ -51,33 +51,33 @@ defmodule BotchiniWeb.TwitchController do
     end
   end
 
-  defp send_stream_online_messages(stream) do
-    {:ok, {user, stream_data}} = Twitch.stream_info(stream.code)
+  defp send_stream_online_messages(creator) do
+    {:ok, {user, stream_data}} = Creators.stream_info({:twitch, creator.code})
 
-    followers = Twitch.find_followers_for_stream(stream)
-    Logger.info("Stream #{stream.code} is online, sending to #{length(followers)} channels")
+    followers = Creators.find_followers_for_creator(creator)
+    Logger.info("Stream #{creator.code} is online, sending to #{length(followers)} channels")
 
     Enum.each(followers, fn follower ->
       Task.start(fn ->
-        notify_followers(stream, follower, {user, stream_data})
+        notify_followers(creator, follower, {user, stream_data})
       end)
     end)
   end
 
-  defp notify_followers(stream, follower, {user, stream_data}) do
+  defp notify_followers(creator, follower, {user, stream_data}) do
     channel_id = follower.discord_channel_id
 
     msg_response =
       Nostrum.Api.create_message(
         String.to_integer(channel_id),
         embed: Embeds.stream_online(user, stream_data),
-        components: [Components.unfollow_stream(stream.code)]
+        components: [Components.unfollow_stream(creator.code)]
       )
 
     case msg_response do
       {:error, _err} ->
         Logger.warn("Removing channel since doesn't exist anymore", channel_id: channel_id)
-        {:ok} = Twitch.unfollow(stream.code, %{channel_id: channel_id})
+        {:ok} = Creators.unfollow({:twitch, creator.code}, %{channel_id: channel_id})
 
       _ ->
         :noop

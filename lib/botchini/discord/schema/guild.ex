@@ -7,8 +7,8 @@ defmodule Botchini.Discord.Schema.Guild do
   require Ecto.Query
   import Ecto.Changeset
 
-  alias Botchini.Discord.Schema.Guild
   alias Botchini.Creators.Schema.Follower
+  alias Botchini.Discord.Schema.Guild
 
   @type t :: %__MODULE__{
           discord_guild_id: String.t()

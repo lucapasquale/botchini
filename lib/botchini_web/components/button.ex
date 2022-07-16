@@ -1,4 +1,8 @@
 defmodule BotchiniWeb.Button do
+  @moduledoc """
+  Component for rendering a button
+  """
+
   use Phoenix.Component
 
   def index(assigns) do

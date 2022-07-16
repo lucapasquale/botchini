@@ -11,7 +11,7 @@ defmodule BotchiniWeb.PageController do
     |> render("index.html")
   end
 
-  defp generate_bot_link() do
+  defp generate_bot_link do
     "https://discord.com/api/oauth2/authorize?client_id=#{Application.fetch_env!(:botchini, :discord_app_id)}&permissions=2048&scope=bot%20applications.commands"
   end
 end

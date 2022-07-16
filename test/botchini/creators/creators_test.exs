@@ -3,7 +3,7 @@ defmodule BotchiniTest.Creators.CreatorsTest do
 
   import Mock
 
-  alias Botchini.{Repo, Creators}
+  alias Botchini.{Creators, Repo}
   alias Botchini.Creators.Clients.Twitch
   alias Botchini.Creators.Schema.{Creator, Follower}
 

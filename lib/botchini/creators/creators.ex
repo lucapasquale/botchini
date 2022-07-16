@@ -6,14 +6,14 @@ defmodule Botchini.Creators do
   import Ecto.Query
   alias Ecto.Query
 
-  alias Botchini.Discord.Schema.Guild
-  alias Botchini.Repo
   alias Botchini.Creators.Clients.Twitch
   alias Botchini.Creators.Clients.Twitch.Structs
   alias Botchini.Creators.Schema.{Creator, Follower}
+  alias Botchini.Discord.Schema.Guild
+  alias Botchini.Repo
 
   @spec count_creators() :: Integer.t()
-  def count_creators() do
+  def count_creators do
     Query.from(s in Creator, select: count())
     |> Repo.one!()
   end
@@ -33,17 +33,6 @@ defmodule Botchini.Creators do
     |> Ecto.Query.where(creator_id: ^creator.id)
     |> Repo.all()
   end
-
-  # @spec search_twitch_streams(String.t()) :: [{String.t(), String.t()}]
-  # def search_twitch_streams(term) do
-  #   if String.length(term) <= 2 do
-  #     API.top_live_streams()
-  #     |> Enum.map(fn stream -> {stream.user_login, stream.user_name} end)
-  #   else
-  #     API.search_channels(term)
-  #     |> Enum.map(fn channel -> {channel.broadcaster_login, channel.display_name} end)
-  #   end
-  # end
 
   @spec search_following_creators(String.t(), %{channel_id: String.t()}) :: [Creator.t()]
   def search_following_creators(term, %{channel_id: channel_id}) do

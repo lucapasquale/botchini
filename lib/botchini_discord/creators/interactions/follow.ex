@@ -5,7 +5,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
 
   alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
-  alias Botchini.{Discord, Creators}
+  alias Botchini.{Creators, Discord}
   alias BotchiniDiscord.Creators.Responses.{Components, Embeds}
   alias BotchiniDiscord.{Helpers, InteractionBehaviour}
 

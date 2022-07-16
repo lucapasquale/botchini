@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Twitch.Responses.Components do
+defmodule BotchiniDiscord.Creators.Responses.Components do
   @moduledoc """
   Generates component messages for twitch commands
   """

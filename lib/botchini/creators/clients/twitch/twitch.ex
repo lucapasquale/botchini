@@ -1,4 +1,4 @@
-defmodule Botchini.Twitch.API do
+defmodule Botchini.Creators.Clients.Twitch do
   @moduledoc """
   Handles communication with Twitch API
   """
@@ -67,7 +67,9 @@ defmodule Botchini.Twitch.API do
         condition: %{broadcaster_user_id: user_id},
         transport: %{
           method: "webhook",
-          callback: Application.fetch_env!(:botchini, :host) <> "/api/twitch/webhooks/callback",
+          callback:
+            "https://" <>
+              Application.fetch_env!(:botchini, :host) <> "/api/twitch/webhooks/callback",
           secret: "abcd1234abcd1234abcd1234"
         }
       })

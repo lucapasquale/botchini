@@ -1,12 +1,11 @@
-defmodule BotchiniDiscord.Twitch.Interactions.Stream do
+defmodule BotchiniDiscord.Creators.Interactions.Unfollow do
   @moduledoc """
-  Handles /stream slash command
+  Handles /unfollow slash command
   """
 
   alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
-  alias Botchini.Twitch
-  alias BotchiniDiscord.Twitch.Responses.{Components, Embeds}
+  alias Botchini.Creators
   alias BotchiniDiscord.{Helpers, InteractionBehaviour}
 
   @behaviour InteractionBehaviour
@@ -15,8 +14,8 @@ defmodule BotchiniDiscord.Twitch.Interactions.Stream do
   @spec get_command() :: ApplicationCommand.application_command_map()
   def get_command,
     do: %{
-      name: "stream",
-      description: "Information about a twitch user",
+      name: "unfollow",
+      description: "Stop following twitch stream",
       options: [
         %{
           type: 3,
@@ -30,21 +29,27 @@ defmodule BotchiniDiscord.Twitch.Interactions.Stream do
 
   @impl InteractionBehaviour
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
-  def handle_interaction(_interaction, options) do
+  def handle_interaction(interaction, options) do
     {stream_code, is_autocomplete} = Helpers.get_option(options, "stream")
     stream_code = Helpers.cleanup_stream_code(stream_code)
 
+    follow_info = %{
+      channel_id: Integer.to_string(interaction.channel_id)
+    }
+
     if is_autocomplete do
-      search_twitch_streams(stream_code)
+      search_creators_to_unfollow(stream_code, follow_info)
     else
-      get_stream_info(stream_code)
+      unfollow_stream(stream_code, follow_info)
     end
   end
 
-  defp search_twitch_streams(term) do
+  defp search_creators_to_unfollow(term, follow_info) do
     choices =
-      Twitch.search_twitch_streams(term)
-      |> Enum.map(fn {code, name} -> %{value: code, name: name} end)
+      Creators.search_following_creators(term, follow_info)
+      |> Enum.map(fn stream ->
+        %{name: stream.name, value: stream.code}
+      end)
 
     %{
       type: 8,
@@ -52,21 +57,18 @@ defmodule BotchiniDiscord.Twitch.Interactions.Stream do
     }
   end
 
-  defp get_stream_info(stream_code) do
-    case Twitch.stream_info(stream_code) do
+  defp unfollow_stream(stream_code, follow_info) do
+    case Creators.unfollow({:twitch, stream_code}, follow_info) do
       {:error, :not_found} ->
         %{
           type: 4,
-          data: %{content: "Twitch stream **#{stream_code}** not found!"}
+          data: %{content: "Stream **#{stream_code}** was not being followed"}
         }
 
-      {:ok, {user, _}} ->
+      {:ok} ->
         %{
           type: 4,
-          data: %{
-            embeds: [Embeds.twitch_user(user)],
-            components: [Components.follow_stream(stream_code)]
-          }
+          data: %{content: "Removed **#{stream_code}** from your following streams"}
         }
     end
   end

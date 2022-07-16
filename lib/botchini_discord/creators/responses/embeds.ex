@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Twitch.Responses.Embeds do
+defmodule BotchiniDiscord.Creators.Responses.Embeds do
   @moduledoc """
   Generates embed messages for twitch commands
   """
@@ -6,7 +6,7 @@ defmodule BotchiniDiscord.Twitch.Responses.Embeds do
   alias Nostrum.Struct.Embed
   import Nostrum.Struct.Embed
 
-  alias Botchini.Twitch.API.Structs.{Stream, User}
+  alias Botchini.Creators.Clients.Twitch.Structs.{Stream, User}
 
   @spec twitch_user(User.t()) :: Embed.t()
   def twitch_user(user) do

@@ -9,7 +9,7 @@ defmodule BotchiniDiscord.Interactions do
 
   alias BotchiniDiscord.Common.Interactions.Info
   alias BotchiniDiscord.Helpers
-  alias BotchiniDiscord.Twitch.Interactions.{ConfirmUnfollow, Follow, List, Stream, Unfollow}
+  alias BotchiniDiscord.Creators.Interactions.{ConfirmUnfollow, Follow, List, Stream, Unfollow}
 
   @spec register_commands() :: any()
   def register_commands do

@@ -1,12 +1,12 @@
 defmodule BotchiniWeb.PageController do
   use BotchiniWeb, :controller
 
-  alias Botchini.{Discord, Twitch}
+  alias Botchini.{Creators, Discord}
 
   def index(conn, _params) do
     conn
     |> Plug.Conn.assign(:total_servers, Discord.count_guilds())
-    |> Plug.Conn.assign(:total_streams, Twitch.count_streams())
+    |> Plug.Conn.assign(:total_streams, Creators.count_creators())
     |> Plug.Conn.assign(:add_bot_link, generate_bot_link())
     |> render("index.html")
   end

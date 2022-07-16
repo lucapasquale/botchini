@@ -17,7 +17,7 @@ defmodule Botchini.Application do
         # Start the Endpoint (http/https)
         BotchiniWeb.Endpoint,
         # Auth middleware
-        Botchini.Twitch.AuthMiddleware
+        Botchini.Creators.Clients.Twitch.AuthMiddleware
       ] ++
         if Application.fetch_env!(:botchini, :environment) != :test,
           do: [BotchiniDiscord.Consumer],

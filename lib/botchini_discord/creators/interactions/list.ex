@@ -1,4 +1,4 @@
-defmodule BotchiniDiscord.Twitch.Interactions.List do
+defmodule BotchiniDiscord.Creators.Interactions.List do
   @moduledoc """
   Handles /list slash command
   """
@@ -6,7 +6,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.List do
   alias Nostrum.Cache.ChannelCache
   alias Nostrum.Struct.{ApplicationCommand, Embed, Interaction}
 
-  alias Botchini.{Discord, Twitch}
+  alias Botchini.{Creators, Discord}
   alias BotchiniDiscord.InteractionBehaviour
 
   @behaviour InteractionBehaviour
@@ -22,7 +22,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.List do
   @impl InteractionBehaviour
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, _options) when is_nil(interaction.guild_id) do
-    case Twitch.channel_following_list(Integer.to_string(interaction.channel_id)) do
+    case Creators.channel_following_list(Integer.to_string(interaction.channel_id)) do
       {:ok, following} when following == [] ->
         %{
           type: 4,
@@ -40,7 +40,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.List do
   def handle_interaction(interaction, _options) do
     {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
 
-    case Twitch.guild_following_list(guild) do
+    case Creators.guild_following_list(guild) do
       {:ok, following} when following == [] ->
         %{
           type: 4,

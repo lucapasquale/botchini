@@ -25,6 +25,7 @@ defmodule BotchiniWeb.Router do
     pipe_through(:api)
 
     post("/twitch/webhooks/callback", TwitchController, :callback)
+    get("/youtube/webhooks/callback", YoutubeController, :callback)
   end
 
   # Enables LiveDashboard only for development

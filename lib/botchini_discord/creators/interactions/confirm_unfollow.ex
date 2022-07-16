@@ -1,12 +1,12 @@
-defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
+defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
   @moduledoc """
   Handles the confirmation before unfollowing a stream
   """
 
   alias Nostrum.Struct.Interaction
 
-  alias Botchini.Twitch
-  alias BotchiniDiscord.Twitch.Responses.Components
+  alias Botchini.Creators
+  alias BotchiniDiscord.Creators.Responses.Components
   alias BotchiniDiscord.{Helpers, InteractionBehaviour}
 
   @behaviour InteractionBehaviour
@@ -30,7 +30,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
       channel_id: Integer.to_string(interaction.channel_id)
     }
 
-    case Twitch.channel_follower(stream_code, follow_info) do
+    case Creators.channel_follower({:twitch, stream_code}, follow_info) do
       {:error, :not_found} ->
         %{
           type: 4,
@@ -66,7 +66,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.ConfirmUnfollow do
       channel_id: Integer.to_string(interaction.channel_id)
     }
 
-    case Twitch.unfollow(stream_code, follow_info) do
+    case Creators.unfollow({:twitch, stream_code}, follow_info) do
       {:error, :not_found} ->
         %{
           type: 7,

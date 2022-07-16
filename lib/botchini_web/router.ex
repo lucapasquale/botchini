@@ -14,6 +14,11 @@ defmodule BotchiniWeb.Router do
     plug(:accepts, ["json"])
   end
 
+  pipeline :xml_api do
+    plug(:accepts, ["xml"])
+
+  end
+
   scope "/", BotchiniWeb do
     pipe_through(:browser)
 
@@ -25,7 +30,13 @@ defmodule BotchiniWeb.Router do
     pipe_through(:api)
 
     post("/twitch/webhooks/callback", TwitchController, :callback)
-    get("/youtube/webhooks/callback", YoutubeController, :callback)
+    get("/youtube/webhooks/callback", YoutubeController, :challenge)
+  end
+
+  scope "/api", BotchiniWeb do
+    pipe_through(:xml_api)
+
+    post("/youtube/webhooks/callback", YoutubeController, :notification)
   end
 
   # Enables LiveDashboard only for development

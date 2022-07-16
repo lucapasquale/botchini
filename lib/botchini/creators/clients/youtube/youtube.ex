@@ -34,4 +34,8 @@ defmodule Botchini.Creators.Clients.Youtube do
         |> Structs.Channel.new()
     end
   end
+
+  # @spec get_channel(String.t(), boolean()) :: any()
+  # def manage_channel_pubsub(channel_id, subscribe) do
+  # end
 end

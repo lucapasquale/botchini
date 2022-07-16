@@ -1,4 +1,4 @@
-defmodule Botchini.Twitch.API.Structs.User do
+defmodule Botchini.Creators.Clients.Twitch.Structs.User do
   @moduledoc """
   User from Twitch API
   """
@@ -30,7 +30,7 @@ defmodule Botchini.Twitch.API.Structs.User do
   use ExConstructor
 end
 
-defmodule Botchini.Twitch.API.Structs.Stream do
+defmodule Botchini.Creators.Clients.Twitch.Structs.Stream do
   @moduledoc """
   Stream from Twitch API
   """
@@ -70,7 +70,7 @@ defmodule Botchini.Twitch.API.Structs.Stream do
   use ExConstructor
 end
 
-defmodule Botchini.Twitch.API.Structs.Channel do
+defmodule Botchini.Creators.Clients.Twitch.Structs.Channel do
   @moduledoc """
   Channel from Twitch API
   """

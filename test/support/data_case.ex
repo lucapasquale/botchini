@@ -8,7 +8,7 @@ defmodule Botchini.DataCase do
 
   alias Botchini.Discord.Schema.Guild
   alias Botchini.Repo
-  alias Botchini.Twitch.Schema.{Follower, Stream}
+  alias Botchini.Creators.Schema.{Creator, Follower}
 
   using do
     quote do
@@ -44,23 +44,26 @@ defmodule Botchini.DataCase do
     guild
   end
 
-  @spec generate_stream(map()) :: Stream.t()
-  def generate_stream(attrs \\ %{}) do
+  @spec generate_creator(map()) :: Creator.t()
+  def generate_creator(attrs \\ %{}) do
     payload =
       %{
+        service: :twitch,
         code: String.downcase(Faker.String.base64()),
         name: Faker.String.base64(),
-        twitch_user_id: Faker.String.base64(),
-        twitch_subscription_id: Faker.String.base64()
+        metadata: %{
+          "user_id" => Faker.String.base64(),
+          "subscription_id" => Faker.String.base64()
+        }
       }
       |> Map.merge(attrs)
 
-    {:ok, stream} =
-      %Stream{}
-      |> Stream.changeset(payload)
+    {:ok, creator} =
+      %Creator{}
+      |> Creator.changeset(payload)
       |> Repo.insert()
 
-    stream
+    creator
   end
 
   @spec generate_follower(map()) :: Follower.t()

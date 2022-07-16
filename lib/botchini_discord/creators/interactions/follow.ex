@@ -1,12 +1,12 @@
-defmodule BotchiniDiscord.Twitch.Interactions.Follow do
+defmodule BotchiniDiscord.Creators.Interactions.Follow do
   @moduledoc """
   Handles /follow slash command
   """
 
   alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
-  alias Botchini.{Discord, Twitch}
-  alias BotchiniDiscord.Twitch.Responses.{Components, Embeds}
+  alias Botchini.{Creators, Discord}
+  alias BotchiniDiscord.Creators.Responses.{Components, Embeds}
   alias BotchiniDiscord.{Helpers, InteractionBehaviour}
 
   @behaviour InteractionBehaviour
@@ -22,8 +22,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.Follow do
           type: 3,
           name: "stream",
           description: "Twitch stream code",
-          required: true,
-          autocomplete: true
+          required: true
         }
       ]
     }
@@ -31,28 +30,13 @@ defmodule BotchiniDiscord.Twitch.Interactions.Follow do
   @impl InteractionBehaviour
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, options) do
-    {stream_code, autocomplete} = Helpers.get_option(options, "stream")
+    {stream_code, _autocomplete} = Helpers.get_option(options, "stream")
     stream_code = Helpers.cleanup_stream_code(stream_code)
 
-    if autocomplete do
-      search_twitch_streams(stream_code)
-    else
-      follow_stream(interaction, stream_code)
-    end
+    follow_stream(interaction, {:twitch, stream_code})
   end
 
-  defp search_twitch_streams(term) do
-    choices =
-      Twitch.search_twitch_streams(term)
-      |> Enum.map(fn {code, name} -> %{value: code, name: name} end)
-
-    %{
-      type: 8,
-      data: %{choices: choices}
-    }
-  end
-
-  defp follow_stream(interaction, stream_code) do
+  defp follow_stream(interaction, {service, stream_code}) do
     guild = get_guild(interaction)
 
     follow_info = %{
@@ -60,8 +44,8 @@ defmodule BotchiniDiscord.Twitch.Interactions.Follow do
       user_id: interaction.member && Integer.to_string(interaction.member.user.id)
     }
 
-    case Twitch.follow_stream(stream_code, guild, follow_info) do
-      {:error, :invalid_stream} ->
+    case Creators.follow_creator({service, stream_code}, guild, follow_info) do
+      {:error, :invalid_creator} ->
         %{
           type: 4,
           data: %{content: "Twitch stream **#{stream_code}** not found!"}
@@ -97,7 +81,7 @@ defmodule BotchiniDiscord.Twitch.Interactions.Follow do
   end
 
   defp send_stream_online_message(channel_id, stream) do
-    {:ok, {user_data, stream_data}} = Twitch.stream_info(stream.code)
+    {:ok, {user_data, stream_data}} = Creators.stream_info({:twitch, stream.code})
 
     if stream_data != nil do
       Nostrum.Api.create_message(

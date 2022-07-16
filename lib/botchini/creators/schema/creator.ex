@@ -1,19 +1,3 @@
-defmodule Botchini.Creators.Schema.Creator.Metadata do
-  @moduledoc """
-  Metadata from a Creator
-  """
-
-  defstruct user_id: "",
-            subscription_id: ""
-
-  @type t :: %__MODULE__{
-          user_id: String.t(),
-          subscription_id: String.t()
-        }
-
-  use ExConstructor
-end
-
 defmodule Botchini.Creators.Schema.Creator do
   @moduledoc """
   Schema representing a creator
@@ -23,6 +7,13 @@ defmodule Botchini.Creators.Schema.Creator do
   import Ecto.Changeset
 
   alias Botchini.Creators.Schema.{Creator, Follower}
+
+  @type services :: :twitch | :youtube
+
+  @type metadata :: %{
+          user_id: String.t(),
+          subscription_id: String.t()
+        }
 
   @type t :: %__MODULE__{
           service: :twitch | :youtube,

@@ -52,7 +52,7 @@ defmodule BotchiniWeb.TwitchController do
   end
 
   defp send_stream_online_messages(creator) do
-    {:ok, {user, stream_data}} = Creators.stream_info({:twitch, creator.code})
+    {:ok, {user, stream_data}} = Creators.stream_info(creator.code)
 
     followers = Creators.find_followers_for_creator(creator)
     Logger.info("Stream #{creator.code} is online, sending to #{length(followers)} channels")

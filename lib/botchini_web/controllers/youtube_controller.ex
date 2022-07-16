@@ -60,3 +60,14 @@ end
 #     "updated" => "2022-07-16T20:33:50.882435395+00:00"
 #   }
 # }
+
+# channel link = feed -> entry -> author -> uri
+# channel name = feed -> entry -> author -> name
+# stream link = feed -> entry -> link -> href
+# stream title = feed -> entry -> title
+# stream start = feed -> entry -> published
+
+# precisa pegar:
+# - thumbnail
+# - avatar canal
+# - viewers?

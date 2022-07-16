@@ -5,11 +5,11 @@ defmodule Botchini.Creators.Clients.Twitch do
 
   use Tesla
 
-  alias Botchini.Twitch.API.Structs.{Channel, Stream, User}
+  alias Botchini.Creators.Clients.Twitch.Structs.{Channel, Stream, User}
 
   plug(Tesla.Middleware.JSON)
   plug(Tesla.Middleware.Logger)
-  plug(Botchini.Twitch.AuthMiddleware)
+  plug(Botchini.Creators.Clients.Twitch.AuthMiddleware)
   plug(Tesla.Middleware.BaseUrl, "https://api.twitch.tv/helix")
 
   plug(Tesla.Middleware.Headers, [

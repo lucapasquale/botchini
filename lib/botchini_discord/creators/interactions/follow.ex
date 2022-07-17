@@ -6,7 +6,6 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
   alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias Botchini.{Creators, Discord}
-  alias BotchiniDiscord.Creators.Responses.{Components, Embeds}
   alias BotchiniDiscord.{Helpers, InteractionBehaviour}
 
   @behaviour InteractionBehaviour
@@ -20,9 +19,19 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
       options: [
         %{
           type: 3,
-          name: "stream",
-          description: "Twitch stream code",
-          required: true
+          name: "service",
+          required: true,
+          description: "Service the creator is from",
+          choices: [
+            %{name: "Twitch", value: "twitch"},
+            %{name: "YouTube", value: "youtube"}
+          ]
+        },
+        %{
+          type: 3,
+          name: "code",
+          required: true,
+          description: "Twitch code or YouTube channel"
         }
       ]
     }
@@ -30,13 +39,13 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
   @impl InteractionBehaviour
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, options) do
-    {stream_code, _autocomplete} = Helpers.get_option(options, "stream")
-    stream_code = Helpers.cleanup_stream_code(stream_code)
+    service = Helpers.get_service(options)
+    {code, _autocomplete} = Helpers.get_code(options)
 
-    follow_stream(interaction, {:twitch, stream_code})
+    follow_stream(interaction, {service, code})
   end
 
-  defp follow_stream(interaction, {service, stream_code}) do
+  defp follow_stream(interaction, {service, code}) do
     guild = get_guild(interaction)
 
     follow_info = %{
@@ -44,11 +53,11 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
       user_id: interaction.member && Integer.to_string(interaction.member.user.id)
     }
 
-    case Creators.follow_creator({service, stream_code}, guild, follow_info) do
+    case Creators.follow_creator({service, code}, guild, follow_info) do
       {:error, :invalid_creator} ->
         %{
           type: 4,
-          data: %{content: "Twitch stream **#{stream_code}** not found!"}
+          data: %{content: "Couldn't find **#{code}**!"}
         }
 
       {:error, :already_following} ->
@@ -57,16 +66,10 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
           data: %{content: "Already following!"}
         }
 
-      {:ok, stream} ->
-        spawn(fn ->
-          # Waits for the slash command response so it shows message after it
-          :timer.sleep(200)
-          send_stream_online_message(interaction.channel_id, stream)
-        end)
-
+      {:ok, creator} ->
         %{
           type: 4,
-          data: %{content: "Following the stream **#{stream.code}**!"}
+          data: %{content: "Following **#{creator.name}**!"}
         }
     end
   end
@@ -77,18 +80,6 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
     else
       {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
       guild
-    end
-  end
-
-  defp send_stream_online_message(channel_id, stream) do
-    {:ok, {user_data, stream_data}} = Creators.stream_info({:twitch, stream.code})
-
-    if stream_data != nil do
-      Nostrum.Api.create_message(
-        channel_id,
-        embed: Embeds.stream_online(user_data, stream_data),
-        components: [Components.unfollow_stream(stream.code)]
-      )
     end
   end
 end

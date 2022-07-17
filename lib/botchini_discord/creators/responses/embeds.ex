@@ -1,6 +1,6 @@
 defmodule BotchiniDiscord.Creators.Responses.Embeds do
   @moduledoc """
-  Generates embed messages for twitch commands
+  Generates embed messages for creator commands
   """
 
   alias Nostrum.Struct.Embed
@@ -64,5 +64,24 @@ defmodule BotchiniDiscord.Creators.Responses.Embeds do
     |> put_field("Viewer count", Integer.to_string(stream.viewer_count), true)
     |> put_footer("Since")
     |> put_timestamp(stream.started_at)
+  end
+
+  @spec youtube_video(Youtube.Structs.Channel.t(), Youtube.Structs.Video.t()) :: Embed.t()
+  def youtube_video(channel, video) do
+    channel_url = "https://youtube.com/channel/#{channel.id}"
+    video_url = "https://www.youtube.com/watch?v=#{video.id}"
+
+    %Embed{}
+    |> put_author(
+      channel.snippet["title"],
+      channel_url,
+      channel.snippet["thumbnails"]["default"]["url"]
+    )
+    |> put_title("New video by #{channel.snippet["title"]}")
+    |> put_description(video.snippet["title"])
+    |> put_url(video_url)
+    |> put_color(16_711_680)
+    |> put_image(video.snippet["thumbnails"]["high"]["url"])
+    |> put_timestamp(video.snippet["publishedAt"])
   end
 end

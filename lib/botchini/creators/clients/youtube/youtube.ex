@@ -82,10 +82,8 @@ defmodule Botchini.Creators.Clients.Youtube do
 
     topic_url = "https://www.youtube.com/xml/feeds/videos.xml?channel_id=#{channel_id}"
 
-    Logger.info("Syncinc pubsub",
-      callback_url: callback_url,
-      topic_url: topic_url,
-      subscribe: subscribe
+    Logger.info(
+      "Syncinc pubsub callback_url: #{callback_url} topic_url: #{topic_url} subscribe: #{subscribe}"
     )
 
     mp =

@@ -16,7 +16,6 @@ defmodule BotchiniWeb.Router do
 
   pipeline :xml_api do
     plug(:accepts, ["xml"])
-
   end
 
   scope "/", BotchiniWeb do

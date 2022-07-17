@@ -15,8 +15,6 @@ defmodule BotchiniWeb.YoutubeController do
 
   @spec notification(Plug.Conn.t(), any) :: Plug.Conn.t()
   def notification(conn, _params) do
-    IO.inspect(conn)
-
     entry =
       conn.body_params
       |> Map.get("feed")
@@ -24,7 +22,6 @@ defmodule BotchiniWeb.YoutubeController do
 
     channel_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}channelId")
     video_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}videoId")
-    IO.inspect({channel_id, video_id})
 
     case Creators.find_creator_by_youtube_channel_id(channel_id) do
       nil ->
@@ -41,9 +38,6 @@ defmodule BotchiniWeb.YoutubeController do
   defp send_new_video_messages(creator, video_id) do
     {:ok, {channel, video}} =
       Creators.youtube_video_info(creator.metadata["channel_id"], video_id)
-
-    IO.inspect(channel)
-    IO.inspect(video)
 
     followers = Creators.find_followers_for_creator(creator)
 
@@ -65,7 +59,6 @@ defmodule BotchiniWeb.YoutubeController do
       Nostrum.Api.create_message(
         String.to_integer(follower.discord_channel_id),
         embed: Embeds.youtube_video(channel, video)
-        # components: [Components.unfollow_stream(creator.code)]
       )
 
     case msg_response do
@@ -81,50 +74,3 @@ defmodule BotchiniWeb.YoutubeController do
     end
   end
 end
-
-# body: %{
-#   "feed" => %{
-#     "entry" => %{
-#       "author" => %{
-#         "name" => "Luca Pasquale",
-#         "uri" => "https://www.youtube.com/channel/UCpZOwKhGAc38GhLC7XWq6vg"
-#       },
-#       "id" => "yt:video:q2_Bh4A4fG4",
-#       "link" => %{
-#         "#content" => nil,
-#         "-href" => "https://www.youtube.com/watch?v=q2_Bh4A4fG4",
-#         "-rel" => "alternate"
-#       },
-#       "published" => "2022-07-16T20:33:18+00:00",
-#       "title" => "2",
-#       "updated" => "2022-07-16T20:33:50.882435395+00:00",
-#       "{http://www.youtube.com/xml/schemas/2015}channelId" => "UCpZOwKhGAc38GhLC7XWq6vg",
-#       "{http://www.youtube.com/xml/schemas/2015}videoId" => "q2_Bh4A4fG4"
-#     },
-#     "link" => [
-#       %{
-#         "#content" => nil,
-#         "-href" => "https://pubsubhubbub.appspot.com",
-#         "-rel" => "hub"
-#       },
-#       %{
-#         "#content" => nil,
-#         "-href" => "https://www.youtube.com/xml/feeds/videos.xml?channel_id=UCpZOwKhGAc38GhLC7XWq6vg",
-#         "-rel" => "self"
-#       }
-#     ],
-#     "title" => "YouTube video feed",
-#     "updated" => "2022-07-16T20:33:50.882435395+00:00"
-#   }
-# }
-
-# channel link = feed -> entry -> author -> uri
-# channel name = feed -> entry -> author -> name
-# stream link = feed -> entry -> link -> href
-# stream title = feed -> entry -> title
-# stream start = feed -> entry -> published
-
-# precisa pegar:
-# - thumbnail
-# - avatar canal
-# - viewers?

@@ -1,4 +1,8 @@
 defmodule Plug.Parsers.XML do
+  @moduledoc """
+  Plug for decoding XML requests
+  """
+
   @behaviour Plug.Parsers
   import Plug.Conn
 
@@ -18,7 +22,5 @@ defmodule Plug.Parsers.XML do
 
   defp decode({:ok, body, conn}) do
     {:ok, XmlToMap.naive_map(body), conn}
-  rescue
-    e -> raise Plug.Parsers.ParseError, exception: e
   end
 end

@@ -3,7 +3,7 @@ defmodule Botchini.Creators.Clients.Youtube.Structs.Channel do
   Channel from YouTube API
   """
 
-  defstruct [:id, :snippet, :statistics]
+  defstruct [:id, :snippet]
 
   @type thumbnail :: %{
           url: String.t(),
@@ -23,14 +23,9 @@ defmodule Botchini.Creators.Clients.Youtube.Structs.Channel do
           }
         }
 
-  @type statistics :: %{
-          subscriberCount: String.t()
-        }
-
   @type t :: %__MODULE__{
           id: String.t(),
-          snippet: snippet(),
-          statistics: statistics()
+          snippet: snippet()
         }
 
   use ExConstructor
@@ -41,7 +36,7 @@ defmodule Botchini.Creators.Clients.Youtube.Structs.Video do
   Video from YouTube API
   """
 
-  defstruct [:id, :snippet, :statistics, liveStreamingDetails: nil]
+  defstruct [:id, :snippet, liveStreamingDetails: nil]
 
   @type thumbnail :: %{
           url: String.t(),
@@ -64,13 +59,6 @@ defmodule Botchini.Creators.Clients.Youtube.Structs.Video do
           }
         }
 
-  @type statistics :: %{
-          viewCount: String.t(),
-          likeCount: String.t(),
-          favoriteCount: String.t(),
-          commentCount: String.t()
-        }
-
   @type liveStreamingDetails :: %{
           actualStartTime: String.t(),
           actualEndTime: String.t(),
@@ -80,7 +68,6 @@ defmodule Botchini.Creators.Clients.Youtube.Structs.Video do
   @type t :: %__MODULE__{
           id: String.t(),
           snippet: snippet(),
-          statistics: statistics(),
           liveStreamingDetails: liveStreamingDetails() | nil
         }
 

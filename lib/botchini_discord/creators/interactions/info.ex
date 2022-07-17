@@ -66,18 +66,18 @@ defmodule BotchiniDiscord.Creators.Interactions.Info do
   end
 
   defp get_stream_info({:youtube, code}) do
-    case Creators.youtube_channel_info(code) do
-      {:error, :not_found} ->
+    case Creators.search_youtube_channels(code) do
+      {:error, _} ->
         %{
           type: 4,
           data: %{content: "Channel **#{code}** not found!"}
         }
 
-      {:ok, channel} ->
+      {:ok, channels} ->
         %{
           type: 4,
           data: %{
-            embeds: [Embeds.youtube_channel(channel)]
+            embeds: [Embeds.youtube_channel(hd(channels))]
             # components: [Components.follow_stream(code)]
           }
         }

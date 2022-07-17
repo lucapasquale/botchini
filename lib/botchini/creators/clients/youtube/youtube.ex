@@ -77,9 +77,7 @@ defmodule Botchini.Creators.Clients.Youtube do
 
   @spec manage_channel_pubsub(String.t(), boolean()) :: {:ok}
   def manage_channel_pubsub(channel_id, subscribe) do
-    callback_url =
-      "https://#{Application.fetch_env!(:botchini, :host)}/api/youtube/webhooks/callback"
-
+    callback_url = "#{Application.fetch_env!(:botchini, :host)}/api/youtube/webhooks/callback"
     topic_url = "https://www.youtube.com/xml/feeds/videos.xml?channel_id=#{channel_id}"
 
     Logger.info(

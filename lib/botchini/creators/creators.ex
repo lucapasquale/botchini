@@ -192,12 +192,12 @@ defmodule Botchini.Creators do
     end
   end
 
-  @spec youtube_channel_info(String.t()) ::
-          {:error, :not_found} | {:ok, Youtube.Structs.Channel.t()}
-  def youtube_channel_info(code) do
-    case Youtube.get_channel(code) do
-      nil -> {:error, :not_found}
-      channel -> {:ok, channel}
+  @spec search_youtube_channels(String.t()) ::
+          {:error, :not_found} | {:ok, nonempty_list(Youtube.Structs.Channel.t())}
+  def search_youtube_channels(term) do
+    case Youtube.search_channels(term) do
+      channels when channels == [] -> {:error, :not_found}
+      channels -> {:ok, channels}
     end
   end
 
@@ -237,11 +237,13 @@ defmodule Botchini.Creators do
   end
 
   defp creator_info({:youtube, code}) do
-    case Youtube.get_channel(code) do
-      nil ->
+    case Youtube.search_channels(code) do
+      channels when channels == [] ->
         {:error, :invalid_creator}
 
-      channel ->
+      channels ->
+        channel = hd(channels)
+
         {:ok} = Youtube.manage_channel_pubsub(channel.id, true)
         {:ok, {channel.snippet["title"], %{channel_id: channel.id}}}
     end

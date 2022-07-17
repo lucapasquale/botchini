@@ -12,15 +12,35 @@ defmodule Botchini.Creators.Clients.Youtube do
   plug(Tesla.Middleware.JSON)
   plug(Tesla.Middleware.Logger)
 
+  plug(Tesla.Middleware.Query,
+    key: Application.fetch_env!(:botchini, :youtube_api_key)
+  )
+
+  @youtube_api "https://www.googleapis.com/youtube/v3"
+
+  @spec search_channels(String.t()) :: list(Structs.Channel.t())
+  def search_channels(term) do
+    {:ok, %{body: body}} =
+      get("#{@youtube_api}/search",
+        query: [part: "snippet", type: "channel", q: term]
+      )
+
+    case Map.get(body, "items") do
+      nil ->
+        nil
+
+      items ->
+        Enum.map(items, fn item ->
+          Structs.Channel.new(%{id: item["id"]["channelId"], snippet: item["snippet"]})
+        end)
+    end
+  end
+
   @spec get_channel(String.t()) :: Structs.Channel.t() | nil
   def get_channel(code) do
     {:ok, %{body: body}} =
-      get("https://youtube.googleapis.com/youtube/v3/channels",
-        query: [
-          key: Application.fetch_env!(:botchini, :youtube_api_key),
-          part: "snippet,statistics",
-          forUsername: code
-        ]
+      get("#{@youtube_api}/channels",
+        query: [part: "snippet", forUsername: code]
       )
 
     case Map.get(body, "items") do
@@ -36,12 +56,8 @@ defmodule Botchini.Creators.Clients.Youtube do
   @spec get_channel_by_id(String.t()) :: Structs.Channel.t() | nil
   def get_channel_by_id(channel_id) do
     {:ok, %{body: body}} =
-      get("https://youtube.googleapis.com/youtube/v3/channels",
-        query: [
-          key: Application.fetch_env!(:botchini, :youtube_api_key),
-          part: "snippet,statistics",
-          id: channel_id
-        ]
+      get("#{@youtube_api}/channels",
+        query: [part: "snippet", id: channel_id]
       )
 
     case Map.get(body, "items") do
@@ -58,11 +74,7 @@ defmodule Botchini.Creators.Clients.Youtube do
   def get_video(video_id) do
     {:ok, %{body: body}} =
       get("https://www.googleapis.com/youtube/v3/videos",
-        query: [
-          key: Application.fetch_env!(:botchini, :youtube_api_key),
-          part: "snippet,statistics,liveStreamingDetails",
-          id: video_id
-        ]
+        query: [part: "snippet,liveStreamingDetails", id: video_id]
       )
 
     case Map.get(body, "items") do
@@ -79,10 +91,6 @@ defmodule Botchini.Creators.Clients.Youtube do
   def manage_channel_pubsub(channel_id, subscribe) do
     callback_url = "#{Application.fetch_env!(:botchini, :host)}/api/youtube/webhooks/callback"
     topic_url = "https://www.youtube.com/xml/feeds/videos.xml?channel_id=#{channel_id}"
-
-    Logger.info(
-      "Syncinc pubsub callback_url: #{callback_url} topic_url: #{topic_url} subscribe: #{subscribe}"
-    )
 
     mp =
       Multipart.new()

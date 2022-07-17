@@ -20,8 +20,8 @@ defmodule BotchiniDiscord.Creators.Interactions.Info do
       options: [
         %{
           type: 3,
-          required: true,
           name: "service",
+          required: true,
           description: "Service the creator is from",
           choices: [
             %{name: "Twitch", value: "twitch"},
@@ -30,8 +30,8 @@ defmodule BotchiniDiscord.Creators.Interactions.Info do
         },
         %{
           type: 3,
-          required: true,
           name: "code",
+          required: true,
           description: "Twitch code or YouTube channel"
         }
       ]

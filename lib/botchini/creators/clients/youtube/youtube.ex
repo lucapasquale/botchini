@@ -5,21 +5,19 @@ defmodule Botchini.Creators.Clients.Youtube do
 
   use Tesla
   alias Tesla.Multipart
+  require Logger
 
   alias Botchini.Creators.Clients.Youtube.Structs
 
   plug(Tesla.Middleware.JSON)
   plug(Tesla.Middleware.Logger)
 
-  plug(Tesla.Middleware.Query, [
-    {"key", Application.fetch_env!(:botchini, :youtube_api_key)}
-  ])
-
   @spec get_channel(String.t()) :: Structs.Channel.t() | nil
   def get_channel(code) do
     {:ok, %{body: body}} =
       get("https://youtube.googleapis.com/youtube/v3/channels",
         query: [
+          key: Application.fetch_env!(:botchini, :youtube_api_key),
           part: "snippet,statistics",
           forUsername: code
         ]
@@ -40,6 +38,7 @@ defmodule Botchini.Creators.Clients.Youtube do
     {:ok, %{body: body}} =
       get("https://youtube.googleapis.com/youtube/v3/channels",
         query: [
+          key: Application.fetch_env!(:botchini, :youtube_api_key),
           part: "snippet,statistics",
           id: channel_id
         ]
@@ -60,6 +59,7 @@ defmodule Botchini.Creators.Clients.Youtube do
     {:ok, %{body: body}} =
       get("https://www.googleapis.com/youtube/v3/videos",
         query: [
+          key: Application.fetch_env!(:botchini, :youtube_api_key),
           part: "snippet,statistics,liveStreamingDetails",
           id: video_id
         ]
@@ -75,12 +75,18 @@ defmodule Botchini.Creators.Clients.Youtube do
     end
   end
 
-  @spec manage_channel_pubsub(String.t(), boolean()) :: any()
+  @spec manage_channel_pubsub(String.t(), boolean()) :: {:ok}
   def manage_channel_pubsub(channel_id, subscribe) do
     callback_url =
       "https://#{Application.fetch_env!(:botchini, :host)}/api/youtube/webhooks/callback"
 
     topic_url = "https://www.youtube.com/xml/feeds/videos.xml?channel_id=#{channel_id}"
+
+    Logger.info("Syncinc pubsub",
+      callback_url: callback_url,
+      topic_url: topic_url,
+      subscribe: subscribe
+    )
 
     mp =
       Multipart.new()
@@ -90,5 +96,6 @@ defmodule Botchini.Creators.Clients.Youtube do
       |> Multipart.add_field("hub.mode", if(subscribe, do: "subscribe", else: "unsubscribe"))
 
     {:ok, _} = post("https://pubsubhubbub.appspot.com/subscribe", mp)
+    {:ok}
   end
 end

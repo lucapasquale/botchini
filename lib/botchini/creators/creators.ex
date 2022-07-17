@@ -80,7 +80,15 @@ defmodule Botchini.Creators do
 
         case existing_follower do
           nil ->
-            insert_follower(creator, guild, follower_info)
+            %Follower{}
+            |> Follower.changeset(%{
+              creator_id: creator.id,
+              guild_id: guild && guild.id,
+              discord_user_id: follower_info.user_id,
+              discord_channel_id: follower_info.channel_id
+            })
+            |> Repo.insert!()
+
             {:ok, creator}
 
           _follower ->
@@ -108,7 +116,7 @@ defmodule Botchini.Creators do
             {:error, :not_found}
 
           follower ->
-            Repo.delete(follower)
+            remove_follower(creator, follower)
             {:ok}
         end
     end
@@ -234,19 +242,25 @@ defmodule Botchini.Creators do
         {:error, :invalid_creator}
 
       channel ->
-        Youtube.manage_channel_pubsub(channel.id, true)
+        {:ok} = Youtube.manage_channel_pubsub(channel.id, true)
         {:ok, {channel.snippet["title"], %{channel_id: channel.id}}}
     end
   end
 
-  defp insert_follower(creator, guild, %{channel_id: channel_id, user_id: user_id}) do
-    %Follower{}
-    |> Follower.changeset(%{
-      creator_id: creator.id,
-      guild_id: guild && guild.id,
-      discord_user_id: user_id,
-      discord_channel_id: channel_id
-    })
-    |> Repo.insert!()
+  defp remove_follower(creator, follower) do
+    Repo.delete(follower)
+
+    remaining_followers =
+      Ecto.Query.where(Follower, creator_id: ^creator.id)
+      |> Repo.all()
+
+    if remaining_followers == [] do
+      case creator.service do
+        :twitch -> Twitch.delete_stream_webhook(creator.metadata["subscription_id"])
+        :youtube -> Youtube.manage_channel_pubsub(creator.metadata["channel_id"], false)
+      end
+
+      Repo.delete(creator)
+    end
   end
 end

@@ -22,6 +22,7 @@ defmodule BotchiniWeb.YoutubeController do
 
     channel_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}channelId")
     video_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}videoId")
+    Logger.info("Received webhook for youtube", channel_id: channel_id, video_id: video_id)
 
     case Creators.find_creator_by_youtube_channel_id(channel_id) do
       nil ->

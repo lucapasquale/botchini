@@ -19,7 +19,7 @@ defmodule BotchiniWeb.TwitchController do
 
       {:stream_online, subscription} ->
         twitch_user_id = subscription["condition"]["broadcaster_user_id"]
-        Logger.info("twitch_user_id: #{twitch_user_id}")
+        Logger.info("Received webhook for twitch", twitch_user_id: twitch_user_id)
 
         case Creators.find_creator_by_twitch_user_id(twitch_user_id) do
           nil ->
@@ -52,25 +52,25 @@ defmodule BotchiniWeb.TwitchController do
   end
 
   defp send_stream_online_messages(creator) do
-    {:ok, {user, stream_data}} = Creators.stream_info(creator.code)
+    {:ok, {user, stream}} = Creators.stream_info(creator.code)
 
     followers = Creators.find_followers_for_creator(creator)
     Logger.info("Stream #{creator.code} is online, sending to #{length(followers)} channels")
 
     Enum.each(followers, fn follower ->
       Task.start(fn ->
-        notify_followers(creator, follower, {user, stream_data})
+        notify_followers(creator, follower, {user, stream})
       end)
     end)
   end
 
-  defp notify_followers(creator, follower, {user, stream_data}) do
+  defp notify_followers(creator, follower, {user, stream}) do
     channel_id = follower.discord_channel_id
 
     msg_response =
       Nostrum.Api.create_message(
         String.to_integer(channel_id),
-        embed: Embeds.stream_online(user, stream_data),
+        embed: Embeds.stream_online(user, stream),
         components: [Components.unfollow_stream(creator.code)]
       )
 

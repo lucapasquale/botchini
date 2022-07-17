@@ -71,13 +71,15 @@ defmodule BotchiniDiscord.Creators.Responses.Embeds do
     channel_url = "https://youtube.com/channel/#{channel.id}"
     video_url = "https://www.youtube.com/watch?v=#{video.id}"
 
+    video_type = if(is_nil(video.liveStreamingDetails), do: "video", else: "livestream")
+
     %Embed{}
     |> put_author(
       channel.snippet["title"],
       channel_url,
       channel.snippet["thumbnails"]["default"]["url"]
     )
-    |> put_title("New video by #{channel.snippet["title"]}")
+    |> put_title("New #{video_type} by #{channel.snippet["title"]}")
     |> put_description(video.snippet["title"])
     |> put_url(video_url)
     |> put_color(16_711_680)

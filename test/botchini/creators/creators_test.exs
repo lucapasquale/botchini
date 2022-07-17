@@ -4,7 +4,7 @@ defmodule BotchiniTest.Creators.CreatorsTest do
   import Mock
 
   alias Botchini.{Creators, Repo}
-  alias Botchini.Creators.Clients.Twitch
+  alias Botchini.Creators.Clients.{Twitch, Youtube}
   alias Botchini.Creators.Schema.{Creator, Follower}
 
   describe "find_creator_by_twitch_user_id" do
@@ -240,17 +240,42 @@ defmodule BotchiniTest.Creators.CreatorsTest do
   end
 
   describe "unfollow" do
-    test "stop following, and delete creator if no more followers for that creator" do
-      creator = generate_creator()
+    test "stop following, delete creator and remove twitch webhook if no more followers" do
+      creator = generate_creator(%{service: :twitch})
       guild = generate_guild()
       follower = generate_follower(%{creator_id: creator.id, guild_id: guild.id})
 
-      {:ok} =
-        Creators.unfollow({creator.service, creator.code}, %{
-          channel_id: follower.discord_channel_id
-        })
+      with_mock Twitch,
+        delete_stream_webhook: fn _ -> :noop end do
+        {:ok} =
+          Creators.unfollow({creator.service, creator.code}, %{
+            channel_id: follower.discord_channel_id
+          })
 
-      refute Repo.get_by(Follower, id: follower.id)
+        assert_called(Twitch.delete_stream_webhook(creator.metadata["subscription_id"]))
+
+        refute Repo.get_by(Follower, id: follower.id)
+        refute Repo.get_by(Creator, id: creator.id)
+      end
+    end
+
+    test "stop following, delete creator and remove youtube pubsub if no more followers" do
+      creator = generate_creator(%{service: :youtube})
+      guild = generate_guild()
+      follower = generate_follower(%{creator_id: creator.id, guild_id: guild.id})
+
+      with_mock Youtube,
+        manage_channel_pubsub: fn _, _ -> :ok end do
+        {:ok} =
+          Creators.unfollow({creator.service, creator.code}, %{
+            channel_id: follower.discord_channel_id
+          })
+
+        assert_called(Youtube.manage_channel_pubsub(creator.metadata["channel_id"], false))
+
+        refute Repo.get_by(Follower, id: follower.id)
+        refute Repo.get_by(Creator, id: creator.id)
+      end
     end
 
     test "not_found if creator was not found" do

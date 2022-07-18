@@ -1,11 +1,8 @@
 defmodule BotchiniTest.Creators.CreatorsTest do
   use Botchini.DataCase, async: false
 
-  import Mock
-
   alias Botchini.{Creators, Repo}
-  alias Botchini.Creators.Clients.{Twitch, Youtube}
-  alias Botchini.Creators.Schema.{Creator, Follower}
+  alias Botchini.Creators.Schema.Follower
 
   describe "find_by_service" do
     test "find creator by its service and service_id" do

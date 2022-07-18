@@ -6,8 +6,8 @@ defmodule BotchiniDiscord.Creators.Responses.Embeds do
   alias Nostrum.Struct.Embed
   import Nostrum.Struct.Embed
 
-  alias Botchini.Services
   alias Botchini.Creators.Schema.Creator
+  alias Botchini.Services
 
   @spec creator_embed(Creator.t()) :: Embed.t()
   def creator_embed(creator) when creator.service == :twitch do

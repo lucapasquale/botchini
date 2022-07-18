@@ -27,7 +27,7 @@ defmodule Botchini.Creators.Clients.Youtube do
 
     case Map.get(body, "items") do
       nil ->
-        nil
+        []
 
       items ->
         Enum.map(items, fn item ->

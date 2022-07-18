@@ -25,7 +25,7 @@ defmodule Botchini.Creators.Clients.Twitch do
     |> Enum.map(&Stream.new/1)
   end
 
-  @spec search_channels(String.t()) :: [Channel.t()]
+  @spec search_channels(String.t()) :: list(Channel.t())
   def search_channels(term) do
     {:ok, %{body: body}} = get("/search/channels", query: [query: term, first: 10])
 

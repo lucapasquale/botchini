@@ -37,8 +37,7 @@ defmodule BotchiniWeb.YoutubeController do
   end
 
   defp send_new_video_messages(creator, video_id) do
-    {:ok, {channel, video}} =
-      Creators.youtube_video_info(creator.metadata["channel_id"], video_id)
+    {:ok, {channel, video}} = Creators.youtube_video_info(creator.service_id, video_id)
 
     followers = Creators.find_followers_for_creator(creator)
 

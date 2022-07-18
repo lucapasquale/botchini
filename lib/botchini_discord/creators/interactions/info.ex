@@ -30,9 +30,9 @@ defmodule BotchiniDiscord.Creators.Interactions.Info do
         },
         %{
           type: 3,
-          name: "code",
+          name: "term",
           required: true,
-          description: "Twitch code or YouTube channel"
+          description: "Twitch stream or YouTube channel"
         }
       ]
     }
@@ -41,9 +41,26 @@ defmodule BotchiniDiscord.Creators.Interactions.Info do
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(_interaction, options) do
     service = Helpers.get_service(options)
-    {code, _autocomplete} = Helpers.get_code(options)
+    {term, _autocomplete} = Helpers.get_option(options, "term")
 
-    get_stream_info({service, code})
+    case Creators.upsert_creator(service, term) do
+      {:error, _} ->
+        %{
+          type: 4,
+          data: %{content: "Creator **#{code}** not found!"}
+        }
+
+      {:ok, creator} ->
+        %{
+          type: 4,
+          data: %{
+            embeds: [Embeds.twitch_user(user)],
+            components: [Components.follow_stream(code)]
+          }
+        }
+    end
+
+    get_stream_info({service, term})
   end
 
   defp get_stream_info({:twitch, code}) do

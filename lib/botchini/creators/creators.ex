@@ -23,7 +23,7 @@ defmodule Botchini.Creators do
   def find_creator_by_twitch_user_id(twitch_user_id) do
     from(c in Creator,
       where: c.service == :twitch,
-      where: fragment("metadata->>'user_id' = ?", ^twitch_user_id)
+      where: c.service_id == ^twitch_user_id
     )
     |> Repo.one()
   end
@@ -32,7 +32,7 @@ defmodule Botchini.Creators do
   def find_creator_by_youtube_channel_id(channel_id) do
     from(c in Creator,
       where: c.service == :youtube,
-      where: fragment("metadata->>'channel_id' = ?", ^channel_id)
+      where: c.service_id == ^channel_id
     )
     |> Repo.one()
   end
@@ -67,7 +67,7 @@ defmodule Botchini.Creators do
         }) ::
           {:ok, Creator.t()} | {:error, :invalid_creator} | {:error, :already_following}
   def follow_creator({service, code}, guild, follower_info) do
-    case upsert_creator({service, code}) do
+    case upsert_creator(service, code) do
       {:error, _} ->
         {:error, :invalid_creator}
 
@@ -201,52 +201,60 @@ defmodule Botchini.Creators do
     end
   end
 
-  defp upsert_creator({service, code}) do
-    case Repo.get_by(Creator, service: service, code: code) do
-      %Creator{} = existing ->
-        {:ok, existing}
+  @spec upsert_creator(Creator.services(), String.t()) ::
+          {:error, :invalid_creator} | {:ok, Creator.t()}
+  def upsert_creator(service, term) do
+    case search_channel(service, term) do
+      {:error, _} ->
+        {:error, :invalid_creator}
 
-      nil ->
-        case creator_info({service, code}) do
-          {:error, _} ->
-            {:error, :invalid_creator}
+      {:ok, {service_id, name}} ->
+        case Repo.get_by(Creator, service: service, service_id: service_id) do
+          %Creator{} = existing ->
+            {:ok, existing}
 
-          {:ok, {name, metadata}} ->
-            %Creator{}
-            |> Creator.changeset(%{
+          nil ->
+            Creator.changeset(%Creator{}, %{
               service: service,
-              code: code,
               name: name,
-              metadata: metadata
+              service_id: service_id,
+              webhook_id: subscribe_to_service(service, service_id)
             })
             |> Repo.insert()
         end
     end
   end
 
-  defp creator_info({:twitch, code}) do
-    case Twitch.get_user(code) do
-      nil ->
-        {:error, :invalid_creator}
-
-      user ->
-        event_subscription = Twitch.add_stream_webhook(user.id)
-
-        {:ok, {user.display_name, %{user_id: user.id, subscription_id: event_subscription["id"]}}}
-    end
-  end
-
-  defp creator_info({:youtube, code}) do
-    case Youtube.search_channels(code) do
+  defp search_channel(:twitch, term) do
+    case Twitch.search_channels(term) do
       channels when channels == [] ->
-        {:error, :invalid_creator}
+        {:error, :not_found}
 
       channels ->
         channel = hd(channels)
-
-        {:ok} = Youtube.manage_channel_pubsub(channel.id, true)
-        {:ok, {channel.snippet["title"], %{channel_id: channel.id}}}
+        {:ok, {channel.id, channel.display_name}}
     end
+  end
+
+  defp search_channel(:youtube, term) do
+    case Youtube.search_channels(term) do
+      channels when channels == [] ->
+        {:error, :not_found}
+
+      channels ->
+        channel = hd(channels)
+        {:ok, {channel.id, channel.snippet["title"]}}
+    end
+  end
+
+  defp subscribe_to_service(:twitch, service_id) do
+    event_subscription = Twitch.add_stream_webhook(service_id)
+    event_subscription["id"]
+  end
+
+  defp subscribe_to_service(:youtube, service_id) do
+    {:ok} = Youtube.manage_channel_pubsub(service_id, true)
+    nil
   end
 
   defp remove_follower(creator, follower) do
@@ -258,8 +266,8 @@ defmodule Botchini.Creators do
 
     if remaining_followers == [] do
       case creator.service do
-        :twitch -> Twitch.delete_stream_webhook(creator.metadata["subscription_id"])
-        :youtube -> Youtube.manage_channel_pubsub(creator.metadata["channel_id"], false)
+        :twitch -> Twitch.delete_stream_webhook(creator.webhook_id)
+        :youtube -> Youtube.manage_channel_pubsub(creator.service_id, false)
       end
 
       Repo.delete(creator)

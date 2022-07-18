@@ -45,7 +45,7 @@ defmodule Botchini.Creators do
   end
 
   @spec search_following_creators({Creator.services(), String.t()}, %{channel_id: String.t()}) ::
-          [Creator.t()]
+          list({String.t(), String.t()})
   def search_following_creators({service, term}, %{channel_id: channel_id}) do
     term = "%#{term}%"
 
@@ -53,6 +53,7 @@ defmodule Botchini.Creators do
       c in Creator,
       join: f in Follower,
       on: f.creator_id == c.id,
+      select: {c.id, c.name},
       where: c.service == ^service,
       where: ilike(c.code, ^term),
       where: f.discord_channel_id == ^channel_id,
@@ -61,88 +62,51 @@ defmodule Botchini.Creators do
     |> Repo.all()
   end
 
-  @spec follow_creator(creator_input, Guild.t() | nil, %{
+  @spec follow_creator(Creator.t(), Guild.t() | nil, %{
           channel_id: String.t(),
           user_id: String.t() | nil
         }) ::
-          {:ok, Creator.t()} | {:error, :invalid_creator} | {:error, :already_following}
-  def follow_creator({service, code}, guild, follower_info) do
-    case upsert_creator(service, code) do
-      {:error, _} ->
-        {:error, :invalid_creator}
+          {:ok, Follower.t()} | {:error, :already_following}
+  def follow_creator(creator, guild, follower_info) do
+    existing_follower =
+      Repo.get_by(Follower,
+        creator_id: creator.id,
+        discord_channel_id: follower_info.channel_id
+      )
 
-      {:ok, creator} ->
-        existing_follower =
-          Repo.get_by(Follower,
+    case existing_follower do
+      nil ->
+        follower =
+          Follower.changeset(%Follower{}, %{
             creator_id: creator.id,
+            guild_id: guild && guild.id,
+            discord_user_id: follower_info.user_id,
             discord_channel_id: follower_info.channel_id
-          )
+          })
+          |> Repo.insert()
 
-        case existing_follower do
+        {:ok, follower}
+
+      _follower ->
+        {:error, :already_following}
+    end
+  end
+
+  @spec unfollow(integer(), %{channel_id: String.t()}) ::
+          {:error, :not_found} | {:ok, Creator.t()}
+  def unfollow(creator_id, %{channel_id: channel_id}) do
+    case Repo.get(Creator, creator_id) do
+      nil ->
+        {:error, :not_found}
+
+      creator ->
+        case Repo.get_by(Follower, creator_id: creator.id, discord_channel_id: channel_id) do
           nil ->
-            %Follower{}
-            |> Follower.changeset(%{
-              creator_id: creator.id,
-              guild_id: guild && guild.id,
-              discord_user_id: follower_info.user_id,
-              discord_channel_id: follower_info.channel_id
-            })
-            |> Repo.insert!()
+            {:error, :not_found}
 
+          follower ->
+            Repo.delete(follower)
             {:ok, creator}
-
-          _follower ->
-            {:error, :already_following}
-        end
-    end
-  end
-
-  @spec unfollow(creator_input, %{channel_id: String.t()}) ::
-          {:ok} | {:error, :not_found}
-  def unfollow({service, code}, %{channel_id: channel_id}) do
-    case Repo.get_by(Creator, service: service, code: code) do
-      nil ->
-        {:error, :not_found}
-
-      creator ->
-        existing_follower =
-          Repo.get_by(Follower,
-            creator_id: creator.id,
-            discord_channel_id: channel_id
-          )
-
-        case existing_follower do
-          nil ->
-            {:error, :not_found}
-
-          follower ->
-            remove_follower(creator, follower)
-            {:ok}
-        end
-    end
-  end
-
-  @spec unfollow_by_creator_id(integer(), %{channel_id: String.t()}) ::
-          {:ok} | {:error, :not_found}
-  def unfollow_by_creator_id(creator_id, %{channel_id: channel_id}) do
-    case Repo.get_by(Creator, id: creator_id) do
-      nil ->
-        {:error, :not_found}
-
-      creator ->
-        existing_follower =
-          Repo.get_by(Follower,
-            creator_id: creator.id,
-            discord_channel_id: channel_id
-          )
-
-        case existing_follower do
-          nil ->
-            {:error, :not_found}
-
-          follower ->
-            remove_follower(creator, follower)
-            {:ok}
         end
     end
   end
@@ -289,22 +253,5 @@ defmodule Botchini.Creators do
   defp subscribe_to_service(:youtube, service_id) do
     {:ok} = Youtube.manage_channel_pubsub(service_id, true)
     nil
-  end
-
-  defp remove_follower(creator, follower) do
-    Repo.delete(follower)
-
-    remaining_followers =
-      Ecto.Query.where(Follower, creator_id: ^creator.id)
-      |> Repo.all()
-
-    if remaining_followers == [] do
-      case creator.service do
-        :twitch -> Twitch.delete_stream_webhook(creator.webhook_id)
-        :youtube -> Youtube.manage_channel_pubsub(creator.service_id, false)
-      end
-
-      Repo.delete(creator)
-    end
   end
 end

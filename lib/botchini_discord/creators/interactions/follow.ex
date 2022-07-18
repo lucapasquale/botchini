@@ -29,9 +29,9 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
         },
         %{
           type: 3,
-          name: "code",
+          name: "term",
           required: true,
-          description: "Twitch code or YouTube channel"
+          description: "Twitch stream or YouTube channel"
         }
       ]
     }
@@ -40,12 +40,21 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, options) do
     service = Helpers.get_service(options)
-    {code, _autocomplete} = Helpers.get_code(options)
+    {term, _autocomplete} = Helpers.get_option(options, "term")
 
-    follow_stream(interaction, {service, code})
+    case Creators.upsert_creator(service, term) do
+      {:error, _} ->
+        %{
+          type: 4,
+          data: %{content: "Creator not found!"}
+        }
+
+      {:ok, creator} ->
+        follow_stream(interaction, creator)
+    end
   end
 
-  defp follow_stream(interaction, {service, code}) do
+  defp follow_stream(interaction, creator) do
     guild = get_guild(interaction)
 
     follow_info = %{
@@ -53,20 +62,14 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
       user_id: interaction.member && Integer.to_string(interaction.member.user.id)
     }
 
-    case Creators.follow_creator({service, code}, guild, follow_info) do
-      {:error, :invalid_creator} ->
-        %{
-          type: 4,
-          data: %{content: "Couldn't find **#{code}**!"}
-        }
-
+    case Creators.follow_creator(creator, guild, follow_info) do
       {:error, :already_following} ->
         %{
           type: 4,
           data: %{content: "Already following!"}
         }
 
-      {:ok, creator} ->
+      {:ok, _} ->
         %{
           type: 4,
           data: %{content: "Following **#{creator.name}**!"}

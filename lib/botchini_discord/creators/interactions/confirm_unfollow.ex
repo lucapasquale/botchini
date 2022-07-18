@@ -18,18 +18,27 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
   @impl InteractionBehaviour
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, options) do
-    {type, _} = Helpers.get_option(options, "type")
     {creator_id, _autocomplete} = Helpers.get_option(options, "creator_id")
 
-    confirm_unfollow(interaction, type, String.to_integer(creator_id))
+    case Creators.creator_by_id(String.to_integer(creator_id)) do
+      nil ->
+        %{
+          type: 4,
+          data: %{content: "Creator not found"}
+        }
+
+      creator ->
+        {type, _} = Helpers.get_option(options, "type")
+        confirm_unfollow(interaction, type, creator)
+    end
   end
 
-  defp confirm_unfollow(interaction, "ask", creator_id) do
+  defp confirm_unfollow(interaction, "ask", creator) do
     follow_info = %{
       channel_id: Integer.to_string(interaction.channel_id)
     }
 
-    case Creators.discord_channel_follower(creator_id, follow_info) do
+    case Creators.discord_channel_follower(creator.id, follow_info) do
       {:error, :not_found} ->
         %{
           type: 4,
@@ -40,19 +49,19 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
         %{
           type: 4,
           data: %{
-            content: unfollow_message(interaction, creator_id),
-            components: [Components.confirm_unfollow_creator(creator_id)]
+            content: unfollow_message(interaction, creator),
+            components: [Components.confirm_unfollow_creator(creator.id)]
           }
         }
     end
   end
 
-  defp confirm_unfollow(interaction, "cancel", creator_id) do
+  defp confirm_unfollow(interaction, "cancel", creator) do
     %{
       type: 7,
       data: %{
         content: """
-        #{unfollow_message(interaction, creator_id)}
+        #{unfollow_message(interaction, creator)}
         - Canceled unfollowing
         """,
         components: []
@@ -60,31 +69,31 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
     }
   end
 
-  defp confirm_unfollow(interaction, "confirm", creator_id) do
+  defp confirm_unfollow(interaction, "confirm", creator) do
     follow_info = %{
       channel_id: Integer.to_string(interaction.channel_id)
     }
 
-    case Creators.unfollow_by_creator_id(creator_id, follow_info) do
+    case Creators.unfollow(creator.id, follow_info) do
       {:error, :not_found} ->
         %{
           type: 7,
           data: %{
             content: """
-            #{unfollow_message(interaction, creator_id)}
+            #{unfollow_message(interaction, creator)}
             - Stream was not being followed
             """,
             components: []
           }
         }
 
-      {:ok} ->
+      {:ok, _creator} ->
         %{
           type: 7,
           data: %{
             content: """
-            #{unfollow_message(interaction, creator_id)}
-            - Stream unfollowed
+            #{unfollow_message(interaction, creator)}
+            - Unfollowed #{creator.name}
             """,
             components: []
           }
@@ -92,11 +101,11 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
     end
   end
 
-  defp unfollow_message(interaction, creator_id) do
+  defp unfollow_message(interaction, creator) do
     if is_nil(interaction.member) do
-      "Are you sure you want to unfollow **#{creator_id}**?"
+      "Are you sure you want to unfollow **#{creator.name}**?"
     else
-      "<@#{interaction.member.user.id}> are you sure you want to unfollow **#{creator_id}**?"
+      "<@#{interaction.member.user.id}> are you sure you want to unfollow **#{creator.name}**?"
     end
   end
 end

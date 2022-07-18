@@ -43,7 +43,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Info do
     service = Helpers.get_service(options)
     {term, _autocomplete} = Helpers.get_option(options, "term")
 
-    case Creators.upsert_creator(service, term) do
+    case Creators.upsert(service, term) do
       {:error, _} ->
         %{
           type: 4,

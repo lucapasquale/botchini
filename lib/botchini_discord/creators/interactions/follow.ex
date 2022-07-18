@@ -39,10 +39,21 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
   @impl InteractionBehaviour
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, options) do
-    service = Helpers.get_service(options)
-    {term, _autocomplete} = Helpers.get_option(options, "term")
+    case Enum.find(options, fn opt -> opt.name == "creator_id" end) do
+      nil ->
+        service = Helpers.get_service(options)
+        {term, _autocomplete} = Helpers.get_option(options, "term")
 
-    case Creators.upsert_creator(service, term) do
+        follow_by_term(interaction, {service, term})
+
+      creator_id_option ->
+        creator_id = creator_id_option.value
+        follow_by_creator_id(interaction, creator_id)
+    end
+  end
+
+  defp follow_by_term(interaction, {service, term}) do
+    case Creators.upsert(service, term) do
       {:error, _} ->
         %{
           type: 4,
@@ -50,6 +61,19 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
         }
 
       {:ok, creator} ->
+        follow_stream(interaction, creator)
+    end
+  end
+
+  defp follow_by_creator_id(interaction, creator_id) do
+    case Creators.creator_by_id(creator_id) do
+      nil ->
+        %{
+          type: 4,
+          data: %{content: "Creator not found!"}
+        }
+
+      creator ->
         follow_stream(interaction, creator)
     end
   end
@@ -62,7 +86,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
       user_id: interaction.member && Integer.to_string(interaction.member.user.id)
     }
 
-    case Creators.follow_creator(creator, guild, follow_info) do
+    case Creators.follow(creator, guild, follow_info) do
       {:error, :already_following} ->
         %{
           type: 4,

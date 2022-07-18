@@ -1,4 +1,4 @@
-defmodule Botchini.Creators.Clients.Twitch.AuthMiddleware do
+defmodule Botchini.Services.Twitch.AuthMiddleware do
   @moduledoc """
   Middleware to generate accessToken for Twitch API
   """
@@ -6,7 +6,7 @@ defmodule Botchini.Creators.Clients.Twitch.AuthMiddleware do
   use Agent
   use Tesla
 
-  alias Botchini.Creators.Clients.Twitch
+  alias Botchini.Services.Twitch
 
   def start_link(_initial_value) do
     Agent.start_link(fn -> %{exp: nil, access_token: ""} end, name: __MODULE__)

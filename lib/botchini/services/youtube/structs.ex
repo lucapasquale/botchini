@@ -1,4 +1,4 @@
-defmodule Botchini.Creators.Clients.Youtube.Structs.Channel do
+defmodule Botchini.Services.Youtube.Structs.Channel do
   @moduledoc """
   Channel from YouTube API
   """
@@ -31,7 +31,7 @@ defmodule Botchini.Creators.Clients.Youtube.Structs.Channel do
   use ExConstructor
 end
 
-defmodule Botchini.Creators.Clients.Youtube.Structs.Video do
+defmodule Botchini.Services.Youtube.Structs.Video do
   @moduledoc """
   Video from YouTube API
   """

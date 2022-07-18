@@ -1,29 +1,20 @@
-defmodule Botchini.Creators.Clients.Twitch do
+defmodule Botchini.Services.Twitch do
   @moduledoc """
   Handles communication with Twitch API
   """
 
   use Tesla
 
-  alias Botchini.Creators.Clients.Twitch.Structs.{Channel, Stream, User}
+  alias Botchini.Services.Twitch.Structs.{Channel, Stream, User}
 
   plug(Tesla.Middleware.JSON)
   plug(Tesla.Middleware.Logger)
-  plug(Botchini.Creators.Clients.Twitch.AuthMiddleware)
+  plug(Botchini.Services.Twitch.AuthMiddleware)
   plug(Tesla.Middleware.BaseUrl, "https://api.twitch.tv/helix")
 
   plug(Tesla.Middleware.Headers, [
     {"Client-ID", Application.fetch_env!(:botchini, :twitch_client_id)}
   ])
-
-  @spec top_live_streams() :: [Stream.t()]
-  def top_live_streams do
-    {:ok, %{body: body}} = get("/streams", query: [first: 10])
-
-    body
-    |> Map.get("data")
-    |> Enum.map(&Stream.new/1)
-  end
 
   @spec search_channels(String.t()) :: list(Channel.t())
   def search_channels(term) do
@@ -47,8 +38,8 @@ defmodule Botchini.Creators.Clients.Twitch do
   end
 
   @spec get_stream(String.t()) :: Stream.t() | nil
-  def get_stream(stream_code) do
-    {:ok, %{body: body}} = get("/streams", query: [user_login: stream_code])
+  def get_stream(user_id) do
+    {:ok, %{body: body}} = get("/streams", query: [id: user_id])
 
     stream =
       body
@@ -75,11 +66,6 @@ defmodule Botchini.Creators.Clients.Twitch do
     body
     |> Map.get("data")
     |> List.first()
-  end
-
-  @spec delete_stream_webhook(String.t()) :: any()
-  def delete_stream_webhook(subscription_id) do
-    delete("/eventsub/subscriptions", query: [id: subscription_id])
   end
 
   @spec authenticate() :: any()

@@ -6,26 +6,28 @@ defmodule BotchiniDiscord.Creators.Responses.Embeds do
   alias Nostrum.Struct.Embed
   import Nostrum.Struct.Embed
 
-  alias Botchini.Creators.Clients.{Twitch, Youtube}
+  alias Botchini.Creators.Schema.Creator
+  alias Botchini.Services
 
-  @spec twitch_user(Twitch.Structs.User.t()) :: Embed.t()
-  def twitch_user(user) do
-    stream_url = "https://www.twitch.tv/" <> user.login
+  @spec creator_embed(Creator.t()) :: Embed.t()
+  def creator_embed(creator) when creator.service == :twitch do
+    user = Services.twitch_user_info(creator.service_id)
+    user_url = "https://www.twitch.tv/#{user.login}"
 
     %Embed{}
-    |> put_author(user.display_name, stream_url, user.profile_image_url)
+    |> put_author(user.display_name, user_url, user.profile_image_url)
     |> put_title(user.display_name)
     |> put_description(user.description)
-    |> put_url(stream_url)
+    |> put_url(user_url)
     |> put_thumbnail(user.profile_image_url)
     |> put_color(6_570_404)
     |> put_footer("Since")
     |> put_timestamp(user.created_at)
   end
 
-  @spec youtube_channel(Youtube.Structs.Channel.t()) :: Embed.t()
-  def youtube_channel(channel) do
-    channel_url = "https://www.youtube.com/channel/" <> channel.id
+  def creator_embed(creator) when creator.service == :youtube do
+    channel = Services.youtube_channel_info(creator.service_id)
+    channel_url = "https://www.youtube.com/channel/#{channel.id}"
 
     %Embed{}
     |> put_author(
@@ -42,9 +44,12 @@ defmodule BotchiniDiscord.Creators.Responses.Embeds do
     |> put_timestamp(channel.snippet["publishedAt"])
   end
 
-  @spec stream_online(Twitch.Structs.User.t(), Stream.t()) :: Embed.t()
-  def stream_online(user, stream) do
-    stream_url = "https://www.twitch.tv/" <> user.login
+  @spec twitch_stream_online(Creator.t()) :: Embed.t()
+  def twitch_stream_online(creator) do
+    user = Services.twitch_user_info(creator.service_id)
+    stream = Services.twitch_stream_info(creator.service_id)
+
+    stream_url = "https://www.twitch.tv/#{user.login}"
 
     thumbnail_url =
       Map.get(stream, :thumbnail_url, "")
@@ -66,11 +71,12 @@ defmodule BotchiniDiscord.Creators.Responses.Embeds do
     |> put_timestamp(stream.started_at)
   end
 
-  @spec youtube_video(Youtube.Structs.Channel.t(), Youtube.Structs.Video.t()) :: Embed.t()
-  def youtube_video(channel, video) do
-    channel_url = "https://youtube.com/channel/#{channel.id}"
-    video_url = "https://www.youtube.com/watch?v=#{video.id}"
+  @spec youtube_video_posted(Creator.t(), String.t()) :: Embed.t()
+  def youtube_video_posted(creator, video_id) do
+    channel = Services.youtube_channel_info(creator.service_id)
+    video = Services.youtube_video_info(video_id)
 
+    channel_url = "https://youtube.com/channel/#{channel.id}"
     video_type = if(is_nil(video.liveStreamingDetails), do: "video", else: "livestream")
 
     %Embed{}
@@ -81,7 +87,7 @@ defmodule BotchiniDiscord.Creators.Responses.Embeds do
     )
     |> put_title("New #{video_type} by #{channel.snippet["title"]}")
     |> put_description(video.snippet["title"])
-    |> put_url(video_url)
+    |> put_url("https://www.youtube.com/watch?v=#{video.id}")
     |> put_color(16_711_680)
     |> put_image(video.snippet["thumbnails"]["high"]["url"])
     |> put_timestamp(video.snippet["publishedAt"])

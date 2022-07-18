@@ -1,4 +1,4 @@
-defmodule Botchini.Creators.Clients.Youtube do
+defmodule Botchini.Services.Youtube do
   @moduledoc """
   Handles communication with YouTube API
   """
@@ -7,7 +7,7 @@ defmodule Botchini.Creators.Clients.Youtube do
   alias Tesla.Multipart
   require Logger
 
-  alias Botchini.Creators.Clients.Youtube.Structs
+  alias Botchini.Services.Youtube.Structs.{Channel, Video}
 
   plug(Tesla.Middleware.JSON)
   plug(Tesla.Middleware.Logger)
@@ -18,7 +18,7 @@ defmodule Botchini.Creators.Clients.Youtube do
 
   @youtube_api "https://www.googleapis.com/youtube/v3"
 
-  @spec search_channels(String.t()) :: list(Structs.Channel.t())
+  @spec search_channels(String.t()) :: list(Channel.t())
   def search_channels(term) do
     {:ok, %{body: body}} =
       get("#{@youtube_api}/search",
@@ -27,34 +27,17 @@ defmodule Botchini.Creators.Clients.Youtube do
 
     case Map.get(body, "items") do
       nil ->
-        nil
+        []
 
       items ->
         Enum.map(items, fn item ->
-          Structs.Channel.new(%{id: item["id"]["channelId"], snippet: item["snippet"]})
+          Channel.new(%{id: item["id"]["channelId"], snippet: item["snippet"]})
         end)
     end
   end
 
-  @spec get_channel(String.t()) :: Structs.Channel.t() | nil
-  def get_channel(code) do
-    {:ok, %{body: body}} =
-      get("#{@youtube_api}/channels",
-        query: [part: "snippet", forUsername: code]
-      )
-
-    case Map.get(body, "items") do
-      nil ->
-        nil
-
-      items ->
-        List.first(items)
-        |> Structs.Channel.new()
-    end
-  end
-
-  @spec get_channel_by_id(String.t()) :: Structs.Channel.t() | nil
-  def get_channel_by_id(channel_id) do
+  @spec get_channel(String.t()) :: Channel.t() | nil
+  def get_channel(channel_id) do
     {:ok, %{body: body}} =
       get("#{@youtube_api}/channels",
         query: [part: "snippet", id: channel_id]
@@ -66,11 +49,11 @@ defmodule Botchini.Creators.Clients.Youtube do
 
       items ->
         List.first(items)
-        |> Structs.Channel.new()
+        |> Channel.new()
     end
   end
 
-  @spec get_video(String.t()) :: Structs.Channel.t() | nil
+  @spec get_video(String.t()) :: Video.t() | nil
   def get_video(video_id) do
     {:ok, %{body: body}} =
       get("https://www.googleapis.com/youtube/v3/videos",
@@ -83,7 +66,7 @@ defmodule Botchini.Creators.Clients.Youtube do
 
       items ->
         List.first(items)
-        |> Structs.Video.new()
+        |> Video.new()
     end
   end
 

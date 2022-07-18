@@ -21,7 +21,7 @@ defmodule BotchiniWeb.TwitchController do
         twitch_user_id = subscription["condition"]["broadcaster_user_id"]
         Logger.info("Received webhook for twitch", twitch_user_id: twitch_user_id)
 
-        case Creators.find_creator_by_twitch_user_id(twitch_user_id) do
+        case Creators.find_by_service(:twitch, twitch_user_id) do
           nil ->
             conn
             |> put_status(:not_found)
@@ -52,32 +52,28 @@ defmodule BotchiniWeb.TwitchController do
   end
 
   defp send_stream_online_messages(creator) do
-    {:ok, {user, stream}} = Creators.stream_info(creator.code)
-
     followers = Creators.find_followers_for_creator(creator)
-    Logger.info("Stream #{creator.code} is online, sending to #{length(followers)} channels")
+    Logger.info("Stream #{creator.name} is online, sending to #{length(followers)} channels")
 
     Enum.each(followers, fn follower ->
-      Task.start(fn ->
-        notify_followers(creator, follower, {user, stream})
-      end)
+      Task.start(fn -> notify_followers(creator, follower) end)
     end)
   end
 
-  defp notify_followers(creator, follower, {user, stream}) do
+  defp notify_followers(creator, follower) do
     channel_id = follower.discord_channel_id
 
     msg_response =
       Nostrum.Api.create_message(
         String.to_integer(channel_id),
-        embed: Embeds.stream_online(user, stream),
-        components: [Components.unfollow_stream(creator.code)]
+        embed: Embeds.twitch_stream_online(creator),
+        components: [Components.unfollow_creator(creator.id)]
       )
 
     case msg_response do
       {:error, _err} ->
         Logger.warn("Removing channel since doesn't exist anymore", channel_id: channel_id)
-        {:ok} = Creators.unfollow({:twitch, creator.code}, %{channel_id: channel_id})
+        {:ok, _} = Creators.unfollow(creator.id, %{channel_id: channel_id})
 
       _ ->
         :noop

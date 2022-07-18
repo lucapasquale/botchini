@@ -1,27 +1,18 @@
 defmodule BotchiniTest.Creators.CreatorsTest do
   use Botchini.DataCase, async: false
 
-  import Mock
-
   alias Botchini.{Creators, Repo}
-  alias Botchini.Creators.Clients.{Twitch, Youtube}
-  alias Botchini.Creators.Schema.{Creator, Follower}
+  alias Botchini.Creators.Schema.Follower
 
-  describe "find_creator_by_twitch_user_id" do
-    test "find creator by its twitch_user_id" do
-      creator =
-        generate_creator(%{
-          metadata: %{
-            "user_id" => Faker.String.base64(),
-            "subscription_id" => Faker.String.base64()
-          }
-        })
+  describe "find_by_service" do
+    test "find creator by its service and service_id" do
+      creator = generate_creator()
 
-      ^creator = Creators.find_creator_by_twitch_user_id(creator.metadata["user_id"])
+      ^creator = Creators.find_by_service(creator.service, creator.service_id)
     end
 
     test "return nil of not found" do
-      nil = Creators.find_creator_by_twitch_user_id(Faker.String.base64())
+      nil = Creators.find_by_service(:twitch, Faker.String.base64())
     end
   end
 
@@ -51,43 +42,47 @@ defmodule BotchiniTest.Creators.CreatorsTest do
     test "should find followed creators for same service by similar term" do
       channel_id = Faker.String.base64()
 
-      creator_1 = generate_creator(%{service: :twitch, code: "myTest1"})
+      creator_1 = generate_creator(%{service: :twitch, name: "myTest1"})
       generate_follower(%{creator_id: creator_1.id, discord_channel_id: channel_id})
 
-      creator_2 = generate_creator(%{service: :twitch, code: "myTest2"})
+      creator_2 = generate_creator(%{service: :twitch, name: "myTest2"})
       generate_follower(%{creator_id: creator_2.id, discord_channel_id: channel_id})
 
-      creator_3 = generate_creator(%{service: :youtube, code: "myTest2"})
+      creator_3 = generate_creator(%{service: :youtube, name: "myTest2"})
       generate_follower(%{creator_id: creator_3.id, discord_channel_id: channel_id})
 
       response =
         Creators.search_following_creators({creator_1.service, "test"}, %{channel_id: channel_id})
 
-      assert response == [creator_1, creator_2]
+      assert response == [{creator_1.id, creator_1.name}, {creator_2.id, creator_2.name}]
     end
 
     test "should return everything if term is empty string" do
       channel_id = Faker.String.base64()
 
-      creator_1 = generate_creator(%{code: "qwer"})
+      creator_1 = generate_creator(%{name: "qwer"})
       generate_follower(%{creator_id: creator_1.id, discord_channel_id: channel_id})
 
-      creator_2 = generate_creator(%{service: creator_1.service, code: "asdf"})
+      creator_2 = generate_creator(%{service: creator_1.service, name: "asdf"})
       generate_follower(%{creator_id: creator_2.id, discord_channel_id: channel_id})
 
-      creator_3 = generate_creator(%{service: creator_1.service, code: "zxcv"})
+      creator_3 = generate_creator(%{service: creator_1.service, name: "zxcv"})
       generate_follower(%{creator_id: creator_3.id, discord_channel_id: channel_id})
 
       response =
         Creators.search_following_creators({creator_1.service, ""}, %{channel_id: channel_id})
 
-      assert response == [creator_1, creator_2, creator_3]
+      assert response == [
+               {creator_1.id, creator_1.name},
+               {creator_2.id, creator_2.name},
+               {creator_3.id, creator_3.name}
+             ]
     end
 
     test "should empty if term does not match" do
       channel_id = Faker.String.base64()
 
-      creator = generate_creator(%{code: "qwer"})
+      creator = generate_creator(%{name: "qwer"})
       generate_follower(%{creator_id: creator.id, discord_channel_id: channel_id})
 
       response =
@@ -108,110 +103,56 @@ defmodule BotchiniTest.Creators.CreatorsTest do
     test "should ignore creator if term does not match" do
       channel_id = Faker.String.base64()
 
-      creator = generate_creator(%{code: "valid"})
+      creator = generate_creator(%{name: "valid"})
       generate_follower(%{creator_id: creator.id, discord_channel_id: channel_id})
 
-      invalid_creator = generate_creator(%{code: "somethingElse"})
+      invalid_creator = generate_creator(%{service: creator.service, name: "somethingElse"})
       generate_follower(%{creator_id: invalid_creator.id, discord_channel_id: channel_id})
 
       response =
         Creators.search_following_creators({creator.service, "valid"}, %{channel_id: channel_id})
 
-      assert response == [creator]
+      assert response == [{creator.id, creator.name}]
     end
 
     test "should ignore creator if its from different channel_id" do
       channel_id = Faker.String.base64()
 
-      creator = generate_creator(%{code: "myTest1"})
+      creator = generate_creator(%{name: "myTest1"})
       generate_follower(%{creator_id: creator.id, discord_channel_id: channel_id})
 
-      invalid_creator = generate_creator(%{code: "myTest2"})
+      invalid_creator = generate_creator(%{service: creator.service, name: "myTest2"})
       generate_follower(%{creator_id: invalid_creator.id})
 
       response =
         Creators.search_following_creators({creator.service, "test"}, %{channel_id: channel_id})
 
-      assert response == [creator]
+      assert response == [{creator.id, creator.name}]
     end
   end
 
-  describe "follow_creator" do
-    test "create creator, guild and follower, calls twitch API" do
-      twitch_id = Faker.String.base64()
-      twitch_sub_id = Faker.String.base64()
-
-      code = Faker.String.base64()
-      name = Faker.String.base64()
-      guild = generate_guild()
-      message = generate_message()
-
-      with_mock Twitch,
-        get_user: fn _code -> %{id: twitch_id, display_name: name} end,
-        add_stream_webhook: fn _twitch_id -> %{"id" => twitch_sub_id} end do
-        {:ok, creator} = Creators.follow_creator({:twitch, code}, guild, message)
-
-        assert_called(Twitch.get_user(code))
-        assert_called(Twitch.add_stream_webhook(twitch_id))
-
-        assert creator != nil
-        assert creator.code == code
-        assert creator.name == name
-        assert creator.metadata.user_id == twitch_id
-        assert creator.metadata.subscription_id == twitch_sub_id
-
-        follower = Repo.get_by!(Follower, creator_id: creator.id)
-        assert follower.guild_id == guild.id
-        assert follower.discord_user_id == message.user_id
-        assert follower.discord_channel_id == message.channel_id
-      end
-    end
-
-    test "use existing creator" do
+  describe "follow" do
+    test "start following creator" do
       creator = generate_creator()
       guild = generate_guild()
       message = generate_message()
 
-      with_mock Twitch,
-        get_user: fn _code -> %{id: creator.twitch_user_id} end,
-        add_stream_webhook: fn _twitch_id -> %{"id" => creator.twitch_subscription_id} end do
-        {:ok, returned_creator} = Creators.follow_creator({:twitch, creator.code}, guild, message)
-        assert creator.id == returned_creator.id
+      {:ok, follower} = Creators.follow(creator, guild, message)
 
-        assert_not_called(Twitch.get_user(:_))
-        assert_not_called(Twitch.add_stream_webhook(:_))
-
-        assert Repo.get_by(Follower, creator_id: creator.id)
-      end
+      assert follower.guild_id == guild.id
+      assert follower.discord_user_id == message.user_id
+      assert follower.discord_channel_id == message.channel_id
     end
 
     test "follow from direct message" do
       creator = generate_creator()
       message = %{channel_id: Faker.String.base64(), user_id: nil}
 
-      with_mock Twitch,
-        get_user: fn _code -> %{id: creator.metadata["user_id"]} end,
-        add_stream_webhook: fn _twitch_id -> %{"id" => creator.metadata["subscription_id"]} end do
-        {:ok, _creator} = Creators.follow_creator({:twitch, creator.code}, nil, message)
+      {:ok, follower} = Creators.follow(creator, nil, message)
 
-        follower = Repo.get_by(Follower, creator_id: creator.id)
-        assert follower.discord_user_id == nil
-        assert follower.discord_channel_id == message.channel_id
-      end
-    end
-
-    test "invalid_creator if twitch API returns nil" do
-      guild = generate_guild()
-      message = generate_message()
-
-      with_mock Twitch,
-        get_user: fn _code -> nil end,
-        add_stream_webhook: fn _twitch_id -> %{"id" => Faker.String.base64()} end do
-        {:error, :invalid_creator} =
-          Creators.follow_creator({:twitch, "invalid_creator"}, guild, message)
-
-        assert_not_called(Twitch.add_stream_webhook(:_))
-      end
+      assert follower.guild_id == nil
+      assert follower.discord_user_id == nil
+      assert follower.discord_channel_id == message.channel_id
     end
 
     test "already_following if channel was already following" do
@@ -219,17 +160,12 @@ defmodule BotchiniTest.Creators.CreatorsTest do
       guild = generate_guild()
       follower = generate_follower(%{creator_id: creator.id, guild_id: guild.id})
 
-      with_mock Twitch,
-        get_user: fn _code -> %{id: creator.metadata["user_id"]} end,
-        add_stream_webhook: fn _twitch_id -> %{"id" => creator.metadata["subscription_id"]} end do
-        message = %{
-          channel_id: follower.discord_channel_id,
-          user_id: follower.discord_user_id
-        }
+      message = %{
+        channel_id: follower.discord_channel_id,
+        user_id: follower.discord_user_id
+      }
 
-        {:error, :already_following} =
-          Creators.follow_creator({:twitch, creator.code}, guild, message)
-      end
+      {:error, :already_following} = Creators.follow(creator, nil, message)
     end
 
     defp generate_message,
@@ -245,37 +181,12 @@ defmodule BotchiniTest.Creators.CreatorsTest do
       guild = generate_guild()
       follower = generate_follower(%{creator_id: creator.id, guild_id: guild.id})
 
-      with_mock Twitch,
-        delete_stream_webhook: fn _ -> :noop end do
-        {:ok} =
-          Creators.unfollow({creator.service, creator.code}, %{
-            channel_id: follower.discord_channel_id
-          })
+      {:ok, ^creator} =
+        Creators.unfollow(creator.id, %{
+          channel_id: follower.discord_channel_id
+        })
 
-        assert_called(Twitch.delete_stream_webhook(creator.metadata["subscription_id"]))
-
-        refute Repo.get_by(Follower, id: follower.id)
-        refute Repo.get_by(Creator, id: creator.id)
-      end
-    end
-
-    test "stop following, delete creator and remove youtube pubsub if no more followers" do
-      creator = generate_creator(%{service: :youtube})
-      guild = generate_guild()
-      follower = generate_follower(%{creator_id: creator.id, guild_id: guild.id})
-
-      with_mock Youtube,
-        manage_channel_pubsub: fn _, _ -> :ok end do
-        {:ok} =
-          Creators.unfollow({creator.service, creator.code}, %{
-            channel_id: follower.discord_channel_id
-          })
-
-        assert_called(Youtube.manage_channel_pubsub(creator.metadata["channel_id"], false))
-
-        refute Repo.get_by(Follower, id: follower.id)
-        refute Repo.get_by(Creator, id: creator.id)
-      end
+      refute Repo.get_by(Follower, id: follower.id)
     end
 
     test "not_found if creator was not found" do
@@ -284,7 +195,7 @@ defmodule BotchiniTest.Creators.CreatorsTest do
       follower = generate_follower(%{creator_id: creator.id, guild_id: guild.id})
 
       {:error, :not_found} =
-        Creators.unfollow({creator.service, "invalid_creator"}, %{
+        Creators.unfollow(-1, %{
           channel_id: follower.discord_channel_id
         })
     end
@@ -293,14 +204,14 @@ defmodule BotchiniTest.Creators.CreatorsTest do
       creator = generate_creator()
 
       {:error, :not_found} =
-        Creators.unfollow({creator.service, creator.code}, %{channel_id: "invalid_channel_id"})
-
-      assert Repo.get_by(Creator, id: creator.id)
+        Creators.unfollow(creator.id, %{
+          channel_id: Faker.String.base64()
+        })
     end
   end
 
   describe "guild_following_list" do
-    test "lists all follower.channel_id and creator.code for a guild" do
+    test "lists all follower.channel_id and creator.name for a guild" do
       creator_1 = generate_creator()
       creator_2 = generate_creator()
 
@@ -312,8 +223,8 @@ defmodule BotchiniTest.Creators.CreatorsTest do
       {:ok, following_list} = Creators.guild_following_list(guild)
 
       assert length(following_list) == 2
-      assert Enum.at(following_list, 0) == {follower_1.discord_channel_id, creator_1.code}
-      assert Enum.at(following_list, 1) == {follower_2.discord_channel_id, creator_2.code}
+      assert Enum.at(following_list, 0) == {follower_1.discord_channel_id, creator_1.name}
+      assert Enum.at(following_list, 1) == {follower_2.discord_channel_id, creator_2.name}
     end
 
     test "lists for same creator but different followers" do
@@ -326,8 +237,8 @@ defmodule BotchiniTest.Creators.CreatorsTest do
       {:ok, following_list} = Creators.guild_following_list(guild)
 
       assert length(following_list) == 2
-      assert Enum.at(following_list, 0) == {follower_1.discord_channel_id, creator.code}
-      assert Enum.at(following_list, 1) == {follower_2.discord_channel_id, creator.code}
+      assert Enum.at(following_list, 0) == {follower_1.discord_channel_id, creator.name}
+      assert Enum.at(following_list, 1) == {follower_2.discord_channel_id, creator.name}
     end
 
     test "ignores followers from other guild" do
@@ -341,12 +252,12 @@ defmodule BotchiniTest.Creators.CreatorsTest do
       {:ok, following_list} = Creators.guild_following_list(guild)
 
       assert length(following_list) == 1
-      assert Enum.at(following_list, 0) == {follower_1.discord_channel_id, creator.code}
+      assert Enum.at(following_list, 0) == {follower_1.discord_channel_id, creator.name}
     end
   end
 
   describe "channel_following_list" do
-    test "lists all follower.channel_id and creator.code for a guild" do
+    test "lists all follower.channel_id and creator.name for a guild" do
       creator_1 = generate_creator()
       creator_2 = generate_creator()
 
@@ -355,7 +266,7 @@ defmodule BotchiniTest.Creators.CreatorsTest do
       generate_follower(%{creator_id: creator_2.id, discord_channel_id: discord_channel_id})
 
       {:ok, following_list} = Creators.channel_following_list(discord_channel_id)
-      assert following_list == [creator_1.code, creator_2.code]
+      assert following_list == [creator_1.name, creator_2.name]
     end
 
     test "ignores followers from other channel" do
@@ -366,11 +277,11 @@ defmodule BotchiniTest.Creators.CreatorsTest do
       generate_follower(%{creator_id: creator.id, discord_channel_id: Faker.String.base64()})
 
       {:ok, following_list} = Creators.channel_following_list(discord_channel_id)
-      assert following_list == [creator.code]
+      assert following_list == [creator.name]
     end
   end
 
-  describe "channel_follower" do
+  describe "discord_channel_follower" do
     test "find follower for creator code by channel_id" do
       creator = generate_creator()
       guild = generate_guild()
@@ -378,28 +289,28 @@ defmodule BotchiniTest.Creators.CreatorsTest do
       follower = generate_follower(%{creator_id: creator.id, guild_id: guild.id})
 
       {:ok, ^follower} =
-        Creators.channel_follower({:twitch, creator.code}, %{
+        Creators.discord_channel_follower(creator.id, %{
           channel_id: follower.discord_channel_id
         })
     end
 
-    test "not_found if no creator by that code" do
+    test "not_found if no creator found" do
       creator = generate_creator()
       guild = generate_guild()
 
       follower = generate_follower(%{creator_id: creator.id, guild_id: guild.id})
 
       {:error, :not_found} =
-        Creators.channel_follower({:twitch, Faker.String.base64()}, %{
+        Creators.discord_channel_follower(-1, %{
           channel_id: follower.discord_channel_id
         })
     end
 
-    test "not_found if no follower for that channel_id by that code" do
+    test "not_found if no follower for that channel_id" do
       creator = generate_creator()
 
       {:error, :not_found} =
-        Creators.channel_follower({:twitch, creator.code}, %{
+        Creators.discord_channel_follower(creator.id, %{
           channel_id: Faker.String.base64()
         })
     end

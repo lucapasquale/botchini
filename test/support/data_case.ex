@@ -48,13 +48,10 @@ defmodule Botchini.DataCase do
   def generate_creator(attrs \\ %{}) do
     payload =
       %{
-        service: :twitch,
-        code: String.downcase(Faker.String.base64()),
+        service: Faker.Util.pick([:twitch, :youtube]),
         name: Faker.String.base64(),
-        metadata: %{
-          "user_id" => Faker.String.base64(),
-          "subscription_id" => Faker.String.base64()
-        }
+        service_id: Faker.String.base64(),
+        webhook_id: Faker.String.base64()
       }
       |> Map.merge(attrs)
 

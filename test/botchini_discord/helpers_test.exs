@@ -69,17 +69,4 @@ defmodule BotchiniDiscordTest.HelpersTest do
       end
     end
   end
-
-  describe "cleanup_stream_code" do
-    test "should trim spaces" do
-      "test" = Helpers.cleanup_stream_code(" test")
-      "test" = Helpers.cleanup_stream_code("test  ")
-    end
-
-    test "should set as lowercase" do
-      "test" = Helpers.cleanup_stream_code("test")
-      "test" = Helpers.cleanup_stream_code("TeSt")
-      "test" = Helpers.cleanup_stream_code("TEST")
-    end
-  end
 end

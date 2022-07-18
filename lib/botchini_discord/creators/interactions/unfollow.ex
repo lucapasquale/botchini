@@ -29,10 +29,10 @@ defmodule BotchiniDiscord.Creators.Interactions.Unfollow do
         },
         %{
           type: 3,
-          name: "code",
+          name: "term",
           required: true,
           autocomplete: true,
-          description: "Twitch code or YouTube channel"
+          description: "Twitch stream or YouTube channel"
         }
       ]
     }
@@ -41,25 +41,23 @@ defmodule BotchiniDiscord.Creators.Interactions.Unfollow do
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, options) do
     service = Helpers.get_service(options)
-    {code, is_autocomplete} = Helpers.get_code(options)
+    {term, is_autocomplete} = Helpers.get_option(options, "term")
 
     follow_info = %{
       channel_id: Integer.to_string(interaction.channel_id)
     }
 
     if is_autocomplete do
-      search_creators_to_unfollow({service, code}, follow_info)
+      search_creators_to_unfollow({service, term}, follow_info)
     else
-      unfollow_stream({service, code}, follow_info)
+      unfollow_stream({service, term}, follow_info)
     end
   end
 
   defp search_creators_to_unfollow({service, term}, follow_info) do
     choices =
       Creators.search_following_creators({service, term}, follow_info)
-      |> Enum.map(fn stream ->
-        %{name: stream.name, value: stream.code}
-      end)
+      |> Enum.map(fn {id, name} -> %{name: name, value: Integer.to_string(id)} end)
 
     %{
       type: 8,
@@ -67,18 +65,18 @@ defmodule BotchiniDiscord.Creators.Interactions.Unfollow do
     }
   end
 
-  defp unfollow_stream({service, code}, follow_info) do
-    case Creators.unfollow({service, code}, follow_info) do
+  defp unfollow_stream({_service, follower_id}, follow_info) do
+    case Creators.unfollow(String.to_integer(follower_id), follow_info) do
       {:error, :not_found} ->
         %{
           type: 4,
-          data: %{content: "**#{code}** was not being followed"}
+          data: %{content: "Creator was not being followed!"}
         }
 
-      {:ok} ->
+      {:ok, creator} ->
         %{
           type: 4,
-          data: %{content: "Stopped following **#{code}**"}
+          data: %{content: "Stopped following **#{creator.name}**"}
         }
     end
   end

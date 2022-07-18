@@ -17,16 +17,16 @@ defmodule Botchini.Creators.Schema.Creator do
 
   @type t :: %__MODULE__{
           service: :twitch | :youtube,
-          code: String.t(),
           name: String.t(),
-          metadata: Creator.Metadata.t()
+          service_id: String.t(),
+          webhook_id: String.t() | nil
         }
 
   schema "creators" do
     field(:service, Ecto.Enum, values: [:twitch, :youtube])
-    field(:code, :string)
     field(:name, :string)
-    field(:metadata, :map)
+    field(:service_id, :string)
+    field(:webhook_id, :string)
 
     has_many(:followers, Follower)
 
@@ -36,8 +36,8 @@ defmodule Botchini.Creators.Schema.Creator do
   @spec changeset(Creator.t() | map(), any()) :: Ecto.Changeset.t()
   def changeset(%Creator{} = creator, attrs \\ %{}) do
     creator
-    |> cast(attrs, [:service, :code, :name, :metadata])
-    |> validate_required([:service, :code, :name, :metadata])
-    |> unique_constraint([:service, :code])
+    |> cast(attrs, [:service, :name, :service_id, :webhook_id])
+    |> validate_required([:service, :name, :service_id])
+    |> unique_constraint([:service, :service_id])
   end
 end

@@ -6,10 +6,9 @@ defmodule Botchini.Creators do
   import Ecto.Query
   alias Ecto.Query
 
-  alias Botchini.Creators.Clients.{Twitch, Youtube}
   alias Botchini.Creators.Schema.{Creator, Follower}
   alias Botchini.Discord.Schema.Guild
-  alias Botchini.Repo
+  alias Botchini.{Repo, Services}
 
   @type creator_input :: {Creator.services(), String.t()}
 
@@ -19,20 +18,16 @@ defmodule Botchini.Creators do
     |> Repo.one!()
   end
 
-  @spec find_creator_by_twitch_user_id(String.t()) :: nil | Creator.t()
-  def find_creator_by_twitch_user_id(twitch_user_id) do
-    from(c in Creator,
-      where: c.service == :twitch,
-      where: fragment("metadata->>'user_id' = ?", ^twitch_user_id)
-    )
-    |> Repo.one()
+  @spec creator_by_id(integer()) :: nil | Creator.t()
+  def creator_by_id(creator_id) do
+    Repo.get(Creator, creator_id)
   end
 
-  @spec find_creator_by_youtube_channel_id(String.t()) :: nil | Creator.t()
-  def find_creator_by_youtube_channel_id(channel_id) do
+  @spec find_by_service(Creator.services(), String.t()) :: nil | Creator.t()
+  def find_by_service(service, service_id) do
     from(c in Creator,
-      where: c.service == :youtube,
-      where: fragment("metadata->>'channel_id' = ?", ^channel_id)
+      where: c.service == ^service,
+      where: c.service_id == ^service_id
     )
     |> Repo.one()
   end
@@ -45,7 +40,7 @@ defmodule Botchini.Creators do
   end
 
   @spec search_following_creators({Creator.services(), String.t()}, %{channel_id: String.t()}) ::
-          [Creator.t()]
+          list({String.t(), String.t()})
   def search_following_creators({service, term}, %{channel_id: channel_id}) do
     term = "%#{term}%"
 
@@ -53,71 +48,85 @@ defmodule Botchini.Creators do
       c in Creator,
       join: f in Follower,
       on: f.creator_id == c.id,
+      select: {c.id, c.name},
       where: c.service == ^service,
-      where: ilike(c.code, ^term),
+      where: ilike(c.name, ^term),
       where: f.discord_channel_id == ^channel_id,
       limit: 5
     )
     |> Repo.all()
   end
 
-  @spec follow_creator(creator_input, Guild.t() | nil, %{
-          channel_id: String.t(),
-          user_id: String.t() | nil
-        }) ::
-          {:ok, Creator.t()} | {:error, :invalid_creator} | {:error, :already_following}
-  def follow_creator({service, code}, guild, follower_info) do
-    case upsert_creator({service, code}) do
+  @spec upsert(Creator.services(), String.t()) :: {:error, :invalid_creator} | {:ok, Creator.t()}
+  def upsert(service, term) do
+    case Services.search_channel(service, term) do
       {:error, _} ->
         {:error, :invalid_creator}
 
-      {:ok, creator} ->
-        existing_follower =
-          Repo.get_by(Follower,
-            creator_id: creator.id,
-            discord_channel_id: follower_info.channel_id
-          )
+      {:ok, {service_id, name}} ->
+        case Repo.get_by(Creator, service: service, service_id: service_id) do
+          %Creator{} = existing ->
+            {:ok, existing}
 
-        case existing_follower do
           nil ->
-            %Follower{}
-            |> Follower.changeset(%{
-              creator_id: creator.id,
-              guild_id: guild && guild.id,
-              discord_user_id: follower_info.user_id,
-              discord_channel_id: follower_info.channel_id
+            webhook_id = Services.subscribe_to_service(service, service_id)
+
+            Creator.changeset(%Creator{}, %{
+              service: service,
+              name: name,
+              service_id: service_id,
+              webhook_id: webhook_id
             })
-            |> Repo.insert!()
-
-            {:ok, creator}
-
-          _follower ->
-            {:error, :already_following}
+            |> Repo.insert()
         end
     end
   end
 
-  @spec unfollow(creator_input, %{channel_id: String.t()}) ::
-          {:ok} | {:error, :not_found}
-  def unfollow({service, code}, %{channel_id: channel_id}) do
-    case Repo.get_by(Creator, service: service, code: code) do
+  @spec follow(Creator.t(), Guild.t() | nil, %{
+          channel_id: String.t(),
+          user_id: String.t() | nil
+        }) ::
+          {:ok, Follower.t()} | {:error, :already_following}
+  def follow(creator, guild, follower_info) do
+    existing_follower =
+      Repo.get_by(Follower,
+        creator_id: creator.id,
+        discord_channel_id: follower_info.channel_id
+      )
+
+    case existing_follower do
+      nil ->
+        follower =
+          Follower.changeset(%Follower{}, %{
+            creator_id: creator.id,
+            guild_id: guild && guild.id,
+            discord_user_id: follower_info.user_id,
+            discord_channel_id: follower_info.channel_id
+          })
+          |> Repo.insert!()
+
+        {:ok, follower}
+
+      _follower ->
+        {:error, :already_following}
+    end
+  end
+
+  @spec unfollow(integer(), %{channel_id: String.t()}) ::
+          {:error, :not_found} | {:ok, Creator.t()}
+  def unfollow(creator_id, %{channel_id: channel_id}) do
+    case Repo.get(Creator, creator_id) do
       nil ->
         {:error, :not_found}
 
       creator ->
-        existing_follower =
-          Repo.get_by(Follower,
-            creator_id: creator.id,
-            discord_channel_id: channel_id
-          )
-
-        case existing_follower do
+        case Repo.get_by(Follower, creator_id: creator.id, discord_channel_id: channel_id) do
           nil ->
             {:error, :not_found}
 
           follower ->
-            remove_follower(creator, follower)
-            {:ok}
+            Repo.delete(follower)
+            {:ok, creator}
         end
     end
   end
@@ -130,7 +139,7 @@ defmodule Botchini.Creators do
         join: f in Follower,
         on: f.creator_id == c.id,
         where: f.guild_id == ^guild.id,
-        select: {f.discord_channel_id, c.code}
+        select: {f.discord_channel_id, c.name}
       )
       |> Repo.all()
 
@@ -144,125 +153,23 @@ defmodule Botchini.Creators do
         c in Creator,
         join: f in Follower,
         on: f.creator_id == c.id,
-        where: f.discord_channel_id == ^channel_id,
-        select: c.code
+        select: c.name,
+        where: f.discord_channel_id == ^channel_id
       )
       |> Repo.all()
 
     {:ok, follow_list}
   end
 
-  @spec channel_follower(creator_input, %{channel_id: String.t()}) ::
+  @spec discord_channel_follower(integer(), %{channel_id: String.t()}) ::
           {:error, :not_found} | {:ok, Follower.t()}
-  def channel_follower({service, code}, %{channel_id: channel_id}) do
-    case Repo.get_by(Creator, service: service, code: code) do
+  def discord_channel_follower(creator_id, %{channel_id: channel_id}) do
+    case Repo.get_by(Follower, creator_id: creator_id, discord_channel_id: channel_id) do
       nil ->
         {:error, :not_found}
 
-      creator ->
-        case Repo.get_by(Follower, creator_id: creator.id, discord_channel_id: channel_id) do
-          nil ->
-            {:error, :not_found}
-
-          follower ->
-            {:ok, follower}
-        end
-    end
-  end
-
-  @spec stream_info(String.t()) ::
-          {:error, :not_found} | {:ok, {Twitch.Structs.User.t(), Twitch.Structs.Stream.t() | nil}}
-  def stream_info(code) do
-    case Twitch.get_user(code) do
-      nil -> {:error, :not_found}
-      user -> {:ok, {user, Twitch.get_stream(code)}}
-    end
-  end
-
-  @spec youtube_video_info(String.t(), String.t()) ::
-          {:error, :not_found} | {:ok, {Youtube.Structs.Channel.t(), Youtube.Structs.Video.t()}}
-  def youtube_video_info(channel_id, video_id) do
-    case Youtube.get_channel_by_id(channel_id) do
-      nil ->
-        {:error, :not_found}
-
-      channel ->
-        video = Youtube.get_video(video_id)
-        {:ok, {channel, video}}
-    end
-  end
-
-  @spec search_youtube_channels(String.t()) ::
-          {:error, :not_found} | {:ok, nonempty_list(Youtube.Structs.Channel.t())}
-  def search_youtube_channels(term) do
-    case Youtube.search_channels(term) do
-      channels when channels == [] -> {:error, :not_found}
-      channels -> {:ok, channels}
-    end
-  end
-
-  defp upsert_creator({service, code}) do
-    case Repo.get_by(Creator, service: service, code: code) do
-      %Creator{} = existing ->
-        {:ok, existing}
-
-      nil ->
-        case creator_info({service, code}) do
-          {:error, _} ->
-            {:error, :invalid_creator}
-
-          {:ok, {name, metadata}} ->
-            %Creator{}
-            |> Creator.changeset(%{
-              service: service,
-              code: code,
-              name: name,
-              metadata: metadata
-            })
-            |> Repo.insert()
-        end
-    end
-  end
-
-  defp creator_info({:twitch, code}) do
-    case Twitch.get_user(code) do
-      nil ->
-        {:error, :invalid_creator}
-
-      user ->
-        event_subscription = Twitch.add_stream_webhook(user.id)
-
-        {:ok, {user.display_name, %{user_id: user.id, subscription_id: event_subscription["id"]}}}
-    end
-  end
-
-  defp creator_info({:youtube, code}) do
-    case Youtube.search_channels(code) do
-      channels when channels == [] ->
-        {:error, :invalid_creator}
-
-      channels ->
-        channel = hd(channels)
-
-        {:ok} = Youtube.manage_channel_pubsub(channel.id, true)
-        {:ok, {channel.snippet["title"], %{channel_id: channel.id}}}
-    end
-  end
-
-  defp remove_follower(creator, follower) do
-    Repo.delete(follower)
-
-    remaining_followers =
-      Ecto.Query.where(Follower, creator_id: ^creator.id)
-      |> Repo.all()
-
-    if remaining_followers == [] do
-      case creator.service do
-        :twitch -> Twitch.delete_stream_webhook(creator.metadata["subscription_id"])
-        :youtube -> Youtube.manage_channel_pubsub(creator.metadata["channel_id"], false)
-      end
-
-      Repo.delete(creator)
+      follower ->
+        {:ok, follower}
     end
   end
 end

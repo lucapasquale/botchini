@@ -4,7 +4,7 @@ defmodule BotchiniWeb.YoutubeController do
   require Logger
 
   alias Botchini.Creators
-  alias BotchiniDiscord.Creators.Responses.Embeds
+  alias BotchiniDiscord.Creators.Responses.{Components, Embeds}
 
   @spec challenge(Plug.Conn.t(), any) :: Plug.Conn.t()
   def challenge(conn, _params) do
@@ -22,9 +22,9 @@ defmodule BotchiniWeb.YoutubeController do
 
     channel_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}channelId")
     video_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}videoId")
-    Logger.info("Received webhook for youtube", channel_id: channel_id, video_id: video_id)
+    Logger.info("Received webhook for youtube")
 
-    case Creators.find_creator_by_youtube_channel_id(channel_id) do
+    case Creators.find_by_service(:youtube, channel_id) do
       nil ->
         conn
         |> put_status(:not_found)
@@ -37,38 +37,28 @@ defmodule BotchiniWeb.YoutubeController do
   end
 
   defp send_new_video_messages(creator, video_id) do
-    {:ok, {channel, video}} =
-      Creators.youtube_video_info(creator.metadata["channel_id"], video_id)
-
     followers = Creators.find_followers_for_creator(creator)
-
-    Logger.info(
-      "Channel #{creator.code} posted a new video, sending to #{length(followers)} channels"
-    )
+    Logger.info("Channel #{creator.name} posted, sending to #{length(followers)} channels")
 
     Enum.each(followers, fn follower ->
-      Task.start(fn ->
-        notify_followers(creator, follower, {channel, video})
-      end)
+      Task.start(fn -> notify_followers(creator, follower, video_id) end)
     end)
-
-    :ok
   end
 
-  defp notify_followers(creator, follower, {channel, video}) do
+  defp notify_followers(creator, follower, video_id) do
+    channel_id = follower.discord_channel_id
+
     msg_response =
       Nostrum.Api.create_message(
-        String.to_integer(follower.discord_channel_id),
-        embed: Embeds.youtube_video(channel, video)
+        String.to_integer(channel_id),
+        embed: Embeds.youtube_video_posted(creator, video_id),
+        components: [Components.unfollow_creator(creator.id)]
       )
 
     case msg_response do
       {:error, _err} ->
-        Logger.warn("Removing channel since doesn't exist anymore",
-          channel_id: follower.discord_channel_id
-        )
-
-        Creators.unfollow({:twitch, creator.code}, %{channel_id: follower.discord_channel_id})
+        Logger.warn("Removing channel since doesn't exist anymore", channel_id: channel_id)
+        {:ok, _} = Creators.unfollow(creator.id, %{channel_id: channel_id})
 
       _ ->
         :noop

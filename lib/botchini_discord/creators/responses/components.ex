@@ -3,38 +3,38 @@ defmodule BotchiniDiscord.Creators.Responses.Components do
   Generates component messages for twitch commands
   """
 
-  @spec follow_stream(String.t()) :: map()
-  def follow_stream(stream_code) do
+  @spec follow_creator(integer()) :: map()
+  def follow_creator(creator_id) do
     %{
       type: 1,
       components: [
         %{
           type: 2,
           style: 1,
-          label: "Follow stream",
-          custom_id: "follow|stream:#{stream_code}"
+          label: "Follow",
+          custom_id: "follow|creator_id:#{creator_id}"
         }
       ]
     }
   end
 
-  @spec unfollow_stream(String.t()) :: map()
-  def unfollow_stream(stream_code) do
+  @spec unfollow_creator(integer()) :: map()
+  def unfollow_creator(creator_id) do
     %{
       type: 1,
       components: [
         %{
           type: 2,
           style: 4,
-          label: "Unfollow stream",
-          custom_id: "confirm_unfollow|type:ask:stream:#{stream_code}"
+          label: "Unfollow",
+          custom_id: "confirm_unfollow|type:ask:creator_id:#{creator_id}"
         }
       ]
     }
   end
 
-  @spec confirm_unfollow_stream(String.t()) :: map()
-  def confirm_unfollow_stream(stream_code) do
+  @spec confirm_unfollow_creator(integer()) :: map()
+  def confirm_unfollow_creator(creator_id) do
     %{
       type: 1,
       components: [
@@ -42,13 +42,13 @@ defmodule BotchiniDiscord.Creators.Responses.Components do
           type: 2,
           style: 2,
           label: "No, cancel",
-          custom_id: "confirm_unfollow|type:cancel:stream:#{stream_code}"
+          custom_id: "confirm_unfollow|type:cancel:creator_id:#{creator_id}"
         },
         %{
           type: 2,
           style: 4,
           label: "Yes, unfollow",
-          custom_id: "confirm_unfollow|type:confirm:stream:#{stream_code}"
+          custom_id: "confirm_unfollow|type:confirm:creator_id:#{creator_id}"
         }
       ]
     }

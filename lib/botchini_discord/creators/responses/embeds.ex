@@ -6,7 +6,44 @@ defmodule BotchiniDiscord.Creators.Responses.Embeds do
   alias Nostrum.Struct.Embed
   import Nostrum.Struct.Embed
 
+  alias Botchini.Creators
   alias Botchini.Creators.Clients.{Twitch, Youtube}
+  alias Botchini.Creators.Schema.Creator
+
+  @spec creator_embed(Creator.t()) :: Embed.t()
+  def creator_embed(creator) when creator.service == :twitch do
+    user = Creators.twitch_user_info(creator.service_id)
+    user_url = "https://www.twitch.tv/#{user.login}"
+
+    %Embed{}
+    |> put_author(user.display_name, user_url, user.profile_image_url)
+    |> put_title(user.display_name)
+    |> put_description(user.description)
+    |> put_url(user_url)
+    |> put_thumbnail(user.profile_image_url)
+    |> put_color(6_570_404)
+    |> put_footer("Since")
+    |> put_timestamp(user.created_at)
+  end
+
+  def creator_embed(creator) when creator.service == :youtube do
+    channel = Creators.youtube_channel_info(creator.service_id)
+    channel_url = "https://www.youtube.com/channel/#{channel.id}"
+
+    %Embed{}
+    |> put_author(
+      channel.snippet["title"],
+      channel_url,
+      channel.snippet["thumbnails"]["default"]["url"]
+    )
+    |> put_title(channel.snippet["title"])
+    |> put_description(channel.snippet["description"])
+    |> put_url(channel_url)
+    |> put_thumbnail(channel.snippet["thumbnails"]["high"]["url"])
+    |> put_color(16_711_680)
+    |> put_footer("Since")
+    |> put_timestamp(channel.snippet["publishedAt"])
+  end
 
   @spec twitch_user(Twitch.Structs.User.t()) :: Embed.t()
   def twitch_user(user) do

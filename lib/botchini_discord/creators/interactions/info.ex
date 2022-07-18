@@ -47,55 +47,15 @@ defmodule BotchiniDiscord.Creators.Interactions.Info do
       {:error, _} ->
         %{
           type: 4,
-          data: %{content: "Creator **#{code}** not found!"}
+          data: %{content: "Creator not found!"}
         }
 
       {:ok, creator} ->
         %{
           type: 4,
           data: %{
-            embeds: [Embeds.twitch_user(user)],
-            components: [Components.follow_stream(code)]
-          }
-        }
-    end
-
-    get_stream_info({service, term})
-  end
-
-  defp get_stream_info({:twitch, code}) do
-    case Creators.stream_info(code) do
-      {:error, :not_found} ->
-        %{
-          type: 4,
-          data: %{content: "Creator **#{code}** not found!"}
-        }
-
-      {:ok, {user, _}} ->
-        %{
-          type: 4,
-          data: %{
-            embeds: [Embeds.twitch_user(user)],
-            components: [Components.follow_stream(code)]
-          }
-        }
-    end
-  end
-
-  defp get_stream_info({:youtube, code}) do
-    case Creators.search_youtube_channels(code) do
-      {:error, _} ->
-        %{
-          type: 4,
-          data: %{content: "Channel **#{code}** not found!"}
-        }
-
-      {:ok, channels} ->
-        %{
-          type: 4,
-          data: %{
-            embeds: [Embeds.youtube_channel(hd(channels))]
-            # components: [Components.follow_stream(code)]
+            embeds: [Embeds.creator_embed(creator)],
+            components: [Components.follow_creator(creator.id)]
           }
         }
     end

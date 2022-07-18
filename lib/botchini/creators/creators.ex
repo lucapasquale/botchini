@@ -122,6 +122,31 @@ defmodule Botchini.Creators do
     end
   end
 
+  @spec unfollow_by_creator_id(integer(), %{channel_id: String.t()}) ::
+          {:ok} | {:error, :not_found}
+  def unfollow_by_creator_id(creator_id, %{channel_id: channel_id}) do
+    case Repo.get_by(Creator, id: creator_id) do
+      nil ->
+        {:error, :not_found}
+
+      creator ->
+        existing_follower =
+          Repo.get_by(Follower,
+            creator_id: creator.id,
+            discord_channel_id: channel_id
+          )
+
+        case existing_follower do
+          nil ->
+            {:error, :not_found}
+
+          follower ->
+            remove_follower(creator, follower)
+            {:ok}
+        end
+    end
+  end
+
   @spec guild_following_list(Guild.t()) :: {:ok, [{String.t(), String.t()}]}
   def guild_following_list(guild) do
     follow_list =
@@ -152,21 +177,15 @@ defmodule Botchini.Creators do
     {:ok, follow_list}
   end
 
-  @spec channel_follower(creator_input, %{channel_id: String.t()}) ::
+  @spec discord_channel_follower(integer(), %{channel_id: String.t()}) ::
           {:error, :not_found} | {:ok, Follower.t()}
-  def channel_follower({service, code}, %{channel_id: channel_id}) do
-    case Repo.get_by(Creator, service: service, code: code) do
+  def discord_channel_follower(creator_id, %{channel_id: channel_id}) do
+    case Repo.get_by(Follower, creator_id: creator_id, discord_channel_id: channel_id) do
       nil ->
         {:error, :not_found}
 
-      creator ->
-        case Repo.get_by(Follower, creator_id: creator.id, discord_channel_id: channel_id) do
-          nil ->
-            {:error, :not_found}
-
-          follower ->
-            {:ok, follower}
-        end
+      follower ->
+        {:ok, follower}
     end
   end
 
@@ -177,6 +196,11 @@ defmodule Botchini.Creators do
       nil -> {:error, :not_found}
       user -> {:ok, {user, Twitch.get_stream(code)}}
     end
+  end
+
+  @spec twitch_user_info(String.t()) :: Twitch.Structs.User.t()
+  def twitch_user_info(user_id) do
+    Twitch.get_user(user_id)
   end
 
   @spec youtube_video_info(String.t(), String.t()) ::
@@ -190,6 +214,11 @@ defmodule Botchini.Creators do
         video = Youtube.get_video(video_id)
         {:ok, {channel, video}}
     end
+  end
+
+  @spec youtube_channel_info(String.t()) :: Youtube.Structs.Channel.t() | nil
+  def youtube_channel_info(channel_id) do
+    Youtube.get_channel_by_id(channel_id)
   end
 
   @spec search_youtube_channels(String.t()) ::
@@ -214,11 +243,16 @@ defmodule Botchini.Creators do
             {:ok, existing}
 
           nil ->
+            webhook_id = subscribe_to_service(service, service_id)
+
             Creator.changeset(%Creator{}, %{
               service: service,
               name: name,
               service_id: service_id,
-              webhook_id: subscribe_to_service(service, service_id)
+              webhook_id: webhook_id,
+              # TODO: remove
+              code: name,
+              metadata: %{}
             })
             |> Repo.insert()
         end

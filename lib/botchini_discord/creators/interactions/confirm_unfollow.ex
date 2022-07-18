@@ -19,41 +19,40 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, options) do
     {type, _} = Helpers.get_option(options, "type")
-    {stream_code, _} = Helpers.get_option(options, "stream")
-    stream_code = Helpers.cleanup_stream_code(stream_code)
+    {creator_id, _autocomplete} = Helpers.get_option(options, "creator_id")
 
-    confirm_unfollow(interaction, type, stream_code)
+    confirm_unfollow(interaction, type, String.to_integer(creator_id))
   end
 
-  defp confirm_unfollow(interaction, "ask", stream_code) do
+  defp confirm_unfollow(interaction, "ask", creator_id) do
     follow_info = %{
       channel_id: Integer.to_string(interaction.channel_id)
     }
 
-    case Creators.channel_follower({:twitch, stream_code}, follow_info) do
+    case Creators.discord_channel_follower(creator_id, follow_info) do
       {:error, :not_found} ->
         %{
           type: 4,
-          data: %{content: "Not following #{stream_code}"}
+          data: %{content: "Not following!"}
         }
 
       {:ok, _} ->
         %{
           type: 4,
           data: %{
-            content: unfollow_message(interaction, stream_code),
-            components: [Components.confirm_unfollow_stream(stream_code)]
+            content: unfollow_message(interaction, creator_id),
+            components: [Components.confirm_unfollow_creator(creator_id)]
           }
         }
     end
   end
 
-  defp confirm_unfollow(interaction, "cancel", stream_code) do
+  defp confirm_unfollow(interaction, "cancel", creator_id) do
     %{
       type: 7,
       data: %{
         content: """
-        #{unfollow_message(interaction, stream_code)}
+        #{unfollow_message(interaction, creator_id)}
         - Canceled unfollowing
         """,
         components: []
@@ -61,18 +60,18 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
     }
   end
 
-  defp confirm_unfollow(interaction, "confirm", stream_code) do
+  defp confirm_unfollow(interaction, "confirm", creator_id) do
     follow_info = %{
       channel_id: Integer.to_string(interaction.channel_id)
     }
 
-    case Creators.unfollow({:twitch, stream_code}, follow_info) do
+    case Creators.unfollow_by_creator_id(creator_id, follow_info) do
       {:error, :not_found} ->
         %{
           type: 7,
           data: %{
             content: """
-            #{unfollow_message(interaction, stream_code)}
+            #{unfollow_message(interaction, creator_id)}
             - Stream was not being followed
             """,
             components: []
@@ -84,7 +83,7 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
           type: 7,
           data: %{
             content: """
-            #{unfollow_message(interaction, stream_code)}
+            #{unfollow_message(interaction, creator_id)}
             - Stream unfollowed
             """,
             components: []
@@ -93,11 +92,11 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
     end
   end
 
-  defp unfollow_message(interaction, stream_code) do
+  defp unfollow_message(interaction, creator_id) do
     if is_nil(interaction.member) do
-      "Are you sure you want to unfollow **#{stream_code}**?"
+      "Are you sure you want to unfollow **#{creator_id}**?"
     else
-      "<@#{interaction.member.user.id}> are you sure you want to unfollow **#{stream_code}**?"
+      "<@#{interaction.member.user.id}> are you sure you want to unfollow **#{creator_id}**?"
     end
   end
 end

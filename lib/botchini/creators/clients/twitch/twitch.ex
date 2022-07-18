@@ -35,8 +35,8 @@ defmodule Botchini.Creators.Clients.Twitch do
   end
 
   @spec get_user(String.t()) :: User.t() | nil
-  def get_user(stream_code) do
-    {:ok, %{body: body}} = get("/users", query: [login: stream_code])
+  def get_user(user_id) do
+    {:ok, %{body: body}} = get("/users", query: [id: user_id])
 
     user =
       body
@@ -67,9 +67,7 @@ defmodule Botchini.Creators.Clients.Twitch do
         condition: %{broadcaster_user_id: user_id},
         transport: %{
           method: "webhook",
-          callback:
-            "https://" <>
-              Application.fetch_env!(:botchini, :host) <> "/api/twitch/webhooks/callback",
+          callback: Application.fetch_env!(:botchini, :host) <> "/api/twitch/webhooks/callback",
           secret: "abcd1234abcd1234abcd1234"
         }
       })

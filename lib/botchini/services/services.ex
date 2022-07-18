@@ -1,4 +1,8 @@
 defmodule Botchini.Services do
+  @moduledoc """
+  Handles calling external services
+  """
+
   alias Botchini.Creators.Schema.Creator
   alias Botchini.Services.{Twitch, Youtube}
 

@@ -27,9 +27,6 @@ defmodule Botchini.Creators.Schema.Creator do
     field(:name, :string)
     field(:service_id, :string)
     field(:webhook_id, :string)
-    # TODO: remove
-    field(:code, :string)
-    field(:metadata, :map)
 
     has_many(:followers, Follower)
 
@@ -39,8 +36,8 @@ defmodule Botchini.Creators.Schema.Creator do
   @spec changeset(Creator.t() | map(), any()) :: Ecto.Changeset.t()
   def changeset(%Creator{} = creator, attrs \\ %{}) do
     creator
-    |> cast(attrs, [:service, :code, :name, :service_id, :webhook_id, :metadata])
-    |> validate_required([:service, :code, :name, :service_id])
+    |> cast(attrs, [:service, :name, :service_id, :webhook_id])
+    |> validate_required([:service, :name, :service_id])
     |> unique_constraint([:service, :service_id])
   end
 end

@@ -3,7 +3,7 @@ defmodule BotchiniWeb.TwitchController do
 
   require Logger
 
-  alias Botchini.{Creators, Services}
+  alias Botchini.Creators
   alias BotchiniDiscord.Creators.Responses.{Components, Embeds}
 
   @spec callback(Plug.Conn.t(), any) :: Plug.Conn.t()

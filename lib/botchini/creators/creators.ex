@@ -50,7 +50,7 @@ defmodule Botchini.Creators do
       on: f.creator_id == c.id,
       select: {c.id, c.name},
       where: c.service == ^service,
-      where: ilike(c.code, ^term),
+      where: ilike(c.name, ^term),
       where: f.discord_channel_id == ^channel_id,
       limit: 5
     )
@@ -75,10 +75,7 @@ defmodule Botchini.Creators do
               service: service,
               name: name,
               service_id: service_id,
-              webhook_id: webhook_id,
-              # TODO: remove
-              code: name,
-              metadata: %{}
+              webhook_id: webhook_id
             })
             |> Repo.insert()
         end
@@ -106,7 +103,7 @@ defmodule Botchini.Creators do
             discord_user_id: follower_info.user_id,
             discord_channel_id: follower_info.channel_id
           })
-          |> Repo.insert()
+          |> Repo.insert!()
 
         {:ok, follower}
 
@@ -142,7 +139,7 @@ defmodule Botchini.Creators do
         join: f in Follower,
         on: f.creator_id == c.id,
         where: f.guild_id == ^guild.id,
-        select: {f.discord_channel_id, c.code}
+        select: {f.discord_channel_id, c.name}
       )
       |> Repo.all()
 
@@ -156,7 +153,7 @@ defmodule Botchini.Creators do
         c in Creator,
         join: f in Follower,
         on: f.creator_id == c.id,
-        select: c.code,
+        select: c.name,
         where: f.discord_channel_id == ^channel_id
       )
       |> Repo.all()

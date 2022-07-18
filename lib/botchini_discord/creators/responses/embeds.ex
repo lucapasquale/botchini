@@ -6,7 +6,7 @@ defmodule BotchiniDiscord.Creators.Responses.Embeds do
   alias Nostrum.Struct.Embed
   import Nostrum.Struct.Embed
 
-  alias Botchini.{Creators, Services}
+  alias Botchini.Services
   alias Botchini.Creators.Schema.Creator
 
   @spec creator_embed(Creator.t()) :: Embed.t()
@@ -26,7 +26,7 @@ defmodule BotchiniDiscord.Creators.Responses.Embeds do
   end
 
   def creator_embed(creator) when creator.service == :youtube do
-    channel = Creators.youtube_channel_info(creator.service_id)
+    channel = Services.youtube_channel_info(creator.service_id)
     channel_url = "https://www.youtube.com/channel/#{channel.id}"
 
     %Embed{}

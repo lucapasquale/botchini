@@ -26,8 +26,24 @@ defmodule Botchini.Services do
     Youtube.get_video(video_id)
   end
 
+  @spec get_user(Creator.services(), String.t()) ::
+          {:error, :not_found} | {:ok, {String.t(), String.t()}}
+  def get_user(:twitch, service_id) do
+    case Twitch.get_user(service_id) do
+      nil -> {:error, :not_found}
+      user -> {:ok, {user.id, user.display_name}}
+    end
+  end
+
+  def get_user(:youtube, service_id) do
+    case Youtube.get_channel(service_id) do
+      nil -> {:error, :not_found}
+      channel -> {:ok, {channel.id, channel.snippet["title"]}}
+    end
+  end
+
   @spec search_channel(Creator.services(), String.t()) ::
-          {:error, :not_found} | {:ok, {any(), any()}}
+          {:error, :not_found} | {:ok, {String.t(), String.t()}}
   def search_channel(:twitch, term) do
     case Twitch.search_channels(term) do
       channels when channels == [] ->

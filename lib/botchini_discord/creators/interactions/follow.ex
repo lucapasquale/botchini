@@ -5,7 +5,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
 
   alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
-  alias Botchini.{Creators, Discord}
+  alias Botchini.{Creators, Discord, Services}
   alias BotchiniDiscord.{Helpers, InteractionBehaviour}
 
   @behaviour InteractionBehaviour
@@ -39,42 +39,31 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
   @impl InteractionBehaviour
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, options) do
-    case Enum.find(options, fn opt -> opt.name == "creator_id" end) do
+    case Enum.find(options, fn opt -> opt.name == "service_id" end) do
       nil ->
+        follow_from_term(interaction, options)
+
+      service_id_option ->
         service = Helpers.get_service(options)
-        {term, _autocomplete} = Helpers.get_option(options, "term")
+        {:ok, creator} = Creators.upsert(service, service_id_option.value)
 
-        follow_by_term(interaction, {service, term})
-
-      creator_id_option ->
-        creator_id = creator_id_option.value
-        follow_by_creator_id(interaction, creator_id)
-    end
-  end
-
-  defp follow_by_term(interaction, {service, term}) do
-    case Creators.upsert(service, term) do
-      {:error, _} ->
-        %{
-          type: 4,
-          data: %{content: "Creator not found!"}
-        }
-
-      {:ok, creator} ->
         follow_stream(interaction, creator)
     end
   end
 
-  defp follow_by_creator_id(interaction, creator_id) do
-    case Creators.creator_by_id(creator_id) do
-      nil ->
+  defp follow_from_term(interaction, options) do
+    service = Helpers.get_service(options)
+    {term, _autocomplete} = Helpers.get_option(options, "term")
+
+    with {:ok, {service_id, _name}} <- Services.search_channel(service, term),
+         {:ok, creator} <- Creators.upsert(service, service_id) do
+      follow_stream(interaction, creator)
+    else
+      _ ->
         %{
           type: 4,
           data: %{content: "Creator not found!"}
         }
-
-      creator ->
-        follow_stream(interaction, creator)
     end
   end
 
@@ -101,12 +90,10 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
     end
   end
 
+  defp get_guild(interaction) when is_nil(interaction.guild_id), do: nil
+
   defp get_guild(interaction) do
-    if is_nil(interaction.guild_id) do
-      nil
-    else
-      {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
-      guild
-    end
+    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
+    guild
   end
 end

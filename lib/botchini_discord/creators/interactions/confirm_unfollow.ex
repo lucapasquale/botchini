@@ -18,9 +18,10 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
   @impl InteractionBehaviour
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, options) do
-    {creator_id, _autocomplete} = Helpers.get_option(options, "creator_id")
+    service = Helpers.get_service(options)
+    {service_id, _autocomplete} = Helpers.get_option(options, "service_id")
 
-    case Creators.creator_by_id(String.to_integer(creator_id)) do
+    case Creators.find_by_service(service, service_id) do
       nil ->
         %{
           type: 4,
@@ -50,7 +51,7 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
           type: 4,
           data: %{
             content: unfollow_message(interaction, creator),
-            components: [Components.confirm_unfollow_creator(creator.id)]
+            components: [Components.confirm_unfollow_creator(creator.service, creator.service_id)]
           }
         }
     end

@@ -20,20 +20,34 @@ defmodule BotchiniWeb.YoutubeController do
       |> Map.get("feed")
       |> Map.get("entry")
 
-    channel_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}channelId")
-    video_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}videoId")
-    Logger.info("Received webhook for youtube")
+    Logger.info("Received webhook from youtube")
 
-    case Creators.find_by_service(:youtube, channel_id) do
-      nil ->
-        conn
-        |> put_status(:not_found)
-        |> render(:"404")
-
-      creator ->
-        send_new_video_messages(creator, video_id)
+    case is_first_event_from_video(entry) do
+      false ->
         text(conn, "ok")
+
+      true ->
+        channel_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}channelId")
+        video_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}videoId")
+
+        case Creators.find_by_service(:youtube, channel_id) do
+          nil ->
+            conn
+            |> put_status(:not_found)
+            |> render(:"404")
+
+          creator ->
+            send_new_video_messages(creator, video_id)
+            text(conn, "ok")
+        end
     end
+  end
+
+  defp is_first_event_from_video(entry) do
+    {:ok, published_at, _} = DateTime.from_iso8601(entry["published"])
+    {:ok, updated_at, _} = DateTime.from_iso8601(entry["updated"])
+
+    DateTime.diff(updated_at, published_at, :second) <= 5 * 60
   end
 
   defp send_new_video_messages(creator, video_id) do
@@ -52,7 +66,7 @@ defmodule BotchiniWeb.YoutubeController do
       Nostrum.Api.create_message(
         String.to_integer(channel_id),
         embed: Embeds.youtube_video_posted(creator, video_id),
-        components: [Components.unfollow_creator(creator.id)]
+        components: [Components.unfollow_creator(creator.service, creator.service_id)]
       )
 
     case msg_response do

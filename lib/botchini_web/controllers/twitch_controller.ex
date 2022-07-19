@@ -67,7 +67,7 @@ defmodule BotchiniWeb.TwitchController do
       Nostrum.Api.create_message(
         String.to_integer(channel_id),
         embed: Embeds.twitch_stream_online(creator),
-        components: [Components.unfollow_creator(creator.id)]
+        components: [Components.unfollow_creator(creator.service, creator.service_id)]
       )
 
     case msg_response do

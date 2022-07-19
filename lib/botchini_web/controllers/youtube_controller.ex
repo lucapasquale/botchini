@@ -47,6 +47,10 @@ defmodule BotchiniWeb.YoutubeController do
     {:ok, published_at, _} = DateTime.from_iso8601(entry["published"])
     {:ok, updated_at, _} = DateTime.from_iso8601(entry["updated"])
 
+    Logger.info(
+      "YouTube dates: published_at: #{published_at} updated_at: #{updated_at} diff: #{DateTime.diff(updated_at, published_at, :second)}"
+    )
+
     DateTime.diff(updated_at, published_at, :second) <= 5 * 60
   end
 

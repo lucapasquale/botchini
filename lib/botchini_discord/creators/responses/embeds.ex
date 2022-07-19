@@ -9,9 +9,9 @@ defmodule BotchiniDiscord.Creators.Responses.Embeds do
   alias Botchini.Creators.Schema.Creator
   alias Botchini.Services
 
-  @spec creator_embed(Creator.t()) :: Embed.t()
-  def creator_embed(creator) when creator.service == :twitch do
-    user = Services.twitch_user_info(creator.service_id)
+  @spec creator_embed(Creator.services(), String.t()) :: Embed.t()
+  def creator_embed(service, service_id) when service == :twitch do
+    user = Services.twitch_user_info(service_id)
     user_url = "https://www.twitch.tv/#{user.login}"
 
     %Embed{}
@@ -25,8 +25,8 @@ defmodule BotchiniDiscord.Creators.Responses.Embeds do
     |> put_timestamp(user.created_at)
   end
 
-  def creator_embed(creator) when creator.service == :youtube do
-    channel = Services.youtube_channel_info(creator.service_id)
+  def creator_embed(service, service_id) when service == :youtube do
+    channel = Services.youtube_channel_info(service_id)
     channel_url = "https://www.youtube.com/channel/#{channel.id}"
 
     %Embed{}

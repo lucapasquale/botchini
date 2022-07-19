@@ -18,11 +18,6 @@ defmodule Botchini.Creators do
     |> Repo.one!()
   end
 
-  @spec creator_by_id(integer()) :: nil | Creator.t()
-  def creator_by_id(creator_id) do
-    Repo.get(Creator, creator_id)
-  end
-
   @spec find_by_service(Creator.services(), String.t()) :: nil | Creator.t()
   def find_by_service(service, service_id) do
     from(c in Creator,
@@ -58,22 +53,22 @@ defmodule Botchini.Creators do
   end
 
   @spec upsert(Creator.services(), String.t()) :: {:error, :invalid_creator} | {:ok, Creator.t()}
-  def upsert(service, term) do
-    case Services.search_channel(service, term) do
-      {:error, _} ->
-        {:error, :invalid_creator}
+  def upsert(service, service_id) do
+    case Repo.get_by(Creator, service: service, service_id: service_id) do
+      %Creator{} = existing ->
+        {:ok, existing}
 
-      {:ok, {service_id, name}} ->
-        case Repo.get_by(Creator, service: service, service_id: service_id) do
-          %Creator{} = existing ->
-            {:ok, existing}
+      nil ->
+        case Services.get_user(service, service_id) do
+          {:error, _} ->
+            {:error, :invalid_creator}
 
-          nil ->
+          {:ok, {_service_id, name}} ->
             webhook_id = Services.subscribe_to_service(service, service_id)
 
             Creator.changeset(%Creator{}, %{
-              service: service,
               name: name,
+              service: service,
               service_id: service_id,
               webhook_id: webhook_id
             })
@@ -171,5 +166,20 @@ defmodule Botchini.Creators do
       follower ->
         {:ok, follower}
     end
+  end
+
+  @spec discord_channel_follower(Creator.services(), String.t(), %{:channel_id => String.t()}) ::
+          Follower.t() | nil
+  def discord_channel_follower(service, service_id, %{channel_id: channel_id}) do
+    from(
+      c in Creator,
+      join: f in Follower,
+      on: f.creator_id == c.id,
+      select: f,
+      where: c.service == ^service,
+      where: c.service_id == ^service_id,
+      where: f.discord_channel_id == ^channel_id
+    )
+    |> Repo.one()
   end
 end

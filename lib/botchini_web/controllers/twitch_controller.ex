@@ -19,7 +19,7 @@ defmodule BotchiniWeb.TwitchController do
 
       {:stream_online, subscription} ->
         twitch_user_id = subscription["condition"]["broadcaster_user_id"]
-        Logger.info("Received webhook for twitch", twitch_user_id: twitch_user_id)
+        Logger.info("Received webhook for twitch user #{twitch_user_id}")
 
         case Creators.find_by_service(:twitch, twitch_user_id) do
           nil ->

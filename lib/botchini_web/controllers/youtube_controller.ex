@@ -21,16 +21,17 @@ defmodule BotchiniWeb.YoutubeController do
       |> Map.get("feed")
       |> Map.get("entry")
 
-    Logger.info("Received webhook from youtube")
+    channel_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}channelId")
+    Logger.info("Received webhook from youtube channel #{channel_id}")
+
     video_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}videoId")
 
-    case video_already_posted(entry, video_id) do
+    case VideoCache.has_video_id(video_id) do
       true ->
         text(conn, "ok")
 
       false ->
         VideoCache.insert(video_id)
-        channel_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}channelId")
 
         case Creators.find_by_service(:youtube, channel_id) do
           nil ->
@@ -43,14 +44,6 @@ defmodule BotchiniWeb.YoutubeController do
             text(conn, "ok")
         end
     end
-  end
-
-  defp video_already_posted(entry, video_id) do
-    {:ok, published_at, _} = DateTime.from_iso8601(entry["published"])
-    {:ok, updated_at, _} = DateTime.from_iso8601(entry["updated"])
-
-    VideoCache.has_video_id(video_id) ||
-      DateTime.diff(updated_at, published_at, :second) > 5 * 60
   end
 
   defp send_new_video_messages(creator, video_id) do

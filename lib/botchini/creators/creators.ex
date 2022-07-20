@@ -120,9 +120,28 @@ defmodule Botchini.Creators do
             {:error, :not_found}
 
           follower ->
-            Repo.delete(follower)
+            remove_follower(creator, follower)
             {:ok, creator}
         end
+    end
+  end
+
+  defp remove_follower(creator, follower) do
+    Repo.delete(follower)
+
+    remaining_followers =
+      from(
+        f in Follower,
+        select: count(),
+        where: f.creator_id == ^creator.id
+      )
+      |> Repo.one!()
+
+    if remaining_followers == 0 do
+      {:ok} =
+        Services.unsubscribe_to_service(creator.service, {creator.service_id, creator.webhook_id})
+
+      Repo.delete(creator)
     end
   end
 

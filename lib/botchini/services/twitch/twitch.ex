@@ -68,6 +68,11 @@ defmodule Botchini.Services.Twitch do
     |> List.first()
   end
 
+  @spec delete_stream_webhook(String.t()) :: any()
+  def delete_stream_webhook(subscription_id) do
+    delete("/eventsub/subscriptions", query: [id: subscription_id])
+  end
+
   @spec authenticate() :: any()
   def authenticate do
     [Tesla.Middleware.JSON]

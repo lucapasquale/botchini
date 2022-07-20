@@ -76,4 +76,15 @@ defmodule Botchini.Services do
     {:ok} = Youtube.manage_channel_pubsub(service_id, true)
     nil
   end
+
+  @spec unsubscribe_to_service(Creator.services(), {String.t(), String.t()}) :: {:ok}
+  def unsubscribe_to_service(:twitch, {_service_id, webhook_id}) do
+    Twitch.delete_stream_webhook(webhook_id)
+    {:ok}
+  end
+
+  def unsubscribe_to_service(:youtube, {service_id, _}) do
+    Youtube.manage_channel_pubsub(service_id, false)
+    {:ok}
+  end
 end

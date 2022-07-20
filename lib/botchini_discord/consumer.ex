@@ -19,7 +19,7 @@ defmodule BotchiniDiscord.Consumer do
     version = to_string(Application.spec(:botchini, :vsn))
     Nostrum.Api.update_status(:online, "on v#{version}")
 
-    Logger.info("Bot started!")
+    Logger.info("Bot started! v#{version}")
   end
 
   def handle_event({:GUILD_CREATE, {guild}, _ws_state}) do

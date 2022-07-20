@@ -28,6 +28,8 @@ defmodule BotchiniWeb.Router do
   scope "/api", BotchiniWeb do
     pipe_through(:api)
 
+    get("/status", StatusController, :index)
+
     post("/twitch/webhooks/callback", TwitchController, :callback)
     get("/youtube/webhooks/callback", YoutubeController, :challenge)
   end

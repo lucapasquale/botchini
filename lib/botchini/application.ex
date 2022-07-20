@@ -17,7 +17,9 @@ defmodule Botchini.Application do
         # Start the Endpoint (http/https)
         BotchiniWeb.Endpoint,
         # Twitch auth middleware
-        Botchini.Services.Twitch.AuthMiddleware
+        Botchini.Services.Twitch.AuthMiddleware,
+        # Youtube videos posted cache
+        Botchini.Services.Youtube.VideoCache
       ] ++
         if Application.fetch_env!(:botchini, :environment) != :test,
           do: [BotchiniDiscord.Consumer],

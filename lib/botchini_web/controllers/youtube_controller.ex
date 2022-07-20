@@ -4,6 +4,7 @@ defmodule BotchiniWeb.YoutubeController do
   require Logger
 
   alias Botchini.Creators
+  alias Botchini.Services.Youtube.VideoCache
   alias BotchiniDiscord.Creators.Responses.{Components, Embeds}
 
   @spec challenge(Plug.Conn.t(), any) :: Plug.Conn.t()
@@ -21,14 +22,15 @@ defmodule BotchiniWeb.YoutubeController do
       |> Map.get("entry")
 
     Logger.info("Received webhook from youtube")
+    video_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}videoId")
 
-    case is_first_event_from_video(entry) do
-      false ->
+    case video_already_posted(entry, video_id) do
+      true ->
         text(conn, "ok")
 
-      true ->
+      false ->
+        VideoCache.insert(video_id)
         channel_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}channelId")
-        video_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}videoId")
 
         case Creators.find_by_service(:youtube, channel_id) do
           nil ->
@@ -43,15 +45,12 @@ defmodule BotchiniWeb.YoutubeController do
     end
   end
 
-  defp is_first_event_from_video(entry) do
+  defp video_already_posted(entry, video_id) do
     {:ok, published_at, _} = DateTime.from_iso8601(entry["published"])
     {:ok, updated_at, _} = DateTime.from_iso8601(entry["updated"])
 
-    Logger.info(
-      "YouTube dates: published_at: #{published_at} updated_at: #{updated_at} diff: #{DateTime.diff(updated_at, published_at, :second)}"
-    )
-
-    DateTime.diff(updated_at, published_at, :second) <= 5 * 60
+    VideoCache.has_video_id(video_id) ||
+      DateTime.diff(updated_at, published_at, :second) > 5 * 60
   end
 
   defp send_new_video_messages(creator, video_id) do

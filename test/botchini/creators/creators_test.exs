@@ -1,8 +1,10 @@
 defmodule BotchiniTest.Creators.CreatorsTest do
   use Botchini.DataCase, async: false
 
-  alias Botchini.{Creators, Repo}
-  alias Botchini.Creators.Schema.Follower
+  import Mock
+
+  alias Botchini.{Creators, Repo, Services}
+  alias Botchini.Creators.Schema.{Creator, Follower}
 
   describe "find_by_service" do
     test "find creator by its service and service_id" do
@@ -176,17 +178,46 @@ defmodule BotchiniTest.Creators.CreatorsTest do
   end
 
   describe "unfollow" do
-    test "stop following, delete creator and remove twitch webhook if no more followers" do
-      creator = generate_creator(%{service: :twitch})
-      guild = generate_guild()
-      follower = generate_follower(%{creator_id: creator.id, guild_id: guild.id})
+    test "stop following, delete creator and remove subscription if no more followers" do
+      creator = generate_creator()
+      follower = generate_follower(%{creator_id: creator.id})
 
-      {:ok, ^creator} =
-        Creators.unfollow(creator.id, %{
-          channel_id: follower.discord_channel_id
-        })
+      with_mock Services,
+        unsubscribe_to_service: fn _, _ -> {:ok} end do
+        {:ok, ^creator} =
+          Creators.unfollow(creator.id, %{
+            channel_id: follower.discord_channel_id
+          })
 
-      refute Repo.get_by(Follower, id: follower.id)
+        refute Repo.get_by(Creator, id: creator.id)
+        refute Repo.get_by(Follower, id: follower.id)
+
+        assert_called(
+          Services.unsubscribe_to_service(
+            creator.service,
+            {creator.service_id, creator.webhook_id}
+          )
+        )
+      end
+    end
+
+    test "stop following, but don't delete creator if has other followers" do
+      creator = generate_creator()
+      follower = generate_follower(%{creator_id: creator.id})
+      generate_follower(%{creator_id: creator.id})
+
+      with_mock Services,
+        unsubscribe_to_service: fn _, _ -> {:ok} end do
+        {:ok, ^creator} =
+          Creators.unfollow(creator.id, %{
+            channel_id: follower.discord_channel_id
+          })
+
+        assert Repo.get_by(Creator, id: creator.id)
+        refute Repo.get_by(Follower, id: follower.id)
+
+        assert_not_called(Services.unsubscribe_to_service())
+      end
     end
 
     test "not_found if creator was not found" do

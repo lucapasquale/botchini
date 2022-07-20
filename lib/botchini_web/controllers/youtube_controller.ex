@@ -3,7 +3,7 @@ defmodule BotchiniWeb.YoutubeController do
 
   require Logger
 
-  alias Botchini.Creators
+  alias Botchini.{Creators, Services}
   alias Botchini.Services.Youtube.VideoCache
   alias BotchiniDiscord.Creators.Responses.{Components, Embeds}
 
@@ -57,18 +57,21 @@ defmodule BotchiniWeb.YoutubeController do
     followers = Creators.find_followers_for_creator(creator)
     Logger.info("Channel #{creator.name} posted, sending to #{length(followers)} channels")
 
+    channel = Services.youtube_channel_info(creator.service_id)
+    video = Services.youtube_video_info(video_id)
+
     Enum.each(followers, fn follower ->
-      Task.start(fn -> notify_followers(creator, follower, video_id) end)
+      Task.start(fn -> notify_followers(creator, follower, {channel, video}) end)
     end)
   end
 
-  defp notify_followers(creator, follower, video_id) do
+  defp notify_followers(creator, follower, {channel, video}) do
     channel_id = follower.discord_channel_id
 
     msg_response =
       Nostrum.Api.create_message(
         String.to_integer(channel_id),
-        embed: Embeds.youtube_video_posted(creator, video_id),
+        embed: Embeds.youtube_video_posted(channel, video),
         components: [Components.unfollow_creator(creator.service, creator.service_id)]
       )
 

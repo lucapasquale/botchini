@@ -3,7 +3,7 @@ defmodule BotchiniWeb.TwitchController do
 
   require Logger
 
-  alias Botchini.Creators
+  alias Botchini.{Creators, Services}
   alias BotchiniDiscord.Creators.Responses.{Components, Embeds}
 
   @spec callback(Plug.Conn.t(), any) :: Plug.Conn.t()
@@ -55,18 +55,21 @@ defmodule BotchiniWeb.TwitchController do
     followers = Creators.find_followers_for_creator(creator)
     Logger.info("Stream #{creator.name} is online, sending to #{length(followers)} channels")
 
+    user = Services.twitch_user_info(creator.service_id)
+    stream = Services.twitch_stream_info(creator.service_id)
+
     Enum.each(followers, fn follower ->
-      Task.start(fn -> notify_followers(creator, follower) end)
+      Task.start(fn -> notify_followers(creator, follower, {user, stream}) end)
     end)
   end
 
-  defp notify_followers(creator, follower) do
+  defp notify_followers(creator, follower, {user, stream}) do
     channel_id = follower.discord_channel_id
 
     msg_response =
       Nostrum.Api.create_message(
         String.to_integer(channel_id),
-        embed: Embeds.twitch_stream_online(creator),
+        embed: Embeds.twitch_stream_online(user, stream),
         components: [Components.unfollow_creator(creator.service, creator.service_id)]
       )
 

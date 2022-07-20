@@ -39,7 +39,7 @@ defmodule Botchini.Services.Twitch do
 
   @spec get_stream(String.t()) :: Stream.t() | nil
   def get_stream(user_id) do
-    {:ok, %{body: body}} = get("/streams", query: [id: user_id])
+    {:ok, %{body: body}} = get("/streams", query: [user_id: user_id])
 
     stream =
       body

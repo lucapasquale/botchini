@@ -16,6 +16,7 @@ defmodule Botchini.Application do
         {Phoenix.PubSub, name: Botchini.PubSub},
         # Start the Endpoint (http/https)
         BotchiniWeb.Endpoint,
+        BotchiniWeb.Cache,
         # Twitch auth middleware
         Botchini.Services.Twitch.AuthMiddleware,
         # Youtube videos posted cache

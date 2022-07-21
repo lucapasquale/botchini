@@ -10,13 +10,8 @@ defmodule Botchini.Creators.Schema.Creator do
 
   @type services :: :twitch | :youtube
 
-  @type metadata :: %{
-          user_id: String.t(),
-          subscription_id: String.t()
-        }
-
   @type t :: %__MODULE__{
-          service: :twitch | :youtube,
+          service: services(),
           name: String.t(),
           service_id: String.t(),
           webhook_id: String.t() | nil

@@ -26,31 +26,12 @@ defmodule BotchiniWeb.Cache do
       nil ->
         with result <- resolver.() do
           GenServer.call(@name, {:insert, {key, result, ttl}})
+          {:ok, result}
         end
 
       cached_value ->
         {:ok, cached_value}
     end
-  end
-
-  defp get(key, ttl) do
-    case :ets.lookup(@table, key) do
-      [{^key, value, inserted_at}] ->
-        if timestamp() - inserted_at <= ttl do
-          value
-        else
-          true = :ets.delete(@table, key)
-          nil
-        end
-
-      _else ->
-        nil
-    end
-  end
-
-  defp put(key, value) do
-    true = :ets.insert(@table, {key, value, timestamp()})
-    {:ok, value}
   end
 
   def handle_call({:get, key}, _ref, state) do
@@ -69,16 +50,11 @@ defmodule BotchiniWeb.Cache do
   end
 
   def handle_call({:insert, {key, value, ttl}}, _ref, state) do
+    deleted_at = timestamp() + ttl
+
+    true = :ets.insert(@table, {key, value, deleted_at})
+    {:reply, value, state}
   end
-
-  #   :ets.insert(String.to_atom(table), data)
-  #   {:reply, {:ok, data}, state}
-  # end
-
-  # def handle_call({:exists, video_id}, _ref, state) do
-  #   records = :ets.lookup(:video_cache, video_id)
-  #   {:reply, length(records) > 0, state}
-  # end
 
   defp timestamp, do: System.os_time(:millisecond)
 end

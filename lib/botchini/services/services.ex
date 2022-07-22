@@ -5,8 +5,8 @@ defmodule Botchini.Services do
 
   import Ecto.Query
 
-  alias Botchini.Repo
   alias Botchini.Creators.Schema.Creator
+  alias Botchini.Repo
   alias Botchini.Services.Schema.Video
   alias Botchini.Services.{Twitch, Youtube}
 

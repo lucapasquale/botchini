@@ -4,7 +4,6 @@ defmodule BotchiniWeb.YoutubeController do
   require Logger
 
   alias Botchini.{Creators, Services}
-  alias Botchini.Services.Youtube.VideoCache
   alias BotchiniDiscord.Creators.Responses.{Components, Embeds}
 
   @spec challenge(Plug.Conn.t(), any) :: Plug.Conn.t()
@@ -22,16 +21,16 @@ defmodule BotchiniWeb.YoutubeController do
       |> Map.get("entry")
 
     channel_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}channelId")
-    Logger.info("Received webhook from youtube channel #{channel_id}")
-
     video_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}videoId")
 
-    case VideoCache.has_video_id(video_id) do
+    Logger.info("Received webhook from youtube channel #{channel_id}, video #{video_id}")
+
+    case Services.exists_video_by_video_id?(video_id) do
       true ->
         text(conn, "ok")
 
       false ->
-        VideoCache.insert(video_id)
+        Services.insert_video({channel_id, video_id})
 
         case Creators.find_by_service(:youtube, channel_id) do
           nil ->

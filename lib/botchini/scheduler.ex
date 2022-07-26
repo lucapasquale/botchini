@@ -3,8 +3,6 @@ defmodule Botchini.Scheduler do
   Handles all CRONs in the application
   """
 
-  require Logger
-
   use Quantum, otp_app: :botchini
 
   alias Botchini.{Creators, Services}
@@ -15,9 +13,5 @@ defmodule Botchini.Scheduler do
     |> Enum.each(fn creator ->
       Services.subscribe_to_service(:youtube, creator.service_id)
     end)
-  end
-
-  def test do
-    Logger.info("test called")
   end
 end

@@ -10,17 +10,15 @@ defmodule Botchini.Application do
     children =
       [
         Botchini.Repo,
+        Botchini.Cache,
+        Botchini.Scheduler,
         # Start the Telemetry supervisor
         BotchiniWeb.Telemetry,
         # Start the PubSub system
         {Phoenix.PubSub, name: Botchini.PubSub},
-        # Start the Endpoint (http/https)
         BotchiniWeb.Endpoint,
-        BotchiniWeb.Cache,
         # Twitch auth middleware
-        Botchini.Services.Twitch.AuthMiddleware,
-        # Youtube videos posted cache
-        Botchini.Services.Youtube.VideoCache
+        Botchini.Services.Twitch.AuthMiddleware
       ] ++
         if Application.fetch_env!(:botchini, :environment) != :test,
           do: [BotchiniDiscord.Consumer],

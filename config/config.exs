@@ -7,6 +7,7 @@ config :botchini,
 
 config :botchini, Botchini.Scheduler,
   jobs: [
+    {"* * * * *", {Botchini.Scheduler, :test, []}},
     # Runs every midnight:
     {"@daily", {Botchini.Scheduler, :sync_youtube_subscriptions, []}}
   ]

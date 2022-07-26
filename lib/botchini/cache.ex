@@ -1,4 +1,4 @@
-defmodule BotchiniWeb.Cache do
+defmodule Botchini.Cache do
   @moduledoc """
   ETS caches with TTL functionality
   """

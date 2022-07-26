@@ -5,6 +5,12 @@ config :botchini,
   ecto_repos: [Botchini.Repo],
   port: System.get_env("PORT", "4000") |> String.to_integer()
 
+config :botchini, Botchini.Scheduler,
+  jobs: [
+    # Runs every midnight:
+    {"@daily", {Botchini.Scheduler, :sync_youtube_subscriptions, []}}
+  ]
+
 # Configures the endpoint
 config :botchini, BotchiniWeb.Endpoint,
   url: [host: "localhost"],

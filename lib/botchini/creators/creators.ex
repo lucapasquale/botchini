@@ -27,7 +27,14 @@ defmodule Botchini.Creators do
     |> Repo.one()
   end
 
-  @spec find_followers_for_creator(Creator.t()) :: [Follower.t()]
+  @spec find_all_for_service(Creator.services()) :: list(Creator.t())
+  def find_all_for_service(service) do
+    Creator
+    |> Ecto.Query.where(service: ^service)
+    |> Repo.all()
+  end
+
+  @spec find_followers_for_creator(Creator.t()) :: list(Follower.t())
   def find_followers_for_creator(creator) do
     Follower
     |> Ecto.Query.where(creator_id: ^creator.id)

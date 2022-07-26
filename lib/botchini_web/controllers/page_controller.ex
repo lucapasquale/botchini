@@ -1,8 +1,7 @@
 defmodule BotchiniWeb.PageController do
   use BotchiniWeb, :controller
 
-  alias Botchini.{Creators, Discord}
-  alias BotchiniWeb.Cache
+  alias Botchini.{Cache, Creators, Discord}
 
   def index(conn, _params) do
     {:ok, total_servers} = Cache.get_value("total_servers", &Discord.count_guilds/0)

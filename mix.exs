@@ -4,7 +4,7 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "6.3.2",
+      version: "6.4.0",
       elixir: "~> 1.12",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -16,13 +16,10 @@ defmodule Botchini.MixProject do
 
   def application do
     [
-      extra_applications: extra_applications(Mix.env()),
+      extra_applications: [:logger, :elixir_xml_to_map],
       mod: {Botchini.Application, []}
     ]
   end
-
-  defp extra_applications(:dev), do: extra_applications(:all) ++ [:remix]
-  defp extra_applications(_all), do: [:logger, :elixir_xml_to_map]
 
   defp deps do
     [
@@ -44,7 +41,6 @@ defmodule Botchini.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
       {:elixir_xml_to_map, "~> 2.0"},
-      {:quantum, "~> 3.0"},
       # Ecto
       {:phoenix_ecto, "~> 4.4"},
       {:ecto_sql, "~> 3.6"},
@@ -53,10 +49,10 @@ defmodule Botchini.MixProject do
       {:tesla, "~> 1.4.0"},
       {:hackney, "~> 1.17.0"},
       {:exconstructor, "~> 1.1.0"},
-      # Logging
+      # Helpers
       {:ink, "~> 1.0"},
+      {:quantum, "~> 3.0"},
       # Development and testing
-      {:remix, "~> 0.0.1", only: :dev},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3.0", only: :test},
       {:faker, "~> 0.16", only: :test}

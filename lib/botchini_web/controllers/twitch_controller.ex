@@ -8,30 +8,35 @@ defmodule BotchiniWeb.TwitchController do
 
   @spec callback(Plug.Conn.t(), any) :: Plug.Conn.t()
   def callback(conn, _params) do
-    case get_event_type(conn.body_params) do
-      {:unknown, _} ->
+    case is_request_valid?(conn) do
+      false ->
         conn
         |> put_status(:not_found)
-        |> render(:"404")
+        |> text("Not found")
 
-      {:confirm_subscription, challenge} ->
-        text(conn, challenge)
-
-      {:stream_online, subscription} ->
-        twitch_user_id = subscription["condition"]["broadcaster_user_id"]
-        Logger.info("Received webhook for twitch user #{twitch_user_id}")
-
-        case Creators.find_by_service(:twitch, twitch_user_id) do
-          nil ->
-            conn
-            |> put_status(:not_found)
-            |> render(:"404")
-
-          creator ->
-            send_stream_online_messages(creator)
-            text(conn, "ok")
-        end
+      true ->
+        get_event_type(conn.body_params)
+        |> process_event(conn)
     end
+  end
+
+  defp is_request_valid?(conn) do
+    message_id = get_header(conn, "twitch-eventsub-message-id")
+    message_timestamp = get_header(conn, "twitch-eventsub-message-timestamp")
+    [body] = Map.get(conn.assigns, :raw_body)
+
+    webhook_secret = Application.fetch_env!(:botchini, :twitch_webhook_secret)
+    payload = message_id <> message_timestamp <> body
+
+    hmac =
+      :crypto.mac(:hmac, :sha256, webhook_secret, payload)
+      |> Base.encode16(case: :lower)
+
+    "sha256=" <> hmac == get_header(conn, "twitch-eventsub-message-signature")
+  end
+
+  defp get_header(conn, header_name) do
+    conn |> get_req_header(header_name) |> Enum.at(0)
   end
 
   @spec get_event_type(any()) ::
@@ -49,6 +54,32 @@ defmodule BotchiniWeb.TwitchController do
         _ -> {:unknown, :invalid_event}
       end
     end
+  end
+
+  defp process_event({:confirm_subscription, challenge}, conn) do
+    text(conn, challenge)
+  end
+
+  defp process_event({:stream_online, subscription}, conn) do
+    twitch_user_id = subscription["condition"]["broadcaster_user_id"]
+    Logger.info("Received webhook for twitch user #{twitch_user_id}")
+
+    case Creators.find_by_service(:twitch, twitch_user_id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> render(:"404")
+
+      creator ->
+        send_stream_online_messages(creator)
+        text(conn, "ok")
+    end
+  end
+
+  defp process_event(_, conn) do
+    conn
+    |> put_status(:not_found)
+    |> render(:"404")
   end
 
   defp send_stream_online_messages(creator) do

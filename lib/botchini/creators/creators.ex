@@ -146,7 +146,10 @@ defmodule Botchini.Creators do
 
     if remaining_followers == 0 do
       {:ok} =
-        Services.unsubscribe_to_service(creator.service, {creator.service_id, creator.webhook_id})
+        Services.unsubscribe_from_service(
+          creator.service,
+          {creator.service_id, creator.webhook_id}
+        )
 
       Repo.delete(creator)
     end

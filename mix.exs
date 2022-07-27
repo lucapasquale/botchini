@@ -4,7 +4,7 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "6.3.2",
+      version: "6.4.0",
       elixir: "~> 1.12",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -53,7 +53,6 @@ defmodule Botchini.MixProject do
       {:ink, "~> 1.0"},
       {:quantum, "~> 3.0"},
       # Development and testing
-      {:remix, "~> 0.0.1", only: :dev},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3.0", only: :test},
       {:faker, "~> 0.16", only: :test}

@@ -59,7 +59,7 @@ defmodule Botchini.Services.Twitch do
         transport: %{
           method: "webhook",
           callback: Application.fetch_env!(:botchini, :host) <> "/api/twitch/webhooks/callback",
-          secret: "abcd1234abcd1234abcd1234"
+          secret: Application.fetch_env!(:botchini, :twitch_webhook_secret)
         }
       })
 

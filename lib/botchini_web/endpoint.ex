@@ -43,6 +43,7 @@ defmodule BotchiniWeb.Endpoint do
   plug(Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json, Plug.Parsers.XML],
     pass: ["*/*"],
+    body_reader: {BotchiniWeb.CacheBodyReader, :read_body, []},
     json_decoder: Phoenix.json_library()
   )
 

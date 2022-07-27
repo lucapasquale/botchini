@@ -8,8 +8,6 @@ defmodule BotchiniWeb.TwitchController do
 
   @spec callback(Plug.Conn.t(), any) :: Plug.Conn.t()
   def callback(conn, _params) do
-    IO.inspect(conn)
-
     case is_request_valid?(conn) do
       false ->
         conn

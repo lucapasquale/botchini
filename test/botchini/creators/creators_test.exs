@@ -183,7 +183,7 @@ defmodule BotchiniTest.Creators.CreatorsTest do
       follower = generate_follower(%{creator_id: creator.id})
 
       with_mock Services,
-        unsubscribe_to_service: fn _, _ -> {:ok} end do
+        unsubscribe_from_service: fn _, _ -> {:ok} end do
         {:ok, ^creator} =
           Creators.unfollow(creator.id, %{
             channel_id: follower.discord_channel_id
@@ -193,7 +193,7 @@ defmodule BotchiniTest.Creators.CreatorsTest do
         refute Repo.get_by(Follower, id: follower.id)
 
         assert_called(
-          Services.unsubscribe_to_service(
+          Services.unsubscribe_from_service(
             creator.service,
             {creator.service_id, creator.webhook_id}
           )
@@ -207,7 +207,7 @@ defmodule BotchiniTest.Creators.CreatorsTest do
       generate_follower(%{creator_id: creator.id})
 
       with_mock Services,
-        unsubscribe_to_service: fn _, _ -> {:ok} end do
+        unsubscribe_from_service: fn _, _ -> {:ok} end do
         {:ok, ^creator} =
           Creators.unfollow(creator.id, %{
             channel_id: follower.discord_channel_id
@@ -216,7 +216,7 @@ defmodule BotchiniTest.Creators.CreatorsTest do
         assert Repo.get_by(Creator, id: creator.id)
         refute Repo.get_by(Follower, id: follower.id)
 
-        assert_not_called(Services.unsubscribe_to_service())
+        assert_not_called(Services.unsubscribe_from_service())
       end
     end
 

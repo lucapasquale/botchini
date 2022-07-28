@@ -37,6 +37,18 @@ defmodule Botchini.Services.Twitch do
     if user != nil, do: User.new(user), else: nil
   end
 
+  @spec get_user_by_user_login(String.t()) :: User.t() | nil
+  def get_user_by_user_login(user_login) do
+    {:ok, %{body: body}} = get("/users", query: [login: String.downcase(user_login)])
+
+    user =
+      body
+      |> Map.get("data")
+      |> List.first()
+
+    if user != nil, do: User.new(user), else: nil
+  end
+
   @spec get_stream(String.t()) :: Stream.t() | nil
   def get_stream(user_id) do
     {:ok, %{body: body}} = get("/streams", query: [user_id: user_id])

@@ -9,6 +9,7 @@ defmodule Botchini.DataCase do
   alias Botchini.Discord.Schema.Guild
   alias Botchini.Repo
   alias Botchini.Creators.Schema.{Creator, Follower}
+  alias Botchini.Services.Schema.Video
 
   using do
     quote do
@@ -78,5 +79,22 @@ defmodule Botchini.DataCase do
       |> Repo.insert()
 
     follower
+  end
+
+  @spec generate_video(map()) :: Video.t()
+  def generate_video(attrs \\ %{}) do
+    payload =
+      %{
+        channel_id: Faker.String.base64(),
+        video_id: Faker.String.base64()
+      }
+      |> Map.merge(attrs)
+
+    {:ok, video} =
+      %Video{}
+      |> Video.changeset(payload)
+      |> Repo.insert()
+
+    video
   end
 end

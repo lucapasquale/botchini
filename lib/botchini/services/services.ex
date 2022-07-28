@@ -62,13 +62,21 @@ defmodule Botchini.Services do
   @spec search_channel(Creator.services(), String.t()) ::
           {:error, :not_found} | {:ok, {String.t(), String.t()}}
   def search_channel(:twitch, term) do
-    case Twitch.search_channels(term) do
-      channels when channels == [] ->
-        {:error, :not_found}
+    # Sometimes Twitch search returns inconsistent results, so we
+    # try to find exact match for searched term, if not none found uses channel search
+    case Twitch.get_user_by_user_login(term) do
+      nil ->
+        case Twitch.search_channels(term) do
+          channels when channels == [] ->
+            {:error, :not_found}
 
-      channels ->
-        channel = hd(channels)
-        {:ok, {channel.id, channel.display_name}}
+          channels ->
+            channel = hd(channels)
+            {:ok, {channel.id, channel.display_name}}
+        end
+
+      user ->
+        {:ok, {user.id, user.display_name}}
     end
   end
 

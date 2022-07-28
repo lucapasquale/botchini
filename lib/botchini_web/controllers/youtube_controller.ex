@@ -15,6 +15,29 @@ defmodule BotchiniWeb.YoutubeController do
 
   @spec notification(Plug.Conn.t(), any) :: Plug.Conn.t()
   def notification(conn, _params) do
+    case is_request_valid?(conn) do
+      false ->
+        conn
+        |> put_status(:not_found)
+        |> text("not found")
+
+      true ->
+        process_webhook(conn)
+    end
+  end
+
+  defp is_request_valid?(conn) do
+    [body] = Map.get(conn.assigns, :raw_body)
+    webhook_secret = Application.fetch_env!(:botchini, :youtube_webhook_secret)
+
+    hmac =
+      :crypto.mac(:hmac, :sha, webhook_secret, body)
+      |> Base.encode16(case: :lower)
+
+    "sha1=" <> hmac == conn |> get_req_header("x-hub-signature") |> Enum.at(0)
+  end
+
+  defp process_webhook(conn) do
     entry =
       conn.body_params
       |> Map.get("feed")
@@ -36,7 +59,7 @@ defmodule BotchiniWeb.YoutubeController do
           nil ->
             conn
             |> put_status(:not_found)
-            |> render(:"404")
+            |> text("not found")
 
           creator ->
             send_new_video_messages(creator, video_id)

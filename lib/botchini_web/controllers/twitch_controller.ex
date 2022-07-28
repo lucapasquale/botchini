@@ -12,7 +12,7 @@ defmodule BotchiniWeb.TwitchController do
       false ->
         conn
         |> put_status(:not_found)
-        |> text("Not found")
+        |> text("not found")
 
       true ->
         get_event_type(conn.body_params)
@@ -79,7 +79,7 @@ defmodule BotchiniWeb.TwitchController do
   defp process_event(_, conn) do
     conn
     |> put_status(:not_found)
-    |> render(:"404")
+    |> text("not found")
   end
 
   defp send_stream_online_messages(creator) do

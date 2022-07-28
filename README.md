@@ -59,5 +59,7 @@ The bot needs the following env_vars:
  - `DATABASE_URL` : The url to connect to your postgres db
  - `DISCORD_TOKEN` : Token for your Discord Bot
  - `YOUTUBE_API_KEY` : YouTube API key
+ - `YOUTUBE_WEBHOOK_SECRET` : Secret string to be used for validating YouTube webhooks
  - `TWITCH_CLIENT_ID` : Client ID for your Twitch application
  - `TWITCH_CLIENT_SECRET` : Client Secret for your Twitch application
+ - `TWITCH_WEBHOOK_SECRET` : Secret string to be used for validating Twitch webhooks

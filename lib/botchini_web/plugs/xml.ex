@@ -11,9 +11,10 @@ defmodule Plug.Parsers.XML do
   end
 
   def parse(conn, _, "atom+xml", _headers, opts) do
-    conn
-    |> read_body(opts)
-    |> decode()
+    {:ok, body, conn} = read_body(conn, opts)
+    conn = update_in(conn.assigns[:raw_body], &[body | &1 || []])
+
+    decode({:ok, body, conn})
   end
 
   def parse(conn, _type, _subtype, _headers, _opts) do

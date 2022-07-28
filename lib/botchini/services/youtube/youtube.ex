@@ -81,6 +81,10 @@ defmodule Botchini.Services.Youtube do
       |> Multipart.add_field("hub.topic", topic_url)
       |> Multipart.add_field("hub.verify", "async")
       |> Multipart.add_field("hub.mode", if(subscribe, do: "subscribe", else: "unsubscribe"))
+      |> Multipart.add_field(
+        "hub.secret",
+        Application.fetch_env!(:botchini, :youtube_webhook_secret)
+      )
 
     {:ok, _} = post("https://pubsubhubbub.appspot.com/subscribe", mp)
     {:ok}

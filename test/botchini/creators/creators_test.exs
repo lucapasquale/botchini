@@ -133,6 +133,48 @@ defmodule BotchiniTest.Creators.CreatorsTest do
     end
   end
 
+  describe "upsert" do
+    test "creates new creator on DB and on service" do
+      name = Faker.String.base64()
+      service = :twitch
+      service_id = Faker.String.base64()
+      webhook_id = Faker.String.base64()
+
+      patch(Services, :get_user, {:ok, {service_id, name}})
+      patch(Services, :subscribe_to_service, webhook_id)
+
+      {:ok, creator} = Creators.upsert(service, service_id)
+
+      assert creator.name == name
+      assert creator.service == service
+      assert creator.service_id == service_id
+      assert creator.webhook_id == webhook_id
+
+      assert_called(Services.get_user(service, service_id))
+      assert_called(Services.subscribe_to_service(service, service_id))
+    end
+
+    test "returns existing creator from DB" do
+      creator = generate_creator()
+      {:ok, ^creator} = Creators.upsert(creator.service, creator.service_id)
+
+      refute_called(Services.get_user(_, _))
+      refute_called(Services.subscribe_to_service(_, _))
+    end
+
+    test "returns error if creator not found on service" do
+      patch(Services, :get_user, {:error, :not_found})
+
+      service = :twitch
+      service_id = Faker.String.base64()
+
+      {:error, :invalid_creator} = Creators.upsert(service, service_id)
+
+      assert_called(Services.get_user(service, service_id))
+      refute_called(Services.subscribe_to_service(_, _))
+    end
+  end
+
   describe "follow" do
     test "start following creator" do
       creator = generate_creator()

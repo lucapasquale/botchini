@@ -1,7 +1,7 @@
 defmodule BotchiniTest.Creators.CreatorsTest do
   use Botchini.DataCase, async: false
 
-  import Mock
+  use Patch
 
   alias Botchini.{Creators, Repo, Services}
   alias Botchini.Creators.Schema.{Creator, Follower}
@@ -133,6 +133,48 @@ defmodule BotchiniTest.Creators.CreatorsTest do
     end
   end
 
+  describe "upsert" do
+    test "creates new creator on DB and on service" do
+      name = Faker.String.base64()
+      service = :twitch
+      service_id = Faker.String.base64()
+      webhook_id = Faker.String.base64()
+
+      patch(Services, :get_user, {:ok, {service_id, name}})
+      patch(Services, :subscribe_to_service, webhook_id)
+
+      {:ok, creator} = Creators.upsert(service, service_id)
+
+      assert creator.name == name
+      assert creator.service == service
+      assert creator.service_id == service_id
+      assert creator.webhook_id == webhook_id
+
+      assert_called(Services.get_user(service, service_id))
+      assert_called(Services.subscribe_to_service(service, service_id))
+    end
+
+    test "returns existing creator from DB" do
+      creator = generate_creator()
+      {:ok, ^creator} = Creators.upsert(creator.service, creator.service_id)
+
+      refute_called(Services.get_user(_, _))
+      refute_called(Services.subscribe_to_service(_, _))
+    end
+
+    test "returns error if creator not found on service" do
+      patch(Services, :get_user, {:error, :not_found})
+
+      service = :twitch
+      service_id = Faker.String.base64()
+
+      {:error, :invalid_creator} = Creators.upsert(service, service_id)
+
+      assert_called(Services.get_user(service, service_id))
+      refute_called(Services.subscribe_to_service(_, _))
+    end
+  end
+
   describe "follow" do
     test "start following creator" do
       creator = generate_creator()
@@ -179,45 +221,38 @@ defmodule BotchiniTest.Creators.CreatorsTest do
 
   describe "unfollow" do
     test "stop following, delete creator and remove subscription if no more followers" do
+      patch(Services, :unsubscribe_from_service, {:ok})
+
       creator = generate_creator()
       follower = generate_follower(%{creator_id: creator.id})
 
-      with_mock Services,
-        unsubscribe_from_service: fn _, _ -> {:ok} end do
-        {:ok, ^creator} =
-          Creators.unfollow(creator.id, %{
-            channel_id: follower.discord_channel_id
-          })
+      {:ok, ^creator} =
+        Creators.unfollow(creator.id, %{
+          channel_id: follower.discord_channel_id
+        })
 
-        refute Repo.get_by(Creator, id: creator.id)
-        refute Repo.get_by(Follower, id: follower.id)
+      refute Repo.get_by(Creator, id: creator.id)
+      refute Repo.get_by(Follower, id: follower.id)
 
-        assert_called(
-          Services.unsubscribe_from_service(
-            creator.service,
-            {creator.service_id, creator.webhook_id}
-          )
-        )
-      end
+      assert_called(Services.unsubscribe_from_service(_, _))
     end
 
     test "stop following, but don't delete creator if has other followers" do
+      patch(Services, :unsubscribe_from_service, {:ok})
+
       creator = generate_creator()
       follower = generate_follower(%{creator_id: creator.id})
       generate_follower(%{creator_id: creator.id})
 
-      with_mock Services,
-        unsubscribe_from_service: fn _, _ -> {:ok} end do
-        {:ok, ^creator} =
-          Creators.unfollow(creator.id, %{
-            channel_id: follower.discord_channel_id
-          })
+      {:ok, ^creator} =
+        Creators.unfollow(creator.id, %{
+          channel_id: follower.discord_channel_id
+        })
 
-        assert Repo.get_by(Creator, id: creator.id)
-        refute Repo.get_by(Follower, id: follower.id)
+      assert Repo.get_by(Creator, id: creator.id)
+      refute Repo.get_by(Follower, id: follower.id)
 
-        assert_not_called(Services.unsubscribe_from_service())
-      end
+      refute_called(Services.unsubscribe_from_service(_, _))
     end
 
     test "not_found if creator was not found" do

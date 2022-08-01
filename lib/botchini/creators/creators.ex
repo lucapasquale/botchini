@@ -66,21 +66,23 @@ defmodule Botchini.Creators do
         {:ok, existing}
 
       nil ->
-        case Services.get_user(service, service_id) do
-          {:error, _} ->
-            {:error, :invalid_creator}
+        insert_creator(service, service_id)
+    end
+  end
 
-          {:ok, {_service_id, name}} ->
-            webhook_id = Services.subscribe_to_service(service, service_id)
-
-            Creator.changeset(%Creator{}, %{
-              name: name,
-              service: service,
-              service_id: service_id,
-              webhook_id: webhook_id
-            })
-            |> Repo.insert()
-        end
+  defp insert_creator(service, service_id) do
+    with {:ok, {^service_id, name}} <- Services.get_user(service, service_id),
+         webhook_id <- Services.subscribe_to_service(service, service_id) do
+      %Creator{}
+      |> Creator.changeset(%{
+        name: name,
+        service: service,
+        service_id: service_id,
+        webhook_id: webhook_id
+      })
+      |> Repo.insert()
+    else
+      _ -> {:error, :invalid_creator}
     end
   end
 
@@ -98,16 +100,14 @@ defmodule Botchini.Creators do
 
     case existing_follower do
       nil ->
-        follower =
-          Follower.changeset(%Follower{}, %{
-            creator_id: creator.id,
-            guild_id: guild && guild.id,
-            discord_user_id: follower_info.user_id,
-            discord_channel_id: follower_info.channel_id
-          })
-          |> Repo.insert!()
-
-        {:ok, follower}
+        %Follower{}
+        |> Follower.changeset(%{
+          creator_id: creator.id,
+          guild_id: guild && guild.id,
+          discord_user_id: follower_info.user_id,
+          discord_channel_id: follower_info.channel_id
+        })
+        |> Repo.insert()
 
       _follower ->
         {:error, :already_following}

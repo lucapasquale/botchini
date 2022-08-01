@@ -4,7 +4,7 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "6.6.1",
+      version: "6.6.2",
       elixir: "~> 1.12",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -45,7 +45,7 @@ defmodule Botchini.MixProject do
       {:phoenix_ecto, "~> 4.4"},
       {:ecto_sql, "~> 3.6"},
       {:postgrex, ">= 0.0.0"},
-      # # HTTP Client
+      # HTTP Client
       {:tesla, "~> 1.4.0"},
       {:hackney, "~> 1.17.0"},
       {:exconstructor, "~> 1.1.0"},
@@ -54,7 +54,7 @@ defmodule Botchini.MixProject do
       {:quantum, "~> 3.0"},
       # Development and testing
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
-      {:mock, "~> 0.3.0", only: :test},
+      {:patch, "~> 0.12.0", only: [:test]},
       {:faker, "~> 0.16", only: :test}
     ]
   end

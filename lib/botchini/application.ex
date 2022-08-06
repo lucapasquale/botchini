@@ -19,14 +19,15 @@ defmodule Botchini.Application do
         BotchiniWeb.Endpoint,
         # Twitch auth middleware
         Botchini.Services.Twitch.AuthMiddleware
-      ] ++
-        if Application.fetch_env!(:botchini, :environment) != :test,
-          do: [BotchiniDiscord.Consumer],
-          else: []
+      ]
+      |> start_nostrum(Application.fetch_env!(:botchini, :environment))
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Botchini.Supervisor]
     Supervisor.start_link(children, opts)
   end
+
+  defp start_nostrum(children, :test), do: children
+  defp start_nostrum(children, _env), do: children ++ [BotchiniDiscord.Consumer]
 end

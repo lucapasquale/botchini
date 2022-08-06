@@ -15,7 +15,7 @@ defmodule BotchiniWeb.YoutubeController do
 
   @spec notification(Plug.Conn.t(), any) :: Plug.Conn.t()
   def notification(conn, _params) do
-    case is_request_valid?(conn) do
+    case is_request_valid?(conn, Application.fetch_env!(:botchini, :environment)) do
       false ->
         conn
         |> put_status(:not_found)
@@ -26,7 +26,9 @@ defmodule BotchiniWeb.YoutubeController do
     end
   end
 
-  defp is_request_valid?(conn) do
+  defp is_request_valid?(_conn, :dev), do: true
+
+  defp is_request_valid?(conn, _) do
     [body] = Map.get(conn.assigns, :raw_body)
     webhook_secret = Application.fetch_env!(:botchini, :youtube_webhook_secret)
 

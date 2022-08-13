@@ -1,29 +1,30 @@
-<div class="flex flex-col items-center w-full">
-  <h1 class="text-4xl font-bold">
-    Botchini
-  </h1>
+<main class="flex flex-col items-center w-full p-12">
+  <header class="flex flex-col items-center mb-8 ">
+    <.h1 class="">Botchini</.h1>
+    <.h3 class="">Get notified on Discord whenever your favorite creators goes live!</.h3>
+  </header>
 
-  <div class="flex flex-col items-center w-full">
+  <section class="flex items-center gap-6 mb-8">
+    <img class="w-96" src="/images/twitch_example.png" />
+    <img class="w-96" src="/images/youtube_example.png" />
+  </section>
+
+  <div class="flex flex-col items-center w-full mb-8">
     <section class="grid grid-cols-2 gap-x-10 gap-y-1 text-center w-auto">
-      <div class="text-6xl text-purple-600">
+      <div class="text-6xl text-purple-400">
         <%= @total_servers %>
       </div>
 
-      <div class="text-6xl text-purple-600">
+      <div class="text-6xl text-purple-400">
         <%= @total_streams %>
       </div>
 
       <h4>Discord servers</h4>
 
-      <h4>Streamers being followed</h4>
+      <h4>Creators being followed</h4>
     </section>
   </div>
 
-  <a target="_blank" rel="noopener" href={@add_bot_link}>
-    <div class="flex space-x-2 justify-center">
-      <BotchiniWeb.Button.index>
-        Add it to your server
-      </BotchiniWeb.Button.index>
-    </div>
-  </a>
-</div>
+  <.button color="primary" link_type="a" to={@invite_bot_url} target="_blank" rel="noopener noreferrer"
+    label="Add it to your server" />
+</main>

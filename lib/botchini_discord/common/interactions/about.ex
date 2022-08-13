@@ -26,7 +26,7 @@ defmodule BotchiniDiscord.Common.Interactions.About do
       |> put_title("Botchini information")
       |> put_field("Version", Application.spec(:botchini, :vsn) |> to_string(), true)
       |> put_field("Author", "Luca\#1813", true)
-      |> put_field("Source code", "[GitHub](https://github.com/lucapasquale/botchini/)", true)
+      |> put_field("Website", "[Link](https://botchini.lucapasquale.dev)", true)
       |> put_field("Uptime", uptime(), true)
       |> put_field("Processes", "#{length(:erlang.processes())}", true)
       |> put_field("Memory Usage", "#{div(:erlang.memory(:total), 1_000_000)} MB", true)

@@ -4,7 +4,7 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "6.6.3",
+      version: "6.6.4",
       elixir: "~> 1.12",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -40,6 +40,7 @@ defmodule Botchini.MixProject do
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
+      {:petal_components, "~> 0.17"},
       {:elixir_xml_to_map, "~> 2.0"},
       # Ecto
       {:phoenix_ecto, "~> 4.4"},

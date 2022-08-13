@@ -98,6 +98,9 @@ defmodule BotchiniWeb do
       import BotchiniWeb.ErrorHelpers
       import BotchiniWeb.Gettext
       alias BotchiniWeb.Router.Helpers, as: Routes
+
+      # Imports petal components
+      use PetalComponents
     end
   end
 

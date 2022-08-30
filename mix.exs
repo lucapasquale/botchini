@@ -16,10 +16,13 @@ defmodule Botchini.MixProject do
 
   def application do
     [
-      extra_applications: [:logger, :elixir_xml_to_map],
-      mod: {Botchini.Application, []}
+      mod: {Botchini.Application, []},
+      extra_applications: extra_applications(Mix.env())
     ]
   end
+
+  defp extra_applications(:dev), do: extra_applications(:all) ++ [:remix]
+  defp extra_applications(_all), do: [:logger, :elixir_xml_to_map]
 
   defp deps do
     [
@@ -54,6 +57,7 @@ defmodule Botchini.MixProject do
       {:ink, "~> 1.0"},
       {:quantum, "~> 3.0"},
       # Development and testing
+      {:remix, "~> 0.0.1", only: :dev},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:patch, "~> 0.12.0", only: [:test]},
       {:faker, "~> 0.16", only: :test}

@@ -10,17 +10,9 @@ defmodule BotchiniDiscord.Helpers do
 
   @spec parse_interaction_data(ApplicationCommandInteractionData.t()) ::
           InteractionBehaviour.interaction_input()
-  def parse_interaction_data(interaction_data) when is_nil(interaction_data.custom_id) do
-    options =
-      (interaction_data.options || [])
-      |> Enum.map(fn opt ->
-        %{name: opt.name, value: opt.value, focused: Map.get(opt, :focused, false)}
-      end)
 
-    {interaction_data.name, options}
-  end
-
-  def parse_interaction_data(interaction_data) do
+  def parse_interaction_data(interaction_data) when is_binary(interaction_data.custom_id) do
+    IO.inspect(interaction_data, label: "nope")
     [name, options_string] = String.split(interaction_data.custom_id, "|")
 
     options =
@@ -31,6 +23,22 @@ defmodule BotchiniDiscord.Helpers do
       end)
 
     {name, options}
+  end
+
+  def parse_interaction_data(interaction_data) do
+    IO.inspect(interaction_data, label: "data")
+
+    options =
+      Map.get(interaction_data, :options, [])
+      |> Enum.flat_map(fn opt ->
+        if opt.type == 3 do
+          %{name: opt.name, value: opt.value, focused: Map.get(opt, :focused, false)}
+        else
+          parse_interaction_data(opt)
+        end
+      end)
+
+    {interaction_data.name, options}
   end
 
   @spec get_service(InteractionBehaviour.interaction_options()) :: Creator.services()

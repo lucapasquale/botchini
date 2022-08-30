@@ -10,6 +10,7 @@ defmodule BotchiniDiscord.Interactions do
   alias BotchiniDiscord.Common.Interactions.About
   alias BotchiniDiscord.Helpers
   alias BotchiniDiscord.Creators.Interactions.{ConfirmUnfollow, Follow, Info, List, Unfollow}
+  alias BotchiniDiscord.Squads.Interactions.Squad
 
   @spec register_commands() :: any()
   def register_commands do
@@ -19,7 +20,8 @@ defmodule BotchiniDiscord.Interactions do
       Follow.get_command(),
       Info.get_command(),
       List.get_command(),
-      Unfollow.get_command()
+      Unfollow.get_command(),
+      Squad.get_command()
     ]
     |> Enum.filter(&(!is_nil(&1)))
     |> register_commands(Application.fetch_env!(:botchini, :environment))
@@ -48,7 +50,9 @@ defmodule BotchiniDiscord.Interactions do
     Logger.info("Interaction received")
 
     try do
+      IO.inspect(interaction.data, label: "before")
       data = Helpers.parse_interaction_data(interaction.data)
+      IO.inspect(data, label: "after")
       response = call_interaction(interaction, data)
 
       Nostrum.Api.create_interaction_response(interaction, response)
@@ -80,6 +84,9 @@ defmodule BotchiniDiscord.Interactions do
 
   defp call_interaction(interaction, {"list", opt}),
     do: List.handle_interaction(interaction, opt)
+
+  defp call_interaction(interaction, {"squad", opt}),
+    do: Squad.handle_interaction(interaction, opt)
 
   defp call_interaction(_interaction, _data),
     do: raise("Unknown command")

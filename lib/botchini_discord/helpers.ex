@@ -27,23 +27,29 @@ defmodule BotchiniDiscord.Helpers do
   def parse_interaction_data(interaction_data) do
     options =
       Map.get(interaction_data, :options, [])
-      |> Enum.flat_map(&parse_data_option(&1))
+      |> parse_list_of_options()
 
     {interaction_data.name, options}
   end
 
-  # Sub-command
-  defp parse_data_option(option) when option.type == 1 do
-    [%{name: option.name, value: "", focused: false}] ++
-      Enum.map(option.options, &parse_data_option(&1))
+  defp parse_list_of_options(options) do
+    Enum.flat_map(options, fn option ->
+      case option.type do
+        1 -> parse_sub_command(option)
+        _ -> [parse_data_option(option)]
+      end
+    end)
   end
 
-  # Option
+  defp parse_sub_command(option) do
+    [%{name: option.name, value: "", focused: false}] ++ parse_list_of_options(option.options)
+  end
+
   defp parse_data_option(option) do
     %{
       name: option.name,
       value: option.value,
-      focused: if(is_nil(option.focused), do: false, else: option.focused)
+      focused: if(is_nil(Map.get(option, :focused)), do: false, else: option.focused)
     }
   end
 

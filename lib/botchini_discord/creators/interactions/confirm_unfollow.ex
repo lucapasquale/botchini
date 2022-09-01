@@ -102,11 +102,11 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
     end
   end
 
+  defp unfollow_message(interaction, creator) when is_nil(interaction.member) do
+    "Are you sure you want to unfollow **#{creator.name}**?"
+  end
+
   defp unfollow_message(interaction, creator) do
-    if is_nil(interaction.member) do
-      "Are you sure you want to unfollow **#{creator.name}**?"
-    else
-      "<@#{interaction.member.user.id}> are you sure you want to unfollow **#{creator.name}**?"
-    end
+    "<@#{interaction.member.user.id}> are you sure you want to unfollow **#{creator.name}**?"
   end
 end

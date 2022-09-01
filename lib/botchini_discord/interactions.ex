@@ -50,9 +50,7 @@ defmodule BotchiniDiscord.Interactions do
     Logger.info("Interaction received")
 
     try do
-      IO.inspect(interaction.data, label: "before")
       data = Helpers.parse_interaction_data(interaction.data)
-      IO.inspect(data, label: "after")
       response = call_interaction(interaction, data)
 
       Nostrum.Api.create_interaction_response(interaction, response)

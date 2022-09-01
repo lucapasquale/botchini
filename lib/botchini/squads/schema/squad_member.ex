@@ -24,8 +24,8 @@ defmodule Botchini.Squads.Schema.SquadMember do
   @spec changeset(SquadMember.t() | map(), any()) :: Ecto.Changeset.t()
   def changeset(%SquadMember{} = member, attrs \\ %{}) do
     member
-    |> cast(attrs, [:discord_user_id])
-    |> validate_required([:discord_user_id])
+    |> cast(attrs, [:discord_user_id, :squad_id])
+    |> validate_required([:discord_user_id, :squad_id])
     |> unique_constraint([:discord_user_id, :squad_id])
   end
 end

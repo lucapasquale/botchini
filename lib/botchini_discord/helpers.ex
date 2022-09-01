@@ -12,7 +12,6 @@ defmodule BotchiniDiscord.Helpers do
           InteractionBehaviour.interaction_input()
 
   def parse_interaction_data(interaction_data) when is_binary(interaction_data.custom_id) do
-    IO.inspect(interaction_data, label: "nope")
     [name, options_string] = String.split(interaction_data.custom_id, "|")
 
     options =
@@ -26,19 +25,26 @@ defmodule BotchiniDiscord.Helpers do
   end
 
   def parse_interaction_data(interaction_data) do
-    IO.inspect(interaction_data, label: "data")
-
     options =
       Map.get(interaction_data, :options, [])
-      |> Enum.flat_map(fn opt ->
-        if opt.type == 3 do
-          %{name: opt.name, value: opt.value, focused: Map.get(opt, :focused, false)}
-        else
-          parse_interaction_data(opt)
-        end
-      end)
+      |> Enum.flat_map(&parse_data_option(&1))
 
     {interaction_data.name, options}
+  end
+
+  # Sub-command
+  defp parse_data_option(option) when option.type == 1 do
+    [%{name: option.name, value: "", focused: false}] ++
+      Enum.map(option.options, &parse_data_option(&1))
+  end
+
+  # Option
+  defp parse_data_option(option) do
+    %{
+      name: option.name,
+      value: option.value,
+      focused: if(is_nil(option.focused), do: false, else: option.focused)
+    }
   end
 
   @spec get_service(InteractionBehaviour.interaction_options()) :: Creator.services()
@@ -53,12 +59,24 @@ defmodule BotchiniDiscord.Helpers do
     {cleanup_stream_code(code), autocomplete}
   end
 
-  @spec get_option(InteractionBehaviour.interaction_options(), String.t()) ::
+  @spec get_option!(InteractionBehaviour.interaction_options(), String.t()) ::
           {String.t(), boolean()}
+  def get_option!(options, name) do
+    case get_option(options, name) do
+      nil ->
+        raise("Invalid option received")
+
+      option ->
+        option
+    end
+  end
+
+  @spec get_option(InteractionBehaviour.interaction_options(), String.t()) ::
+          nil | {String.t(), boolean()}
   def get_option(options, name) do
     case Enum.find(options, fn opt -> opt.name == name end) do
       nil ->
-        raise("Invalid option received")
+        nil
 
       option ->
         {option.value, option.focused}

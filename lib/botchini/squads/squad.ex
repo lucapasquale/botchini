@@ -7,8 +7,8 @@ defmodule Botchini.Squads do
   require Ecto.Query
 
   alias Botchini.Discord.Schema.Guild
-  alias Botchini.Squads.Schema.{Squad, SquadMember}
   alias Botchini.Repo
+  alias Botchini.Squads.Schema.{Squad, SquadMember}
 
   @spec get_by_id!(Guild.t(), String.t()) :: Squad.t()
   def get_by_id!(guild, id) do

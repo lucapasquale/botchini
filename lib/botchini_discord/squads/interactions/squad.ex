@@ -155,8 +155,7 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
 
       member_mentions =
         Squads.all_members(squad)
-        |> Enum.map(fn member -> "<@#{member.discord_user_id}>" end)
-        |> Enum.join("\n")
+        |> Enum.map_join("\n", fn member -> "<@#{member.discord_user_id}>" end)
 
       %{
         type: 4,

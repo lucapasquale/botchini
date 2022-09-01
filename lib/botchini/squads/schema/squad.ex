@@ -7,8 +7,8 @@ defmodule Botchini.Squads.Schema.Squad do
   require Ecto.Query
   import Ecto.Changeset
 
-  alias Botchini.Squads.Schema.{Squad, SquadMember}
   alias Botchini.Discord.Schema.Guild
+  alias Botchini.Squads.Schema.{Squad, SquadMember}
 
   @type t :: %__MODULE__{
           name: String.t()

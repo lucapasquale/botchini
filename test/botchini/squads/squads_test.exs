@@ -1,4 +1,4 @@
-defmodule BotchiniTest.Discord.DiscordTest do
+defmodule BotchiniTest.Squads.SquadsTest do
   use Botchini.DataCase, async: false
 
   alias Botchini.Squads

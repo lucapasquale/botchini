@@ -25,12 +25,12 @@ defmodule BotchiniDiscord.Helpers do
   end
 
   def parse_interaction_data(interaction_data) do
-    options =
-      Map.get(interaction_data, :options, [])
-      |> parse_list_of_options()
+    options = parse_list_of_options(interaction_data.options)
 
     {interaction_data.name, options}
   end
+
+  defp parse_list_of_options(options) when is_nil(options), do: []
 
   defp parse_list_of_options(options) do
     Enum.flat_map(options, fn option ->

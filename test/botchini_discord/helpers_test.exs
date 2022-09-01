@@ -15,8 +15,8 @@ defmodule BotchiniDiscordTest.HelpersTest do
         name: "command",
         custom_id: nil,
         options: [
-          %{name: "option1", value: "value1"},
-          %{name: "option2", value: "value2"}
+          %{type: 3, name: "option1", value: "value1"},
+          %{type: 3, name: "option2", value: "value2"}
         ]
       }
 
@@ -24,6 +24,64 @@ defmodule BotchiniDiscordTest.HelpersTest do
        [
          %{name: "option1", value: "value1", focused: false},
          %{name: "option2", value: "value2", focused: false}
+       ]} = Helpers.parse_interaction_data(interaction_data)
+    end
+
+    test "parse interation data with sub-command" do
+      interaction_data = %{
+        name: "command",
+        custom_id: nil,
+        options: [
+          %{
+            type: 1,
+            name: "sub-command",
+            value: nil,
+            options: [
+              %{type: 3, name: "option1", value: "value1"},
+              %{type: 3, name: "option2", value: "value2", focused: true}
+            ]
+          }
+        ]
+      }
+
+      {"command",
+       [
+         %{name: "sub-command", value: "", focused: false},
+         %{name: "option1", value: "value1", focused: false},
+         %{name: "option2", value: "value2", focused: true}
+       ]} = Helpers.parse_interaction_data(interaction_data)
+    end
+
+    test "parse interation data with multiple sub-command layers" do
+      interaction_data = %{
+        name: "command",
+        custom_id: nil,
+        options: [
+          %{
+            type: 1,
+            name: "sub-command1",
+            value: nil,
+            options: [
+              %{
+                type: 1,
+                name: "sub-command2",
+                value: nil,
+                options: [
+                  %{type: 3, name: "option1", value: "value1"},
+                  %{type: 3, name: "option2", value: "value2", focused: true}
+                ]
+              }
+            ]
+          }
+        ]
+      }
+
+      {"command",
+       [
+         %{name: "sub-command1", value: "", focused: false},
+         %{name: "sub-command2", value: "", focused: false},
+         %{name: "option1", value: "value1", focused: false},
+         %{name: "option2", value: "value2", focused: true}
        ]} = Helpers.parse_interaction_data(interaction_data)
     end
 
@@ -51,7 +109,33 @@ defmodule BotchiniDiscordTest.HelpersTest do
       {"second", false} = Helpers.get_option(options, "second")
     end
 
-    test "should raise if option not found" do
+    test "should return nil if option not found" do
+      options = [
+        %{name: "first", value: "first", focused: false},
+        %{name: "second", value: "second", focused: false},
+        %{name: "third", value: "third", focused: false}
+      ]
+
+      nil = Helpers.get_option(options, "INVALID")
+    end
+
+    test "should return nil if no options" do
+      nil = Helpers.get_option([], "INVALID")
+    end
+  end
+
+  describe "get_option!" do
+    test "should get value and focused from options" do
+      options = [
+        %{name: "first", value: "first", focused: false},
+        %{name: "second", value: "second", focused: false},
+        %{name: "third", value: "third", focused: false}
+      ]
+
+      {"second", false} = Helpers.get_option(options, "second")
+    end
+
+    test "should return nil if option not found" do
       options = [
         %{name: "first", value: "first", focused: false},
         %{name: "second", value: "second", focused: false},
@@ -59,13 +143,13 @@ defmodule BotchiniDiscordTest.HelpersTest do
       ]
 
       assert_raise RuntimeError, "Invalid option received", fn ->
-        Helpers.get_option(options, "invalid")
+        Helpers.get_option!(options, "INVALID")
       end
     end
 
-    test "should raise if options are empty" do
+    test "should return nil if no options" do
       assert_raise RuntimeError, "Invalid option received", fn ->
-        Helpers.get_option([], "first")
+        Helpers.get_option!([], "INVALID")
       end
     end
   end

@@ -10,6 +10,7 @@ defmodule Botchini.DataCase do
   alias Botchini.Repo
   alias Botchini.Creators.Schema.{Creator, Follower}
   alias Botchini.Services.Schema.Video
+  alias Botchini.Squads.Schema.{Squad, SquadMember}
 
   using do
     quote do
@@ -96,5 +97,37 @@ defmodule Botchini.DataCase do
       |> Repo.insert()
 
     video
+  end
+
+  @spec generate_squad(map()) :: Squad.t()
+  def generate_squad(attrs \\ %{}) do
+    payload =
+      %{
+        name: Faker.String.base64()
+      }
+      |> Map.merge(attrs)
+
+    {:ok, squad} =
+      %Squad{}
+      |> Squad.changeset(payload)
+      |> Repo.insert()
+
+    squad
+  end
+
+  @spec generate_squad_member(map()) :: SquadMember.t()
+  def generate_squad_member(attrs \\ %{}) do
+    payload =
+      %{
+        discord_user_id: Faker.String.base64()
+      }
+      |> Map.merge(attrs)
+
+    {:ok, member} =
+      %SquadMember{}
+      |> SquadMember.changeset(payload)
+      |> Repo.insert()
+
+    member
   end
 end

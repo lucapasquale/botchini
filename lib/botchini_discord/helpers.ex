@@ -10,17 +10,8 @@ defmodule BotchiniDiscord.Helpers do
 
   @spec parse_interaction_data(ApplicationCommandInteractionData.t()) ::
           InteractionBehaviour.interaction_input()
-  def parse_interaction_data(interaction_data) when is_nil(interaction_data.custom_id) do
-    options =
-      (interaction_data.options || [])
-      |> Enum.map(fn opt ->
-        %{name: opt.name, value: opt.value, focused: Map.get(opt, :focused, false)}
-      end)
 
-    {interaction_data.name, options}
-  end
-
-  def parse_interaction_data(interaction_data) do
+  def parse_interaction_data(interaction_data) when is_binary(interaction_data.custom_id) do
     [name, options_string] = String.split(interaction_data.custom_id, "|")
 
     options =
@@ -31,6 +22,35 @@ defmodule BotchiniDiscord.Helpers do
       end)
 
     {name, options}
+  end
+
+  def parse_interaction_data(interaction_data) do
+    options = parse_list_of_options(interaction_data.options)
+
+    {interaction_data.name, options}
+  end
+
+  defp parse_list_of_options(options) when is_nil(options), do: []
+
+  defp parse_list_of_options(options) do
+    Enum.flat_map(options, fn option ->
+      case option.type do
+        1 -> parse_sub_command(option)
+        _ -> [parse_data_option(option)]
+      end
+    end)
+  end
+
+  defp parse_sub_command(option) do
+    [%{name: option.name, value: "", focused: false}] ++ parse_list_of_options(option.options)
+  end
+
+  defp parse_data_option(option) do
+    %{
+      name: option.name,
+      value: option.value,
+      focused: if(is_nil(Map.get(option, :focused)), do: false, else: option.focused)
+    }
   end
 
   @spec get_service(InteractionBehaviour.interaction_options()) :: Creator.services()
@@ -45,12 +65,24 @@ defmodule BotchiniDiscord.Helpers do
     {cleanup_stream_code(code), autocomplete}
   end
 
-  @spec get_option(InteractionBehaviour.interaction_options(), String.t()) ::
+  @spec get_option!(InteractionBehaviour.interaction_options(), String.t()) ::
           {String.t(), boolean()}
+  def get_option!(options, name) do
+    case get_option(options, name) do
+      nil ->
+        raise("Invalid option received")
+
+      option ->
+        option
+    end
+  end
+
+  @spec get_option(InteractionBehaviour.interaction_options(), String.t()) ::
+          nil | {String.t(), boolean()}
   def get_option(options, name) do
     case Enum.find(options, fn opt -> opt.name == name end) do
       nil ->
-        raise("Invalid option received")
+        nil
 
       option ->
         {option.value, option.focused}

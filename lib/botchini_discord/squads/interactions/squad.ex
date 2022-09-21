@@ -3,6 +3,7 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
   Handles /squad slash command
   """
 
+  alias Nostrum.Cache.GuildCache
   alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias Botchini.{Discord, Squads}
@@ -152,20 +153,30 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
       search_squads(guild, term_or_id)
     else
       squad = Squads.get_by_id!(guild, term_or_id)
+      users_in_voice = users_in_caller_voice_channel(interaction)
 
-      member_mentions =
+      members_to_call =
         Squads.all_members(squad)
-        |> Enum.map_join("\n", fn member -> "<@#{member.discord_user_id}>" end)
+        |> Enum.filter(fn member -> !Enum.member?(users_in_voice, member.discord_user_id) end)
 
-      %{
-        type: 4,
-        data: %{
-          content: """
-            Calling all members from the #{squad.name} squad!
-            #{member_mentions}
-          """
+      if members_to_call == [] do
+        %{
+          type: 4,
+          data: %{
+            content: "All members from squad #{squad.name} are already on the voice channel"
+          }
         }
-      }
+      else
+        %{
+          type: 4,
+          data: %{
+            content: """
+            Calling all members from the #{squad.name} squad!
+            #{Enum.map_join(members_to_call, "\n", fn member -> "<@#{member.discord_user_id}>" end)}
+            """
+          }
+        }
+      end
     end
   end
 
@@ -204,5 +215,21 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
       type: 8,
       data: %{choices: choices}
     }
+  end
+
+  defp users_in_caller_voice_channel(interaction) do
+    voice_states = GuildCache.get!(interaction.guild_id) |> Map.get(:voice_states)
+
+    case Enum.find(voice_states, fn vs -> vs.user_id == interaction.user.id end) do
+      nil ->
+        []
+
+      voice_state ->
+        voice_states
+        |> Enum.filter(fn vs ->
+          vs.channel_id == voice_state.channel_id && vs.self_deaf == false
+        end)
+        |> Enum.map(fn vs -> Integer.to_string(vs.user_id) end)
+    end
   end
 end

@@ -12,7 +12,7 @@ defmodule BotchiniDiscord.Helpers do
           InteractionBehaviour.interaction_input()
 
   def parse_interaction_data(interaction_data) when is_binary(interaction_data.custom_id) do
-    [name, options_string] = String.split(interaction_data.custom_id, "|")
+    [command_string, options_string] = String.split(interaction_data.custom_id, "|")
 
     options =
       String.split(options_string, ":")
@@ -21,7 +21,7 @@ defmodule BotchiniDiscord.Helpers do
         acc ++ [%{name: name, value: value, focused: false}]
       end)
 
-    {name, options}
+    {command_string, options}
   end
 
   def parse_interaction_data(interaction_data) do

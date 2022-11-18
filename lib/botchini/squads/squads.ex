@@ -39,6 +39,14 @@ defmodule Botchini.Squads do
     |> Repo.insert()
   end
 
+  @spec delete(Squad.t()) :: {:ok, Squad.t()}
+  def delete(squad) do
+    from(s in SquadMember, where: s.squad_id == ^squad.id)
+    |> Repo.delete_all()
+
+    Repo.delete(squad)
+  end
+
   @spec all_members(Squad.t()) :: list(SquadMember.t())
   def all_members(squad) do
     from(s in SquadMember, where: s.squad_id == ^squad.id)

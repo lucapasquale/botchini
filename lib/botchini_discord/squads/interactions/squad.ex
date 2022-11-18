@@ -8,6 +8,7 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
 
   alias Botchini.{Discord, Squads}
   alias BotchiniDiscord.{Helpers, InteractionBehaviour}
+  alias BotchiniDiscord.Squads.Responses.Components
 
   @behaviour InteractionBehaviour
 
@@ -27,6 +28,20 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
               type: 3,
               required: true,
               name: "name",
+              description: "Name of the squad"
+            }
+          ]
+        },
+        %{
+          name: "delete",
+          description: "Delete a squad",
+          type: 1,
+          options: [
+            %{
+              type: 3,
+              required: true,
+              autocomplete: true,
+              name: "term",
               description: "Name of the squad"
             }
           ]
@@ -90,6 +105,9 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
       Helpers.get_option(options, "add") ->
         handle_add(interaction, options)
 
+      Helpers.get_option(options, "delete") ->
+        handle_delete(interaction, options)
+
       Helpers.get_option(options, "join") ->
         handle_join(interaction, options)
 
@@ -111,12 +129,32 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
     {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
     {name, _autocomplete} = Helpers.get_option!(options, "name")
 
-    Squads.insert(guild, %{name: name})
+    {:ok, squad} = Squads.insert(guild, %{name: name})
 
     %{
       type: 4,
-      data: %{content: "Created squad **#{name}**"}
+      data: %{
+        content: "Created squad **#{name}**",
+        components: [Components.join_squad(squad.id)]
+      }
     }
+  end
+
+  defp handle_delete(interaction, options) do
+    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
+    {term_or_id, autocomplete} = Helpers.get_option!(options, "term")
+
+    if autocomplete do
+      search_squads(guild, term_or_id)
+    else
+      squad = Squads.get_by_id!(guild, term_or_id)
+      {:ok, _squad} = Squads.delete(squad)
+
+      %{
+        type: 4,
+        data: %{content: "Deleted squad **#{squad.name}**!"}
+      }
+    end
   end
 
   defp handle_join(interaction, options) do
@@ -153,30 +191,16 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
       search_squads(guild, term_or_id)
     else
       squad = Squads.get_by_id!(guild, term_or_id)
+      members = Squads.all_members(squad)
+
       users_in_voice = users_in_caller_voice_channel(interaction)
 
-      members_to_call =
-        Squads.all_members(squad)
-        |> Enum.filter(fn member -> !Enum.member?(users_in_voice, member.discord_user_id) end)
+      members_to_notify =
+        Enum.filter(members, fn member ->
+          !Enum.member?(users_in_voice, member.discord_user_id)
+        end)
 
-      if members_to_call == [] do
-        %{
-          type: 4,
-          data: %{
-            content: "All members from squad #{squad.name} are already on the voice channel"
-          }
-        }
-      else
-        %{
-          type: 4,
-          data: %{
-            content: """
-            Calling all members from the #{squad.name} squad!
-            #{Enum.map_join(members_to_call, "\n", fn member -> "<@#{member.discord_user_id}>" end)}
-            """
-          }
-        }
-      end
+      notify_squad(squad, {members, members_to_notify})
     end
   end
 
@@ -231,5 +255,36 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
         end)
         |> Enum.map(fn vs -> Integer.to_string(vs.user_id) end)
     end
+  end
+
+  defp notify_squad(squad, {members, _members_to_notify}) when members == [] do
+    %{
+      type: 4,
+      data: %{
+        content: "The squad #{squad.name} has no members"
+      }
+    }
+  end
+
+  defp notify_squad(squad, {_members, members_to_notify}) when members_to_notify == [] do
+    %{
+      type: 4,
+      data: %{
+        content: "All members from squad #{squad.name} are already on the voice channel"
+      }
+    }
+  end
+
+  defp notify_squad(squad, {_members, members_to_notify}) do
+    %{
+      type: 4,
+      data: %{
+        content: """
+        Calling all members from the #{squad.name} squad!
+        #{Enum.map_join(members_to_notify, "\n", fn member -> "<@#{member.discord_user_id}>" end)}
+        """,
+        components: [Components.join_and_leave_squad(squad.id)]
+      }
+    }
   end
 end

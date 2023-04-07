@@ -87,6 +87,17 @@ defmodule BotchiniDiscordTest.HelpersTest do
 
     test "parse interation data for component with custom_id" do
       interaction_data = %{
+        custom_id: "command|option1:"
+      }
+
+      {"command",
+       [
+         %{name: "option1", value: "", focused: false}
+       ]} = Helpers.parse_interaction_data(interaction_data)
+    end
+
+    test "parse interation data for component with custom_id and options" do
+      interaction_data = %{
         custom_id: "command|option1:value1:option2:value2"
       }
 

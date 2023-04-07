@@ -13,7 +13,7 @@ defmodule BotchiniDiscord.Music.Responses.Components do
             type: 2,
             style: 2,
             label: "Pause",
-            custom_id: "pause"
+            custom_id: "music|pause:"
           }
         ] ++ skip_and_stop_buttons()
     }
@@ -29,7 +29,7 @@ defmodule BotchiniDiscord.Music.Responses.Components do
             type: 2,
             style: 3,
             label: "Resume",
-            custom_id: "resume"
+            custom_id: "music|resume:"
           }
         ] ++ skip_and_stop_buttons()
     }
@@ -41,13 +41,13 @@ defmodule BotchiniDiscord.Music.Responses.Components do
         type: 2,
         style: 2,
         label: "Skip",
-        custom_id: "skip"
+        custom_id: "music|skip:"
       },
       %{
         type: 2,
         style: 4,
         label: "Stop",
-        custom_id: "stop"
+        custom_id: "music|stop:"
       }
     ]
   end

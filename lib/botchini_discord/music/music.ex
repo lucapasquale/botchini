@@ -27,7 +27,7 @@ defmodule BotchiniDiscord.Music do
 
   def handle_voice_update(event) do
     guild = Discord.fetch_guild(Integer.to_string(event.guild_id))
-    cur_track = Botchini.Music.get_current_track(guild) |> IO.inspect(label: "cur_track")
+    cur_track = Botchini.Music.get_current_track(guild)
 
     if cur_track && cur_track.status == :paused do
       :noop

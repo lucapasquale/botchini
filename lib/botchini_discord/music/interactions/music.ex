@@ -110,8 +110,8 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
         %{
           type: 4,
           data: %{
-            content: "Added #{url} to queue"
-            # components: [Components.pause_controls()]
+            content: "Added #{url} to queue",
+            components: [Components.pause_controls()]
           }
         }
     end
@@ -127,8 +127,8 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
       %{
         type: 4,
         data: %{
-          content: "Paused current song"
-          # components: [Components.resume_controls()]
+          content: "Paused current song",
+          components: [Components.resume_controls()]
         }
       }
     else
@@ -155,8 +155,8 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
       %{
         type: 4,
         data: %{
-          content: "Resuming current song"
-          # components: [Components.pause_controls()]
+          content: "Resuming current song",
+          components: [Components.pause_controls()]
         }
       }
     end
@@ -201,8 +201,8 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
       %{
         type: 4,
         data: %{
-          content: "Skipping to next song"
-          # components: [Components.pause_controls()]
+          content: "Skipping to next song",
+          components: [Components.pause_controls()]
         }
       }
     end

@@ -7,7 +7,7 @@ defmodule BotchiniDiscord.Consumer do
   use Nostrum.Consumer
 
   alias Botchini.Discord
-  alias BotchiniDiscord.Interactions
+  alias BotchiniDiscord.{Interactions, Music}
 
   def start_link do
     Consumer.start_link(__MODULE__)
@@ -28,6 +28,16 @@ defmodule BotchiniDiscord.Consumer do
 
   def handle_event({:INTERACTION_CREATE, interaction, _ws_state}) do
     Interactions.handle_interaction(interaction)
+  end
+
+  def handle_event({:VOICE_READY, event, _ws_state}) do
+    IO.inspect(event, label: "VOICE_READY")
+    Music.handle_voice_ready(event)
+  end
+
+  def handle_event({:VOICE_SPEAKING_UPDATE, event, _ws_state}) do
+    IO.inspect(event, label: "VOICE_SPEAKING_UPDATE")
+    Music.handle_voice_update(event)
   end
 
   def handle_event({_event, _data, _ws}) do

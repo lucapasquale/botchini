@@ -27,28 +27,28 @@ defmodule Botchini.MixProject do
   defp deps do
     [
       # Discord
-      {:nostrum, "~> 0.6", runtime: Mix.env() != :test},
+      {:nostrum, "~> 0.6.1", runtime: Mix.env() != :test},
       {:cowlib, "~> 2.11", hex: :remedy_cowlib, override: true},
       # Phoenix
-      {:phoenix, "~> 1.6.10"},
-      {:phoenix_html, "~> 3.0"},
-      {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.17.5"},
-      {:floki, ">= 0.30.0", only: :test},
+      {:phoenix, "~> 1.6.16"},
+      {:phoenix_html, "~> 3.3.1"},
       {:phoenix_live_dashboard, "~> 0.6"},
-      {:esbuild, "~> 0.4", runtime: Mix.env() == :dev},
+      {:phoenix_live_reload, "~> 1.4.1", only: :dev},
+      {:phoenix_live_view, "~> 0.17.14"},
+      {:floki, ">= 0.34.2", only: :test},
+      {:esbuild, "~> 0.7", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 0.18"},
-      {:jason, "~> 1.2"},
-      {:plug_cowboy, "~> 2.5"},
-      {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
+      {:gettext, "~> 0.22.1"},
+      {:jason, "~> 1.4.0"},
+      {:plug_cowboy, "~> 2.6.1"},
+      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
       {:petal_components, "~> 0.17"},
       {:elixir_xml_to_map, "~> 2.0"},
       # Ecto
       {:phoenix_ecto, "~> 4.4"},
-      {:ecto_sql, "~> 3.6"},
-      {:postgrex, ">= 0.0.0"},
+      {:ecto_sql, "~> 3.9.2"},
+      {:postgrex, ">= 0.16.5"},
       # HTTP Client
       {:tesla, "~> 1.4.0"},
       {:hackney, "~> 1.17.0"},
@@ -58,7 +58,7 @@ defmodule Botchini.MixProject do
       {:quantum, "~> 3.0"},
       # Development and testing
       {:remix, "~> 0.0.1", only: :dev},
-      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.7.0", only: [:dev, :test], runtime: false},
       {:patch, "~> 0.12.0", only: [:test]},
       {:faker, "~> 0.16", only: :test}
     ]

@@ -72,7 +72,8 @@ RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 local
   && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
 # Install yt-dlp
-RUN add-apt-repository ppa:tomtomtom/yt-dlp && apt update && apt install yt-dlp
+RUN wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/local/bin/yt-dlp \
+  && chmod a+rx /usr/local/bin/yt-dlp
 
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen

@@ -3,13 +3,13 @@ on: pull_request
 
 env:
   MIX_ENV: test
-  ELIXIR_VER: 1.12.2
-  OTP_VER: 24
+  ELIXIR_VER: 1.14.4
+  OTP_VER: 25
 
 jobs:
   check-format:
     name: Check formatting
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
@@ -35,7 +35,7 @@ jobs:
 
   credo:
     name: Run Credo
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
@@ -61,7 +61,7 @@ jobs:
 
   test:
     name: Run Tests
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     services:
       db:
         image: postgres:11

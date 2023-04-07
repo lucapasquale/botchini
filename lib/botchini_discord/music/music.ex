@@ -14,7 +14,7 @@ defmodule BotchiniDiscord.Music do
         Nostrum.Voice.stop(guild.discord_guild_id)
 
       {:ok, track} ->
-        IO.inspect(track)
+        IO.inspect(track, label: "track")
 
         try_play(event.guild_id, track.play_url, :ytdl, realtime: true)
         |> IO.inspect(label: "try_play")

@@ -85,17 +85,13 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
     end
   end
 
-  defp get_voice_channel_of_msg(_) do
-    459_166_748_432_924_695
+  defp get_voice_channel_of_msg(interaction) do
+    interaction.guild_id
+    |> GuildCache.get!()
+    |> Map.get(:voice_states)
+    |> Enum.find(%{}, fn v -> v.user_id == interaction.member.user.id end)
+    |> Map.get(:channel_id)
   end
-
-  # defp get_voice_channel_of_msg(interaction) do
-  #   interaction.guild_id
-  #   |> GuildCache.get!()
-  #   |> Map.get(:voice_states)
-  #   |> Enum.find(%{}, fn v -> v.user_id == interaction.member.user.id end)
-  #   |> Map.get(:channel_id)
-  # end
 
   defp get_track_url(url) do
     if String.starts_with?(url, "http") do

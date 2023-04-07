@@ -6,8 +6,7 @@ config :botchini,
   port: System.get_env("PORT", "4000") |> String.to_integer()
 
 config :nostrum,
-  audio_timeout: 60_000,
-  log_full_events: true
+  audio_timeout: 60_000
 
 config :botchini, Botchini.Scheduler,
   jobs: [

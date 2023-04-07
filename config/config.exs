@@ -6,6 +6,7 @@ config :botchini,
   port: System.get_env("PORT", "4000") |> String.to_integer()
 
 config :nostrum,
+  youtubedl: "yt-dlp",
   audio_timeout: 60_000
 
 config :botchini, Botchini.Scheduler,

@@ -14,12 +14,9 @@ defmodule BotchiniDiscord.Music do
         Nostrum.Voice.stop(guild.discord_guild_id)
 
       {:ok, track} ->
-        IO.inspect(track, label: "track")
+        Nostrum.Voice.play(event.guild_id, track.play_url, :ytdl, realtime: true)
 
-        try_play(event.guild_id, track.play_url, :ytdl, realtime: true)
-        |> IO.inspect(label: "try_play")
-
-        Nostrum.Voice.playing?(event.guild_id) |> IO.inspect(label: "playing?")
+        Nostrum.Voice.playing?(event.guild_id)
     end
   end
 
@@ -40,20 +37,8 @@ defmodule BotchiniDiscord.Music do
           Nostrum.Voice.leave_channel(event.guild_id)
 
         {:ok, track} ->
-          try_play(event.guild_id, track.play_url, :ytdl, realtime: true)
-          |> IO.inspect(label: "try_play")
+          Nostrum.Voice.play(event.guild_id, track.play_url, :ytdl, realtime: true)
       end
-    end
-  end
-
-  defp try_play(guild_id, url, type, opts) do
-    case Nostrum.Voice.play(guild_id, url, type, opts) do
-      {:error, _msg} ->
-        Process.sleep(100)
-        try_play(guild_id, url, type, opts)
-
-      _ ->
-        :ok
     end
   end
 end

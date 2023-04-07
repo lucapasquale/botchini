@@ -57,7 +57,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
     end
   end
 
-  def handle_play(interaction, options) do
+  defp handle_play(interaction, options) do
     guild = Discord.fetch_guild(Integer.to_string(interaction.guild_id))
 
     case get_voice_channel_of_msg(interaction) do

@@ -31,12 +31,10 @@ defmodule BotchiniDiscord.Consumer do
   end
 
   def handle_event({:VOICE_READY, event, _ws_state}) do
-    IO.inspect(event, label: "VOICE_READY")
     Music.handle_voice_ready(event)
   end
 
   def handle_event({:VOICE_SPEAKING_UPDATE, event, _ws_state}) do
-    IO.inspect(event, label: "VOICE_SPEAKING_UPDATE")
     Music.handle_voice_update(event)
   end
 

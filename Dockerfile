@@ -69,7 +69,7 @@ RUN mix release
 FROM ${RUNNER_IMAGE}
 
 RUN apt-get update -y \
-  && apt-get install -y software-properties-common libstdc++6 openssl libncurses5 locales ffmpeg curl  \
+  && apt-get install -y libstdc++6 openssl libncurses5 locales ffmpeg curl  \
   && apt-get clean \
   && rm -f /var/lib/apt/lists/*_*
 

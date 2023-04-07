@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Setup elixir
       uses: actions/setup-elixir@v1
       with:
@@ -20,7 +20,7 @@ jobs:
         otp-version: ${{ env.OTP_VER }}
     - id: mix-cache
       name: Retrieve Mix Dependencies Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: deps
         key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Setup elixir
       uses: actions/setup-elixir@v1
       with:
@@ -46,7 +46,7 @@ jobs:
         otp-version: ${{ env.OTP_VER }}
     - id: mix-cache
       name: Retrieve Mix Dependencies Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: deps
         key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
@@ -75,7 +75,7 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Setup elixir
       uses: actions/setup-elixir@v1
       with:
@@ -83,7 +83,7 @@ jobs:
         otp-version: ${{ env.OTP_VER }}
     - id: mix-cache
       name: Retrieve Mix Dependencies Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: deps
         key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}

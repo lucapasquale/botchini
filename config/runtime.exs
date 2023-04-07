@@ -73,5 +73,6 @@ if config_env() == :prod do
     twitch_webhook_secret: System.get_env("TWITCH_WEBHOOK_SECRET")
 
   config :nostrum,
-    token: System.get_env("DISCORD_TOKEN")
+    token: System.get_env("DISCORD_TOKEN"),
+    youtubedl: "yt-dlp"
 end

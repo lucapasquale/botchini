@@ -1,70 +1,17 @@
 name: PR Checks
 on: pull_request
 
+permissions:
+  contents: read
+
 env:
   MIX_ENV: test
-  ELIXIR_VER: 1.12.2
-  OTP_VER: 24
 
 jobs:
-  check-format:
-    name: Check formatting
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: Setup elixir
-      uses: actions/setup-elixir@v1
-      with:
-        elixir-version: ${{ env.ELIXIR_VER }}
-        otp-version: ${{ env.OTP_VER }}
-    - id: mix-cache
-      name: Retrieve Mix Dependencies Cache
-      uses: actions/cache@v3
-      with:
-        path: deps
-        key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
-    - name: Install Mix Dependencies
-      if: steps.mix-cache.outputs.cache-hit != 'true'
-      run: |
-        mix local.rebar --force
-        mix local.hex --force
-        mix deps.get
-
-    - run: mix format --check-formatted
-
-  credo:
-    name: Run Credo
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: Setup elixir
-      uses: actions/setup-elixir@v1
-      with:
-        elixir-version: ${{ env.ELIXIR_VER }}
-        otp-version: ${{ env.OTP_VER }}
-    - id: mix-cache
-      name: Retrieve Mix Dependencies Cache
-      uses: actions/cache@v3
-      with:
-        path: deps
-        key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
-    - name: Install Mix Dependencies
-      if: steps.mix-cache.outputs.cache-hit != 'true'
-      run: |
-        mix local.rebar --force
-        mix local.hex --force
-        mix deps.get
-
-    - run: mix credo --strict
-
   test:
-    name: Run Tests
-    runs-on: ubuntu-latest
     services:
       db:
-        image: postgres:11
+        image: postgres:13
         ports: ['5432:5432']
         env:
           POSTGRES_PASSWORD: postgres
@@ -74,24 +21,57 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    name: Test on OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        otp: ['25.0.4']
+        elixir: ['1.14.4']
+
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup elixir
-      uses: actions/setup-elixir@v1
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
       with:
-        elixir-version: ${{ env.ELIXIR_VER }}
-        otp-version: ${{ env.OTP_VER }}
-    - id: mix-cache
-      name: Retrieve Mix Dependencies Cache
+        otp-version: ${{matrix.otp}}
+        elixir-version: ${{matrix.elixir}}
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Cache deps
+      id: cache-deps
       uses: actions/cache@v3
+      env:
+        cache-name: cache-elixir-deps
       with:
         path: deps
-        key: ${{ runner.os }}-${{ env.OTP_VER }}-${{ env.ELIXIR_VER }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
-    - name: Install Mix Dependencies
-      if: steps.mix-cache.outputs.cache-hit != 'true'
-      run: |
-        mix local.rebar --force
-        mix local.hex --force
-        mix deps.get
+        key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-mix-${{ env.cache-name }}-
 
-    - run: mix test
+    - name: Cache compiled build
+      id: cache-build
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-compiled-build
+      with:
+        path: _build
+        key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-mix-${{ env.cache-name }}-
+          ${{ runner.os }}-mix-
+
+    - name: Install dependencies
+      run: mix deps.get
+
+    - name: Compiles without warnings
+      run: mix compile --warnings-as-errors
+
+    - name: Check Formatting
+      run: mix format --check-formatted
+
+    - name: Run credo
+      run: mix credo --strict
+
+    - name: Run tests
+      run: mix test

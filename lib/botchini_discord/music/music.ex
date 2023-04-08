@@ -7,7 +7,6 @@ defmodule BotchiniDiscord.Music do
 
   @spec handle_voice_ready(Nostrum.Struct.Event.VoiceReady.t()) :: any()
   def handle_voice_ready(event) do
-    IO.inspect(event)
     guild = Discord.fetch_guild(Integer.to_string(event.guild_id))
 
     case Botchini.Music.start_next_track(guild) do

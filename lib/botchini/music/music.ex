@@ -7,8 +7,8 @@ defmodule Botchini.Music do
   alias Ecto.Query
 
   alias Botchini.Discord.Schema.Guild
-  alias Botchini.Repo
   alias Botchini.Music.Schema.Track
+  alias Botchini.Repo
 
   @spec get_current_track(Guild.t()) :: Track.t() | nil
   def get_current_track(guild) do

@@ -223,8 +223,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
       tracks ->
         list_message =
           tracks
-          |> Enum.map(fn track -> " - #{track.play_url}" end)
-          |> Enum.join("\n")
+          |> Enum.map_join("\n", fn track -> " - #{track.play_url}" end)
 
         %{
           type: 4,

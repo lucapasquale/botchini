@@ -7,8 +7,8 @@ defmodule Botchini.Music do
   alias Ecto.Query
 
   alias Botchini.Discord.Schema.Guild
-  alias Botchini.Repo
   alias Botchini.Music.Schema.Track
+  alias Botchini.Repo
 
   @spec get_current_track(Guild.t()) :: Track.t() | nil
   def get_current_track(guild) do
@@ -29,6 +29,17 @@ defmodule Botchini.Music do
     )
     |> Repo.all()
     |> List.first()
+  end
+
+  @spec get_next_tracks(Guild.t()) :: list(Track.t())
+  def get_next_tracks(guild) do
+    Query.from(t in Track,
+      where: t.guild_id == ^guild.id,
+      where: t.status == :waiting,
+      order_by: t.inserted_at,
+      limit: 10
+    )
+    |> Repo.all()
   end
 
   @spec insert_track(%{play_url: String.t()}, Guild.t()) :: {:ok, Track.t()}

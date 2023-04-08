@@ -10,8 +10,8 @@ defmodule BotchiniDiscord.Interactions do
   alias BotchiniDiscord.Common.Interactions.About
   alias BotchiniDiscord.Helpers
   alias BotchiniDiscord.Creators.Interactions.{ConfirmUnfollow, Follow, Info, List, Unfollow}
-  alias BotchiniDiscord.Squads.Interactions.Squad
   alias BotchiniDiscord.Music.Interactions.Music
+  alias BotchiniDiscord.Squads.Interactions.Squad
 
   @spec register_commands() :: any()
   def register_commands do

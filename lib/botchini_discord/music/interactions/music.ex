@@ -21,7 +21,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
       options: [
         %{
           name: "play",
-          description: "Play a music",
+          description: "Play a song",
           type: 1,
           options: [
             %{
@@ -50,6 +50,11 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
         %{
           name: "stop",
           description: "Stop playing",
+          type: 1
+        },
+        %{
+          name: "queue",
+          description: "Next songs",
           type: 1
         }
       ]
@@ -80,6 +85,9 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
 
       Helpers.get_option(options, "stop") ->
         handle_stop(interaction, options)
+
+      Helpers.get_option(options, "queue") ->
+        handle_queue(interaction, options)
 
       true ->
         %{
@@ -120,22 +128,23 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
   defp handle_pause(interaction, _options) do
     guild = Discord.fetch_guild(Integer.to_string(interaction.guild_id))
 
-    if Nostrum.Voice.playing?(interaction.guild_id) do
-      Music.pause(guild)
-      Nostrum.Voice.pause(interaction.guild_id)
-
-      %{
-        type: 4,
-        data: %{
-          content: "Paused current song",
-          components: [Components.resume_controls()]
+    case Music.pause(guild) do
+      {:ok, nil} ->
+        %{
+          type: 4,
+          data: %{content: "Not currently playing"}
         }
-      }
-    else
-      %{
-        type: 4,
-        data: %{content: "Not currently playing"}
-      }
+
+      {:ok, cur_track} ->
+        Nostrum.Voice.pause(interaction.guild_id)
+
+        %{
+          type: 7,
+          data: %{
+            content: "Paused #{cur_track.play_url}",
+            components: [Components.resume_controls()]
+          }
+        }
     end
   end
 
@@ -150,61 +159,82 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
       }
     else
       Music.resume(guild)
-      :ok = Nostrum.Voice.resume(interaction.guild_id)
+      Nostrum.Voice.resume(interaction.guild_id)
 
       %{
-        type: 4,
+        type: 7,
         data: %{
-          content: "Resuming current song",
+          content: "Resuming #{cur_track.play_url}",
           components: [Components.pause_controls()]
         }
       }
+    end
+  end
+
+  defp handle_skip(interaction, _options) do
+    guild = Discord.fetch_guild(Integer.to_string(interaction.guild_id))
+
+    case Music.get_next_track(guild) do
+      nil ->
+        Music.clear_queue(guild)
+        Nostrum.Voice.stop(interaction.guild_id)
+
+        %{
+          type: 4,
+          data: %{content: "No song in queue, stopping"}
+        }
+
+      _track ->
+        Nostrum.Voice.stop(interaction.guild_id)
+
+        %{
+          type: 4,
+          data: %{
+            content: "Skipping to next song",
+            components: [Components.pause_controls()]
+          }
+        }
     end
   end
 
   defp handle_stop(interaction, _options) do
     guild = Discord.fetch_guild(Integer.to_string(interaction.guild_id))
 
-    case Music.get_current_track(guild) do
-      nil ->
-        %{
-          type: 4,
-          data: %{content: "No song in queue"}
-        }
+    Music.clear_queue(guild)
+    Nostrum.Voice.stop(interaction.guild_id)
+    Nostrum.Voice.leave_channel(interaction.guild_id)
 
-      _track ->
-        Music.clear_queue(guild)
-        Nostrum.Voice.stop(interaction.guild_id)
-
-        %{
-          type: 4,
-          data: %{content: "Stopped playing"}
-        }
-    end
+    %{
+      type: 4,
+      data: %{content: "Stopped playing"}
+    }
   end
 
-  defp handle_skip(interaction, _options) do
+  defp handle_queue(interaction, _options) do
     guild = Discord.fetch_guild(Integer.to_string(interaction.guild_id))
-    next_song = Music.get_next_track(guild)
 
-    if is_nil(next_song) do
-      Music.clear_queue(guild)
-      :ok = Nostrum.Voice.stop(interaction.guild_id)
-
-      %{
-        type: 4,
-        data: %{content: "No song in queue, stopping"}
-      }
-    else
-      :ok = Nostrum.Voice.stop(interaction.guild_id)
-
-      %{
-        type: 4,
-        data: %{
-          content: "Skipping to next song",
-          components: [Components.pause_controls()]
+    case Music.get_next_tracks(guild) do
+      tracks when tracks == [] ->
+        %{
+          type: 4,
+          data: %{content: "Queue is empty"}
         }
-      }
+
+      tracks ->
+        list_message =
+          tracks
+          |> Enum.map(fn track -> " - #{track.play_url}" end)
+          |> Enum.join("\n")
+
+        %{
+          type: 4,
+          data: %{
+            content: """
+            Next songs:
+            #{list_message}
+            """
+          }
+        }
     end
   end
 

@@ -7,16 +7,16 @@ defmodule BotchiniDiscord.Music do
 
   @spec handle_voice_ready(Nostrum.Struct.Event.VoiceReady.t()) :: any()
   def handle_voice_ready(event) do
+    IO.inspect(event)
     guild = Discord.fetch_guild(Integer.to_string(event.guild_id))
 
     case Botchini.Music.start_next_track(guild) do
       {:ok, nil} ->
         Nostrum.Voice.stop(guild.discord_guild_id)
+        Nostrum.Voice.leave_channel(event.guild_id)
 
       {:ok, track} ->
         Nostrum.Voice.play(event.guild_id, track.play_url, :ytdl, realtime: true)
-
-        Nostrum.Voice.playing?(event.guild_id)
     end
   end
 

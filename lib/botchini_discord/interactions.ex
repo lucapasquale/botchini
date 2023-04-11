@@ -28,15 +28,23 @@ defmodule BotchiniDiscord.Interactions do
       ]
       |> Enum.filter(&(!is_nil(elem(&1, 1))))
       |> Enum.reduce({[], []}, fn {access, command}, acc ->
-        if command_is_public({access, command}) do
+        is_public =
+          {access, command}
+          |> command_is_public(Application.fetch_env!(:botchini, :environment))
+
+        if is_public do
           {elem(acc, 0) ++ [command], elem(acc, 1)}
         else
           {elem(acc, 0), elem(acc, 1) ++ [command]}
         end
       end)
 
-    register_commands(public_commands, Application.fetch_env!(:botchini, :environment))
-    register_commands(private_commands, Application.fetch_env!(:botchini, :environment))
+    Api.bulk_overwrite_global_application_commands(public_commands)
+
+    Api.bulk_overwrite_guild_application_commands(
+      Application.fetch_env!(:botchini, :test_guild_id),
+      private_commands
+    )
   end
 
   @spec handle_interaction(Interaction.t()) :: any()
@@ -66,24 +74,11 @@ defmodule BotchiniDiscord.Interactions do
     end
   end
 
-  defp command_is_public({:public, _command}), do: true
+  # Set all commands as private while in dev mode
+  defp command_is_public(_command_tupple, :dev), do: false
 
-  defp command_is_public(_command_tupple) do
-    Application.fetch_env!(:botchini, :environment) == :dev
-  end
-
-  defp register_commands(commands, :dev) do
-    case Application.fetch_env(:botchini, :test_guild_id) do
-      {:ok, guild_id} ->
-        Api.bulk_overwrite_guild_application_commands(guild_id, commands)
-
-      _ ->
-        :noop
-    end
-  end
-
-  defp register_commands(commands, _env) do
-    Api.bulk_overwrite_global_application_commands(commands)
+  defp command_is_public({access, _command}, _env) do
+    access == :public
   end
 
   defp call_interaction(interaction, {"about", opt}),

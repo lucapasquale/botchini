@@ -70,7 +70,8 @@ if config_env() == :prod do
     youtube_webhook_secret: System.get_env("YOUTUBE_WEBHOOK_SECRET"),
     twitch_client_id: System.get_env("TWITCH_CLIENT_ID"),
     twitch_client_secret: System.get_env("TWITCH_CLIENT_SECRET"),
-    twitch_webhook_secret: System.get_env("TWITCH_WEBHOOK_SECRET")
+    twitch_webhook_secret: System.get_env("TWITCH_WEBHOOK_SECRET"),
+    test_guild_id: System.get_env("TEST_GUILD_ID")
 
   config :nostrum,
     token: System.get_env("DISCORD_TOKEN"),

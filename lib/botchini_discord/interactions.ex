@@ -15,29 +15,28 @@ defmodule BotchiniDiscord.Interactions do
 
   @spec register_commands() :: any()
   def register_commands do
-    [
-      About.get_command(),
-      ConfirmUnfollow.get_command(),
-      Follow.get_command(),
-      Info.get_command(),
-      List.get_command(),
-      Unfollow.get_command(),
-      Squad.get_command(),
-      Music.get_command()
-    ]
-    |> Enum.filter(&(!is_nil(&1)))
-    |> register_commands(Application.fetch_env!(:botchini, :environment))
-  end
+    {public_commands, private_commands} =
+      [
+        {:public, About.get_command()},
+        {:public, ConfirmUnfollow.get_command()},
+        {:public, Follow.get_command()},
+        {:public, Info.get_command()},
+        {:public, List.get_command()},
+        {:public, Unfollow.get_command()},
+        {:private, Squad.get_command()},
+        {:private, Music.get_command()}
+      ]
+      |> Enum.filter(&(!is_nil(elem(&1, 1))))
+      |> Enum.reduce({[], []}, fn {access, command}, acc ->
+        if command_is_public({access, command}) do
+          {elem(acc, 0) ++ [command], elem(acc, 1)}
+        else
+          {elem(acc, 0), elem(acc, 1) ++ [command]}
+        end
+      end)
 
-  defp register_commands(commands, :prod) do
-    Api.bulk_overwrite_global_application_commands(commands)
-  end
-
-  defp register_commands(commands, _env) do
-    case Application.fetch_env(:botchini, :test_guild_id) do
-      {:ok, guild_id} -> Api.bulk_overwrite_guild_application_commands(guild_id, commands)
-      _ -> :noop
-    end
+    register_commands(public_commands, Application.fetch_env!(:botchini, :environment))
+    register_commands(private_commands, Application.fetch_env!(:botchini, :environment))
   end
 
   @spec handle_interaction(Interaction.t()) :: any()
@@ -65,6 +64,26 @@ defmodule BotchiniDiscord.Interactions do
           data: %{content: "Something went wrong :("}
         })
     end
+  end
+
+  defp command_is_public({:public, _command}), do: true
+
+  defp command_is_public(_command_tupple) do
+    Application.fetch_env!(:botchini, :environment) == :dev
+  end
+
+  defp register_commands(commands, :dev) do
+    case Application.fetch_env(:botchini, :test_guild_id) do
+      {:ok, guild_id} ->
+        Api.bulk_overwrite_guild_application_commands(guild_id, commands)
+
+      _ ->
+        :noop
+    end
+  end
+
+  defp register_commands(commands, _env) do
+    Api.bulk_overwrite_global_application_commands(commands)
   end
 
   defp call_interaction(interaction, {"about", opt}),

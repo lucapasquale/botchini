@@ -4,6 +4,7 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
   """
 
   alias Nostrum.Struct.Interaction
+  alias Nostrum.Constants.InteractionCallbackType
 
   alias Botchini.Creators
   alias BotchiniDiscord.Creators.Responses.Components
@@ -24,7 +25,7 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
     case Creators.find_by_service(service, service_id) do
       nil ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Creator not found"}
         }
 
@@ -42,13 +43,13 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
     case Creators.discord_channel_follower(creator.id, follow_info) do
       {:error, :not_found} ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Not following!"}
         }
 
       {:ok, _} ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{
             content: unfollow_message(interaction, creator),
             components: [Components.confirm_unfollow_creator(creator.service, creator.service_id)]

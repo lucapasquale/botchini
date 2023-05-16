@@ -4,6 +4,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
   """
 
   alias Nostrum.Struct.{ApplicationCommand, Interaction}
+  alias Nostrum.Constants.{ApplicationCommandOptionType, InteractionCallbackType}
 
   alias Botchini.{Creators, Discord, Services}
   alias BotchiniDiscord.{Helpers, InteractionBehaviour}
@@ -18,7 +19,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
       description: "Start following twitch streams",
       options: [
         %{
-          type: 3,
+          type: ApplicationCommandOptionType.string(),
           name: "service",
           required: true,
           description: "Service the creator is from",
@@ -28,7 +29,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
           ]
         },
         %{
-          type: 3,
+          type: ApplicationCommandOptionType.string(),
           name: "term",
           required: true,
           description: "Twitch stream or YouTube channel"
@@ -61,7 +62,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
     else
       _ ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Creator not found!"}
         }
     end
@@ -78,13 +79,13 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
     case Creators.follow(creator, guild, follow_info) do
       {:error, :already_following} ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Already following!"}
         }
 
       {:ok, _} ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Following **#{creator.name}**!"}
         }
     end

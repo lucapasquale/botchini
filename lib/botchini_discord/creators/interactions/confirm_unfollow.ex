@@ -3,8 +3,8 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
   Handles the confirmation before unfollowing a stream
   """
 
-  alias Nostrum.Struct.Interaction
   alias Nostrum.Constants.InteractionCallbackType
+  alias Nostrum.Struct.Interaction
 
   alias Botchini.Creators
   alias BotchiniDiscord.Creators.Responses.Components

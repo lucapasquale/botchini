@@ -3,8 +3,8 @@ defmodule BotchiniDiscord.Creators.Interactions.Unfollow do
   Handles /unfollow slash command
   """
 
-  alias Nostrum.Struct.{ApplicationCommand, Interaction}
   alias Nostrum.Constants.ApplicationCommandOptionType
+  alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias Botchini.Creators
   alias BotchiniDiscord.{Helpers, InteractionBehaviour}

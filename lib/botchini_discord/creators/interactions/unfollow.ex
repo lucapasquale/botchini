@@ -3,6 +3,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Unfollow do
   Handles /unfollow slash command
   """
 
+  alias Nostrum.Constants.ApplicationCommandOptionType
   alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias Botchini.Creators
@@ -18,7 +19,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Unfollow do
       description: "Stop following twitch stream",
       options: [
         %{
-          type: 3,
+          type: ApplicationCommandOptionType.string(),
           name: "service",
           required: true,
           description: "Service the creator is from",
@@ -28,7 +29,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Unfollow do
           ]
         },
         %{
-          type: 3,
+          type: ApplicationCommandOptionType.string(),
           name: "term",
           required: true,
           autocomplete: true,

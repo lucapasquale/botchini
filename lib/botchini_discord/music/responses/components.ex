@@ -3,15 +3,17 @@ defmodule BotchiniDiscord.Music.Responses.Components do
   Generates component messages for music commands
   """
 
+  alias Nostrum.Constants.{ButtonStyle, ComponentType}
+
   @spec pause_controls() :: map()
   def pause_controls do
     %{
-      type: 1,
+      type: ComponentType.action_row(),
       components:
         [
           %{
-            type: 2,
-            style: 2,
+            type: ComponentType.button(),
+            style: ButtonStyle.secondary(),
             label: "Pause",
             custom_id: "music|pause:"
           }
@@ -22,12 +24,12 @@ defmodule BotchiniDiscord.Music.Responses.Components do
   @spec resume_controls() :: map()
   def resume_controls do
     %{
-      type: 1,
+      type: ComponentType.action_row(),
       components:
         [
           %{
-            type: 2,
-            style: 3,
+            type: ComponentType.button(),
+            style: ButtonStyle.success(),
             label: "Resume",
             custom_id: "music|resume:"
           }
@@ -38,14 +40,14 @@ defmodule BotchiniDiscord.Music.Responses.Components do
   defp skip_and_stop_buttons do
     [
       %{
-        type: 2,
-        style: 2,
+        type: ComponentType.button(),
+        style: ButtonStyle.secondary(),
         label: "Skip",
         custom_id: "music|skip:"
       },
       %{
-        type: 2,
-        style: 4,
+        type: ComponentType.button(),
+        style: ButtonStyle.danger(),
         label: "Stop",
         custom_id: "music|stop:"
       }

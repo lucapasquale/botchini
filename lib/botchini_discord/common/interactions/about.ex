@@ -4,6 +4,7 @@ defmodule BotchiniDiscord.Common.Interactions.About do
   """
 
   import Nostrum.Struct.Embed
+  alias Nostrum.Constants.InteractionCallbackType
   alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias BotchiniDiscord.InteractionBehaviour
@@ -32,7 +33,7 @@ defmodule BotchiniDiscord.Common.Interactions.About do
       |> put_field("Memory Usage", "#{div(:erlang.memory(:total), 1_000_000)} MB", true)
 
     %{
-      type: 4,
+      type: InteractionCallbackType.channel_message_with_source(),
       data: %{embeds: [embed]}
     }
   end

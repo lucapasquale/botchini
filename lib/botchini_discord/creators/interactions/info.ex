@@ -4,6 +4,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Info do
   """
 
   alias Nostrum.Struct.{ApplicationCommand, Interaction}
+  alias Nostrum.Constants.{ApplicationCommandOptionType, InteractionCallbackType}
 
   alias Botchini.{Creators, Services}
   alias BotchiniDiscord.Creators.Responses.{Components, Embeds}
@@ -19,7 +20,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Info do
       description: "Information about a creator",
       options: [
         %{
-          type: 3,
+          type: ApplicationCommandOptionType.string(),
           name: "service",
           required: true,
           description: "Service the creator is from",
@@ -29,7 +30,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Info do
           ]
         },
         %{
-          type: 3,
+          type: ApplicationCommandOptionType.string(),
           name: "term",
           required: true,
           description: "Twitch stream or YouTube channel"
@@ -46,7 +47,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Info do
     case Services.search_channel(service, term) do
       {:error, _} ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Creator not found!"}
         }
 
@@ -64,7 +65,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Info do
             else: Components.unfollow_creator(service, service_id)
 
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{
             embeds: [Embeds.creator_embed(service, service_id)],
             components: [component]

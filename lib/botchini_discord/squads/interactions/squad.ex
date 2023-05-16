@@ -4,6 +4,7 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
   """
 
   alias Nostrum.Cache.GuildCache
+  alias Nostrum.Constants.{ApplicationCommandOptionType, InteractionCallbackType}
   alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias Botchini.{Discord, Squads}
@@ -22,10 +23,10 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
         %{
           name: "add",
           description: "Create a new squad",
-          type: 1,
+          type: ApplicationCommandOptionType.sub_command(),
           options: [
             %{
-              type: 3,
+              type: ApplicationCommandOptionType.string(),
               required: true,
               name: "name",
               description: "Name of the squad"
@@ -35,10 +36,10 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
         %{
           name: "delete",
           description: "Delete a squad",
-          type: 1,
+          type: ApplicationCommandOptionType.sub_command(),
           options: [
             %{
-              type: 3,
+              type: ApplicationCommandOptionType.string(),
               required: true,
               autocomplete: true,
               name: "term",
@@ -49,10 +50,10 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
         %{
           name: "join",
           description: "Join a squad",
-          type: 1,
+          type: ApplicationCommandOptionType.sub_command(),
           options: [
             %{
-              type: 3,
+              type: ApplicationCommandOptionType.string(),
               required: true,
               autocomplete: true,
               name: "term",
@@ -63,10 +64,10 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
         %{
           name: "notify",
           description: "Notify all members of a squad",
-          type: 1,
+          type: ApplicationCommandOptionType.sub_command(),
           options: [
             %{
-              type: 3,
+              type: ApplicationCommandOptionType.string(),
               required: true,
               autocomplete: true,
               name: "term",
@@ -77,10 +78,10 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
         %{
           name: "leave",
           description: "Leave a squad",
-          type: 1,
+          type: ApplicationCommandOptionType.sub_command(),
           options: [
             %{
-              type: 3,
+              type: ApplicationCommandOptionType.string(),
               required: true,
               autocomplete: true,
               name: "term",
@@ -95,7 +96,7 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, _options) when is_nil(interaction.member) do
     %{
-      type: 4,
+      type: InteractionCallbackType.channel_message_with_source(),
       data: %{content: "Can only be used inside a server!"}
     }
   end
@@ -119,7 +120,7 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
 
       true ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Invalid command"}
         }
     end
@@ -132,7 +133,7 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
     {:ok, squad} = Squads.insert(guild, %{name: name})
 
     %{
-      type: 4,
+      type: InteractionCallbackType.channel_message_with_source(),
       data: %{
         content: "Created squad **#{name}**",
         components: [Components.join_squad(squad.id)]
@@ -151,7 +152,7 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
       {:ok, _squad} = Squads.delete(squad)
 
       %{
-        type: 4,
+        type: InteractionCallbackType.channel_message_with_source(),
         data: %{content: "Deleted squad **#{squad.name}**!"}
       }
     end
@@ -165,18 +166,18 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
       search_squads(guild, term_or_id)
     else
       squad = Squads.get_by_id!(guild, term_or_id)
-      discord_user_id = Integer.to_string(interaction.member.user.id)
+      discord_user_id = Integer.to_string(interaction.member.user_id)
 
       case Squads.insert_member(squad, %{discord_user_id: discord_user_id}) do
         {:error, _} ->
           %{
-            type: 4,
+            type: InteractionCallbackType.channel_message_with_source(),
             data: %{content: "Already joined **#{squad.name}**!"}
           }
 
         {:ok, _member} ->
           %{
-            type: 4,
+            type: InteractionCallbackType.channel_message_with_source(),
             data: %{content: "Joined squad **#{squad.name}**!"}
           }
       end
@@ -212,18 +213,18 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
       search_squads(guild, term_or_id)
     else
       squad = Squads.get_by_id!(guild, term_or_id)
-      discord_user_id = Integer.to_string(interaction.member.user.id)
+      discord_user_id = Integer.to_string(interaction.member.user_id)
 
       case Squads.remove_member(squad, %{discord_user_id: discord_user_id}) do
         {:error, :not_found} ->
           %{
-            type: 4,
+            type: InteractionCallbackType.channel_message_with_source(),
             data: %{content: "You haven't joined the squad **#{squad.name}**!"}
           }
 
         {:ok, _member} ->
           %{
-            type: 4,
+            type: InteractionCallbackType.channel_message_with_source(),
             data: %{content: "Left squad **#{squad.name}**!"}
           }
       end
@@ -259,7 +260,7 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
 
   defp notify_squad(squad, {members, _members_to_notify}) when members == [] do
     %{
-      type: 4,
+      type: InteractionCallbackType.channel_message_with_source(),
       data: %{
         content: "The squad #{squad.name} has no members"
       }
@@ -268,7 +269,7 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
 
   defp notify_squad(squad, {_members, members_to_notify}) when members_to_notify == [] do
     %{
-      type: 4,
+      type: InteractionCallbackType.channel_message_with_source(),
       data: %{
         content: "All members from squad #{squad.name} are already on the voice channel"
       }
@@ -277,7 +278,7 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
 
   defp notify_squad(squad, {_members, members_to_notify}) do
     %{
-      type: 4,
+      type: InteractionCallbackType.channel_message_with_source(),
       data: %{
         content: """
         Calling all members from the #{squad.name} squad!

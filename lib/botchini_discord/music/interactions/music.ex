@@ -4,6 +4,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
   """
 
   alias Nostrum.Cache.GuildCache
+  alias Nostrum.Constants.{ApplicationCommandOptionType, InteractionCallbackType}
   alias Nostrum.Struct.ApplicationCommand
 
   alias Botchini.{Discord, Music}
@@ -22,10 +23,10 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
         %{
           name: "play",
           description: "Play a song",
-          type: 1,
+          type: ApplicationCommandOptionType.sub_command(),
           options: [
             %{
-              type: 3,
+              type: ApplicationCommandOptionType.string(),
               required: true,
               name: "url",
               description: "YouTube URL or search term"
@@ -35,27 +36,27 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
         %{
           name: "pause",
           description: "Pause current song",
-          type: 1
+          type: ApplicationCommandOptionType.sub_command()
         },
         %{
           name: "resume",
           description: "Resume current song",
-          type: 1
+          type: ApplicationCommandOptionType.sub_command()
         },
         %{
           name: "skip",
           description: "Skip current song",
-          type: 1
+          type: ApplicationCommandOptionType.sub_command()
         },
         %{
           name: "stop",
           description: "Stop playing",
-          type: 1
+          type: ApplicationCommandOptionType.sub_command()
         },
         %{
           name: "queue",
           description: "Next songs",
-          type: 1
+          type: ApplicationCommandOptionType.sub_command()
         }
       ]
     }
@@ -64,7 +65,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
   @spec handle_interaction(Interaction.t(), InteractionBehaviour.interaction_options()) :: map()
   def handle_interaction(interaction, _options) when is_nil(interaction.guild_id) do
     %{
-      type: 4,
+      type: InteractionCallbackType.channel_message_with_source(),
       data: %{content: "Cannot use this command from outside a guild!"}
     }
   end
@@ -91,7 +92,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
 
       true ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Invalid command"}
         }
     end
@@ -103,7 +104,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
     case get_voice_channel_of_msg(interaction) do
       nil ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Please enter a voice channel first!"}
         }
 
@@ -116,7 +117,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
         end
 
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{
             content: "Added #{url} to queue",
             components: [Components.pause_controls()]
@@ -131,7 +132,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
     case Music.pause(guild) do
       {:ok, nil} ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Not currently playing"}
         }
 
@@ -139,7 +140,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
         Nostrum.Voice.pause(interaction.guild_id)
 
         %{
-          type: 7,
+          type: InteractionCallbackType.update_message(),
           data: %{
             content: "Paused #{cur_track.play_url}",
             components: [Components.resume_controls()]
@@ -154,7 +155,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
 
     if is_nil(cur_track) || cur_track.status != :paused do
       %{
-        type: 4,
+        type: InteractionCallbackType.channel_message_with_source(),
         data: %{content: "No song to resume!"}
       }
     else
@@ -162,7 +163,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
       Nostrum.Voice.resume(interaction.guild_id)
 
       %{
-        type: 7,
+        type: InteractionCallbackType.update_message(),
         data: %{
           content: "Resuming #{cur_track.play_url}",
           components: [Components.pause_controls()]
@@ -180,7 +181,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
         Nostrum.Voice.stop(interaction.guild_id)
 
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "No song in queue, stopping"}
         }
 
@@ -188,7 +189,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
         Nostrum.Voice.stop(interaction.guild_id)
 
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{
             content: "Skipping to next song",
             components: [Components.pause_controls()]
@@ -205,7 +206,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
     Nostrum.Voice.leave_channel(interaction.guild_id)
 
     %{
-      type: 4,
+      type: InteractionCallbackType.channel_message_with_source(),
       data: %{content: "Stopped playing"}
     }
   end
@@ -216,7 +217,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
     case Music.get_next_tracks(guild) do
       tracks when tracks == [] ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Queue is empty"}
         }
 
@@ -226,7 +227,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
           |> Enum.map_join("\n", fn track -> " - #{track.play_url}" end)
 
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{
             content: """
             Next songs:
@@ -241,7 +242,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
     interaction.guild_id
     |> GuildCache.get!()
     |> Map.get(:voice_states)
-    |> Enum.find(%{}, fn v -> v.user_id == interaction.member.user.id end)
+    |> Enum.find(%{}, fn v -> v.user_id == interaction.member.user_id end)
     |> Map.get(:channel_id)
   end
 

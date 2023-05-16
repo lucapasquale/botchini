@@ -4,6 +4,7 @@ defmodule BotchiniDiscord.Creators.Interactions.List do
   """
 
   alias Nostrum.Cache.ChannelCache
+  alias Nostrum.Constants.InteractionCallbackType
   alias Nostrum.Struct.{ApplicationCommand, Embed, Interaction}
 
   alias Botchini.{Creators, Discord}
@@ -25,13 +26,13 @@ defmodule BotchiniDiscord.Creators.Interactions.List do
     case Creators.channel_following_list(Integer.to_string(interaction.channel_id)) do
       {:ok, following} when following == [] ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Not following any stream!"}
         }
 
       {:ok, following} ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Following streams:\n#{Enum.join(following, "\n")}"}
         }
     end
@@ -43,13 +44,13 @@ defmodule BotchiniDiscord.Creators.Interactions.List do
     case Creators.guild_following_list(guild) do
       {:ok, following} when following == [] ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Not following any stream!"}
         }
 
       {:ok, following} ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{embeds: [guild_following_embed(following)]}
         }
     end

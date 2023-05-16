@@ -3,6 +3,7 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
   Handles the confirmation before unfollowing a stream
   """
 
+  alias Nostrum.Constants.InteractionCallbackType
   alias Nostrum.Struct.Interaction
 
   alias Botchini.Creators
@@ -24,7 +25,7 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
     case Creators.find_by_service(service, service_id) do
       nil ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Creator not found"}
         }
 
@@ -42,13 +43,13 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
     case Creators.discord_channel_follower(creator.id, follow_info) do
       {:error, :not_found} ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Not following!"}
         }
 
       {:ok, _} ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{
             content: unfollow_message(interaction, creator),
             components: [Components.confirm_unfollow_creator(creator.service, creator.service_id)]
@@ -107,6 +108,6 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
   end
 
   defp unfollow_message(interaction, creator) do
-    "<@#{interaction.member.user.id}> are you sure you want to unfollow **#{creator.name}**?"
+    "<@#{interaction.member.user_id}> are you sure you want to unfollow **#{creator.name}**?"
   end
 end

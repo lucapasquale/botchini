@@ -53,7 +53,7 @@ defmodule BotchiniDiscord.Interactions do
       interaction_data: interaction.data,
       guild_id: interaction.guild_id,
       channel_id: interaction.channel_id,
-      user_id: interaction.member && interaction.member.user.id
+      user_id: interaction.user.id
     )
 
     Logger.info("Interaction received")

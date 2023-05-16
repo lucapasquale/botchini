@@ -3,6 +3,8 @@ defmodule BotchiniDiscord.Squads.Responses.Components do
   Generates component messages for squads commands
   """
 
+  alias Nostrum.Constants.ButtonStyle
+
   @spec join_squad(String.t()) :: map()
   def join_squad(squad_id) do
     %{
@@ -10,7 +12,7 @@ defmodule BotchiniDiscord.Squads.Responses.Components do
       components: [
         %{
           type: 2,
-          style: 1,
+          style: ButtonStyle.primary(),
           label: "Join",
           custom_id: "squad|join::term:#{squad_id}"
         }
@@ -25,7 +27,7 @@ defmodule BotchiniDiscord.Squads.Responses.Components do
       components: [
         %{
           type: 2,
-          style: 4,
+          style: ButtonStyle.danger(),
           label: "Leave",
           custom_id: "squad|leave::term:#{squad_id}"
         }
@@ -40,13 +42,13 @@ defmodule BotchiniDiscord.Squads.Responses.Components do
       components: [
         %{
           type: 2,
-          style: 1,
+          style: ButtonStyle.primary(),
           label: "Join",
           custom_id: "squad|join::term:#{squad_id}"
         },
         %{
           type: 2,
-          style: 4,
+          style: ButtonStyle.danger(),
           label: "Leave",
           custom_id: "squad|leave::term:#{squad_id}"
         }

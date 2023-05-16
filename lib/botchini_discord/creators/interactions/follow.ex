@@ -72,7 +72,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Follow do
 
     follow_info = %{
       channel_id: Integer.to_string(interaction.channel_id),
-      user_id: interaction.member && Integer.to_string(interaction.member.user.id)
+      user_id: interaction.member && Integer.to_string(interaction.member.user_id)
     }
 
     case Creators.follow(creator, guild, follow_info) do

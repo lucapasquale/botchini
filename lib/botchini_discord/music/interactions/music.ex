@@ -241,7 +241,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
     interaction.guild_id
     |> GuildCache.get!()
     |> Map.get(:voice_states)
-    |> Enum.find(%{}, fn v -> v.user_id == interaction.member.user.id end)
+    |> Enum.find(%{}, fn v -> v.user_id == interaction.member.user_id end)
     |> Map.get(:channel_id)
   end
 

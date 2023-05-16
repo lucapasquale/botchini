@@ -3,6 +3,8 @@ defmodule BotchiniDiscord.Music.Responses.Components do
   Generates component messages for music commands
   """
 
+  alias Nostrum.Constants.ButtonStyle
+
   @spec pause_controls() :: map()
   def pause_controls do
     %{
@@ -11,7 +13,7 @@ defmodule BotchiniDiscord.Music.Responses.Components do
         [
           %{
             type: 2,
-            style: 2,
+            style: ButtonStyle.secondary(),
             label: "Pause",
             custom_id: "music|pause:"
           }
@@ -27,7 +29,7 @@ defmodule BotchiniDiscord.Music.Responses.Components do
         [
           %{
             type: 2,
-            style: 3,
+            style: ButtonStyle.success(),
             label: "Resume",
             custom_id: "music|resume:"
           }
@@ -39,13 +41,13 @@ defmodule BotchiniDiscord.Music.Responses.Components do
     [
       %{
         type: 2,
-        style: 2,
+        style: ButtonStyle.secondary(),
         label: "Skip",
         custom_id: "music|skip:"
       },
       %{
         type: 2,
-        style: 4,
+        style: ButtonStyle.danger(),
         label: "Stop",
         custom_id: "music|stop:"
       }

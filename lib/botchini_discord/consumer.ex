@@ -9,10 +9,6 @@ defmodule BotchiniDiscord.Consumer do
   alias Botchini.Discord
   alias BotchiniDiscord.{Interactions, Music}
 
-  def start_link do
-    Consumer.start_link(__MODULE__)
-  end
-
   def handle_event({:READY, _data, _ws_state}) do
     Interactions.register_commands()
 

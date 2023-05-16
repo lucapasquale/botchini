@@ -4,6 +4,7 @@ defmodule BotchiniDiscord.Creators.Responses.Components do
   """
 
   alias Botchini.Creators.Schema.Creator
+  alias Nostrum.Constants.ButtonStyle
 
   @spec follow_creator(Creator.service(), String.t()) :: map()
   def follow_creator(service, service_id) do
@@ -12,7 +13,7 @@ defmodule BotchiniDiscord.Creators.Responses.Components do
       components: [
         %{
           type: 2,
-          style: 1,
+          style: ButtonStyle.primary(),
           label: "Follow",
           custom_id: "follow|service:#{service}:service_id:#{service_id}"
         }
@@ -27,7 +28,7 @@ defmodule BotchiniDiscord.Creators.Responses.Components do
       components: [
         %{
           type: 2,
-          style: 4,
+          style: ButtonStyle.danger(),
           label: "Unfollow",
           custom_id: "confirm_unfollow|type:ask:service:#{service}:service_id:#{service_id}"
         }
@@ -42,13 +43,13 @@ defmodule BotchiniDiscord.Creators.Responses.Components do
       components: [
         %{
           type: 2,
-          style: 2,
+          style: ButtonStyle.secondary(),
           label: "No, cancel",
           custom_id: "confirm_unfollow|type:cancel:service:#{service}:service_id:#{service_id}"
         },
         %{
           type: 2,
-          style: 4,
+          style: ButtonStyle.danger(),
           label: "Yes, unfollow",
           custom_id: "confirm_unfollow|type:confirm:service:#{service}:service_id:#{service_id}"
         }

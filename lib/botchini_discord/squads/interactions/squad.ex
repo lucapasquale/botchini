@@ -165,7 +165,7 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
       search_squads(guild, term_or_id)
     else
       squad = Squads.get_by_id!(guild, term_or_id)
-      discord_user_id = Integer.to_string(interaction.member.user.id)
+      discord_user_id = Integer.to_string(interaction.member.user_id)
 
       case Squads.insert_member(squad, %{discord_user_id: discord_user_id}) do
         {:error, _} ->
@@ -212,7 +212,7 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
       search_squads(guild, term_or_id)
     else
       squad = Squads.get_by_id!(guild, term_or_id)
-      discord_user_id = Integer.to_string(interaction.member.user.id)
+      discord_user_id = Integer.to_string(interaction.member.user_id)
 
       case Squads.remove_member(squad, %{discord_user_id: discord_user_id}) do
         {:error, :not_found} ->

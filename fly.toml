@@ -1,9 +1,12 @@
-# fly.toml file generated for botchini on 2022-06-15T01:05:09-03:00
+# fly.toml app configuration file generated for botchini on 2023-05-16T00:54:47-03:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
 app = "botchini"
+primary_region = "gru"
 kill_signal = "SIGTERM"
-kill_timeout = 5
-processes = []
+kill_timeout = "5s"
 
 [deploy]
   release_command = "/app/bin/migrate"
@@ -12,32 +15,27 @@ processes = []
   PHX_HOST = "botchini.fly.dev"
   PORT = "8080"
 
-[experimental]
-  allowed_public_ports = []
-  auto_rollback = true
-
 [[services]]
-  http_checks = []
-  internal_port = 8080
-  processes = ["app"]
   protocol = "tcp"
-  script_checks = []
+  internal_port = 8080
+  min_machines_running = 0
+  processes = ["app"]
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
   [services.concurrency]
+    type = "connections"
     hard_limit = 25
     soft_limit = 20
-    type = "connections"
-
-  [[services.ports]]
-    force_https = true
-    handlers = ["http"]
-    port = 80
-
-  [[services.ports]]
-    handlers = ["tls", "http"]
-    port = 443
 
   [[services.tcp_checks]]
-    grace_period = "1s"
     interval = "15s"
-    restart_limit = 0
     timeout = "2s"
+    grace_period = "1s"
+    restart_limit = 0

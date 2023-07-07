@@ -20,7 +20,7 @@ defmodule Botchini.Cache do
     {:ok, nil}
   end
 
-  @spec get_value(String.t(), pos_integer(), (() -> any())) :: {:ok, any()}
+  @spec get_value(String.t(), pos_integer(), (-> any())) :: {:ok, any()}
   def get_value(key, ttl \\ @default_ttl, resolver) when is_function(resolver) do
     case GenServer.call(@name, {:get, key}) do
       nil ->

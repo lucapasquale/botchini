@@ -108,7 +108,7 @@ defmodule BotchiniWeb.TwitchController do
 
     case msg_response do
       {:error, _err} ->
-        Logger.warning("Removing channel since doesn't exist anymore", channel_id: channel_id)
+        Logger.warn("Removing channel since doesn't exist anymore", channel_id: channel_id)
         {:ok, _} = Creators.unfollow(creator.id, %{channel_id: channel_id})
 
       _ ->

@@ -17,17 +17,14 @@ defmodule Botchini.MixProject do
   def application do
     [
       mod: {Botchini.Application, []},
-      extra_applications: extra_applications(Mix.env())
+      extra_applications: [:logger, :elixir_xml_to_map]
     ]
   end
-
-  defp extra_applications(:dev), do: extra_applications(:all) ++ [:remix]
-  defp extra_applications(_all), do: [:logger, :elixir_xml_to_map]
 
   defp deps do
     [
       # Discord
-      {:nostrum, "~> 0.8", runtime: Mix.env() != :test},
+      {:nostrum, git: "https://github.com/Kraigie/nostrum.git", runtime: Mix.env() != :test},
       {:cowlib, "~> 2.11", hex: :remedy_cowlib, override: true},
       # Phoenix
       {:phoenix, "~> 1.6.16"},

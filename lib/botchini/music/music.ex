@@ -42,11 +42,16 @@ defmodule Botchini.Music do
     |> Repo.all()
   end
 
-  @spec insert_track(%{play_url: String.t()}, Guild.t()) :: {:ok, Track.t()}
-  def insert_track(%{play_url: play_url}, guild) do
+  @spec insert_track(String.t(), Guild.t()) :: {:ok, Track.t()}
+  def insert_track(term, guild) do
     %Track{}
-    |> Track.changeset(%{play_url: play_url, status: :waiting, guild_id: guild.id})
-    |> Repo.insert()
+    |> Track.changeset(%{
+      title: term,
+      status: :waiting,
+      play_url: get_play_url_from_term(term),
+      guild_id: guild.id
+    })
+    |> Repo.insert!()
   end
 
   @spec start_next_track(Guild.t()) :: {:ok, Track.t() | nil}
@@ -77,6 +82,14 @@ defmodule Botchini.Music do
       where: t.status != :done
     )
     |> Repo.update_all(set: [status: :done])
+  end
+
+  defp get_play_url_from_term(term) do
+    if String.starts_with?(term, "http") do
+      term
+    else
+      "ytsearch:#{term}"
+    end
   end
 
   defp update_track_status(track, _status) when is_nil(track), do: {:ok, nil}

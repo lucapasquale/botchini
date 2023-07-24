@@ -4,8 +4,8 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "8.5.0",
-      elixir: "~> 1.12",
+      version: "8.5.1",
+      elixir: "~> 1.15",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -17,17 +17,14 @@ defmodule Botchini.MixProject do
   def application do
     [
       mod: {Botchini.Application, []},
-      extra_applications: extra_applications(Mix.env())
+      extra_applications: [:logger, :elixir_xml_to_map]
     ]
   end
-
-  defp extra_applications(:dev), do: extra_applications(:all) ++ [:remix]
-  defp extra_applications(_all), do: [:logger, :elixir_xml_to_map]
 
   defp deps do
     [
       # Discord
-      {:nostrum, "~> 0.7", runtime: Mix.env() != :test},
+      {:nostrum, git: "https://github.com/Kraigie/nostrum.git", runtime: Mix.env() != :test},
       {:cowlib, "~> 2.11", hex: :remedy_cowlib, override: true},
       # Phoenix
       {:phoenix, "~> 1.6.16"},
@@ -58,7 +55,6 @@ defmodule Botchini.MixProject do
       {:ink, "~> 1.0"},
       {:quantum, "~> 3.0"},
       # Development and testing
-      {:remix, "~> 0.0.1", only: :dev},
       {:credo, "~> 1.7.0", only: [:dev, :test], runtime: false},
       {:patch, "~> 0.12.0", only: [:test]},
       {:faker, "~> 0.16", only: :test}

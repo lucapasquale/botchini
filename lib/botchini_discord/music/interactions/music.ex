@@ -28,7 +28,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
             %{
               type: ApplicationCommandOptionType.string(),
               required: true,
-              name: "url",
+              name: "term",
               description: "YouTube URL or search term"
             }
           ]
@@ -109,8 +109,8 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
         }
 
       voice_channel_id ->
-        {url, _autocomplete} = Helpers.get_option!(options, "url")
-        Music.insert_track(%{play_url: get_track_url(url)}, guild)
+        {term, _autocomplete} = Helpers.get_option!(options, "term")
+        Music.insert_track(term, guild)
 
         if Nostrum.Voice.get_channel_id(interaction.guild_id) != voice_channel_id do
           Nostrum.Voice.join_channel(interaction.guild_id, voice_channel_id)
@@ -119,7 +119,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
         %{
           type: InteractionCallbackType.channel_message_with_source(),
           data: %{
-            content: "Added #{url} to queue",
+            content: "Added **#{term}** to queue",
             components: [Components.pause_controls()]
           }
         }
@@ -142,7 +142,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
         %{
           type: InteractionCallbackType.update_message(),
           data: %{
-            content: "Paused #{cur_track.play_url}",
+            content: "Paused **#{cur_track.title}**",
             components: [Components.resume_controls()]
           }
         }
@@ -165,7 +165,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
       %{
         type: InteractionCallbackType.update_message(),
         data: %{
-          content: "Resuming #{cur_track.play_url}",
+          content: "Resuming **#{cur_track.title}**",
           components: [Components.pause_controls()]
         }
       }
@@ -185,13 +185,13 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
           data: %{content: "No song in queue, stopping"}
         }
 
-      _track ->
+      track ->
         Nostrum.Voice.stop(interaction.guild_id)
 
         %{
           type: InteractionCallbackType.channel_message_with_source(),
           data: %{
-            content: "Skipping to next song",
+            content: "Skipping to next song: **#{track.title}**",
             components: [Components.pause_controls()]
           }
         }
@@ -224,7 +224,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
       tracks ->
         list_message =
           tracks
-          |> Enum.map_join("\n", fn track -> " - #{track.play_url}" end)
+          |> Enum.map_join("\n", fn track -> " - #{track.title}" end)
 
         %{
           type: InteractionCallbackType.channel_message_with_source(),
@@ -244,13 +244,5 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
     |> Map.get(:voice_states)
     |> Enum.find(%{}, fn v -> v.user_id == interaction.member.user_id end)
     |> Map.get(:channel_id)
-  end
-
-  defp get_track_url(url) do
-    if String.starts_with?(url, "http") do
-      url
-    else
-      "ytsearch:#{url}"
-    end
   end
 end

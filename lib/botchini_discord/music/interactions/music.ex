@@ -110,7 +110,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
 
       voice_channel_id ->
         {term, _autocomplete} = Helpers.get_option!(options, "term")
-        Music.insert_track(term, guild) |> IO.inspect()
+        Music.insert_track(term, guild)
 
         if Nostrum.Voice.get_channel_id(interaction.guild_id) != voice_channel_id do
           Nostrum.Voice.join_channel(interaction.guild_id, voice_channel_id)

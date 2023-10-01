@@ -78,7 +78,7 @@ RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o 
   && chmod a+rx /usr/local/bin/yt-dlp
 
 # Install steramlink
-RUN curl -L https://github.com/streamlink/streamlink-appimage/releases/streamlink-6.2.0-1-cp311-cp311-manylinux2014_aarch64.AppImage -o /usr/local/bin/streamlink \
+RUN curl -L https://github.com/streamlink/streamlink-appimage/releases/download/6.2.0-1/streamlink-6.2.0-1-cp311-cp311-manylinux2014_x86_64.AppImage -o /usr/local/bin/streamlink \
   && chmod a+rx /usr/local/bin/streamlink
 
 # Set the locale

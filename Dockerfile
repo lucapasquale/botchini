@@ -19,7 +19,7 @@ ARG DEBIAN_VERSION=bullseye-20230612-slim
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 
-FROM ${BUILDER_IMAGE} as builder
+FROM ${BUILDER_IMAGE} AS builder
 
 # install build dependencies
 RUN apt-get update -y && apt-get install -y build-essential git \
@@ -76,6 +76,10 @@ RUN apt-get update -y \
 # Install yt-dlp
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
   && chmod a+rx /usr/local/bin/yt-dlp
+
+# Install steramlink
+RUN curl -L https://github.com/streamlink/streamlink-appimage/releases/streamlink-6.2.0-1-cp311-cp311-manylinux2014_aarch64.AppImage -o /usr/local/bin/streamlink \
+  && chmod a+rx /usr/local/bin/streamlink
 
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen

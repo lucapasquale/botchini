@@ -40,45 +40,52 @@ defmodule BotchiniWeb.YoutubeController do
   end
 
   defp process_webhook(conn) do
-    entry =
+    event =
       conn.body_params
+      |> IO.inspect(label: "body")
       |> Map.get("feed")
+      |> IO.inspect(label: "feed")
       |> Map.get("entry")
+      |> IO.inspect(label: "entry")
 
-    channel_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}channelId")
-    video_id = Map.get(entry, "{http://www.youtube.com/xml/schemas/2015}videoId")
+    channel_id = Map.get(event, "{http://www.youtube.com/xml/schemas/2015}channelId")
+    video_id = Map.get(event, "{http://www.youtube.com/xml/schemas/2015}videoId")
 
     Logger.info("Received webhook from youtube channel #{channel_id}, video #{video_id}")
 
-    case Services.exists_video_by_video_id?(video_id) do
-      true ->
-        text(conn, "ok")
+    if published_recently?(event) do
+      # TODO: Try to remove this
+      Services.insert_video({channel_id, video_id})
 
-      false ->
-        Services.insert_video({channel_id, video_id})
-
-        case Creators.find_by_service(:youtube, channel_id) do
-          nil ->
-            conn
-            |> put_status(:not_found)
-            |> text("not found")
-
-          creator ->
-            send_new_video_messages(creator, video_id)
-            text(conn, "ok")
-        end
+      send_new_video_messages(channel_id, video_id)
     end
+
+    text(conn, "ok")
   end
 
-  defp send_new_video_messages(creator, video_id) do
+  defp published_recently?(event) do
+    IO.inspect(event, label: "YouTube event")
+
+    {:ok, published_at, _} = DateTime.from_iso8601(event["published"])
+    {:ok, updated_at, _} = DateTime.from_iso8601(event["updated"])
+
+    Logger.info(
+      "YouTube dates: published_at: #{published_at} updated_at: #{updated_at} diff: #{DateTime.diff(updated_at, published_at, :second)}"
+    )
+
+    abs(DateTime.diff(published_at, DateTime.utc_now(), :hour)) <= 24
+  end
+
+  defp send_new_video_messages(channel_id, video_id) do
+    creator = Creators.find_by_service(:youtube, channel_id)
     followers = Creators.find_followers_for_creator(creator)
     Logger.info("Channel #{creator.name} posted, sending to #{length(followers)} channels")
 
-    channel = Services.youtube_channel_info(creator.service_id)
-    video = Services.youtube_video_info(video_id)
+    yt_channel = Services.youtube_channel_info(creator.service_id)
+    yt_video = Services.youtube_video_info(video_id)
 
     Enum.each(followers, fn follower ->
-      Task.start(fn -> notify_followers(creator, follower, {channel, video}) end)
+      Task.start(fn -> notify_followers(creator, follower, {yt_channel, yt_video}) end)
     end)
   end
 

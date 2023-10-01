@@ -49,7 +49,7 @@ defmodule Botchini.Music do
       title: term,
       status: :waiting,
       play_url: get_play_url_from_term(term),
-      play_type: get_ffmpeg_type_from_term(term),
+      play_type: :ytdl,
       guild_id: guild.id
     })
     |> Repo.insert!()
@@ -90,15 +90,6 @@ defmodule Botchini.Music do
       term
     else
       "ytsearch:#{term}"
-    end
-  end
-
-  defp get_ffmpeg_type_from_term(term) do
-    # TODO: Add support for YouTube streams
-    if String.starts_with?(term, "https://www.twitch.tv") do
-      :stream
-    else
-      :ytdl
     end
   end
 

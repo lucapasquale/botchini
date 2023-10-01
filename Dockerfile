@@ -69,17 +69,13 @@ RUN mix release
 FROM ${RUNNER_IMAGE} AS runner
 
 RUN apt-get update -y \
-  && apt-get install -y software-properties-common libstdc++6 openssl libncurses5 locales ffmpeg curl fuse libfuse2 \
+  && apt-get install -y software-properties-common libstdc++6 openssl libncurses5 locales ffmpeg curl \
   && apt-get clean \
   && rm -f /var/lib/apt/lists/*_*
 
 # Install yt-dlp
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
   && chmod a+rx /usr/local/bin/yt-dlp
-
-# Install steramlink
-RUN curl -L https://github.com/streamlink/streamlink-appimage/releases/download/6.2.0-1/streamlink-6.2.0-1-cp311-cp311-manylinux2014_x86_64.AppImage -o /usr/local/bin/streamlink \
-  && chmod a+rx /usr/local/bin/streamlink
 
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
@@ -100,6 +96,7 @@ COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/botchini ./
 USER nobody
 
 CMD ["/app/bin/server"]
+
 # Appended by flyctl
 ENV ECTO_IPV6 true
 ENV ERL_AFLAGS "-proto_dist inet6_tcp"

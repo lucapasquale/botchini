@@ -94,10 +94,11 @@ defmodule Botchini.Music do
   end
 
   defp get_ffmpeg_type_from_term(term) do
+    # TODO: Add support for YouTube streams
     if String.starts_with?(term, "https://www.twitch.tv") do
-      "stream"
+      :stream
     else
-      "ytdl"
+      :ytdl
     end
   end
 

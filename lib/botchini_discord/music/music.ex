@@ -42,6 +42,9 @@ defmodule BotchiniDiscord.Music do
   end
 
   defp play_track(guild_id, track) do
+    IO.inspect(track, label: "track")
+
     Nostrum.Voice.play(guild_id, track.play_url, track.play_type)
+    |> IO.inspect(label: "play_track")
   end
 end

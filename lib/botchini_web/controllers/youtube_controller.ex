@@ -29,21 +29,24 @@ defmodule BotchiniWeb.YoutubeController do
   defp is_request_valid?(_conn, :dev), do: true
 
   defp is_request_valid?(conn, _) do
-    [body] = Map.get(conn.assigns, :raw_body)
+    [raw_body] = Map.get(conn.assigns, :raw_body)
     webhook_secret = Application.fetch_env!(:botchini, :youtube_webhook_secret)
 
     hmac =
-      :crypto.mac(:hmac, :sha, webhook_secret, body)
+      :crypto.mac(:hmac, :sha, webhook_secret, raw_body)
       |> Base.encode16(case: :lower)
 
-    "sha1=" <> hmac == conn |> get_req_header("x-hub-signature") |> Enum.at(0)
+    header_signature =
+      conn
+      |> get_req_header("x-hub-signature")
+      |> Enum.at(0)
+
+    "sha1=" <> hmac == header_signature
   end
 
   defp process_webhook(conn) do
-    {:ok, body, conn} = Plug.Conn.read_body(conn)
-
     event =
-      XmlToMap.naive_map(body)
+      conn.body_params
       |> Map.get("feed")
       |> Map.get("entry")
 

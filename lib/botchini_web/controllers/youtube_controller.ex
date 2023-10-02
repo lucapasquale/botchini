@@ -29,49 +29,41 @@ defmodule BotchiniWeb.YoutubeController do
   defp is_request_valid?(_conn, :dev), do: true
 
   defp is_request_valid?(conn, _) do
-    [body] = Map.get(conn.assigns, :raw_body)
+    [raw_body] = Map.get(conn.assigns, :raw_body)
     webhook_secret = Application.fetch_env!(:botchini, :youtube_webhook_secret)
 
     hmac =
-      :crypto.mac(:hmac, :sha, webhook_secret, body)
+      :crypto.mac(:hmac, :sha, webhook_secret, raw_body)
       |> Base.encode16(case: :lower)
 
-    "sha1=" <> hmac == conn |> get_req_header("x-hub-signature") |> Enum.at(0)
+    header_signature =
+      conn
+      |> get_req_header("x-hub-signature")
+      |> Enum.at(0)
+
+    "sha1=" <> hmac == header_signature
   end
 
   defp process_webhook(conn) do
     event =
       conn.body_params
-      |> IO.inspect(label: "body")
       |> Map.get("feed")
-      |> IO.inspect(label: "feed")
       |> Map.get("entry")
-      |> IO.inspect(label: "entry")
 
     channel_id = Map.get(event, "{http://www.youtube.com/xml/schemas/2015}channelId")
     video_id = Map.get(event, "{http://www.youtube.com/xml/schemas/2015}videoId")
 
     Logger.info("Received webhook from youtube channel #{channel_id}, video #{video_id}")
 
-    if published_recently?(event) do
-      # TODO: Try to remove this
-      Services.insert_video({channel_id, video_id})
-
+    if should_notify?(event) do
       send_new_video_messages(channel_id, video_id)
     end
 
     text(conn, "ok")
   end
 
-  defp published_recently?(event) do
-    IO.inspect(event, label: "YouTube event")
-
+  defp should_notify?(event) do
     {:ok, published_at, _} = DateTime.from_iso8601(event["published"])
-    {:ok, updated_at, _} = DateTime.from_iso8601(event["updated"])
-
-    Logger.info(
-      "YouTube dates: published_at: #{published_at} updated_at: #{updated_at} diff: #{DateTime.diff(updated_at, published_at, :second)}"
-    )
 
     abs(DateTime.diff(published_at, DateTime.utc_now(), :hour)) <= 24
   end

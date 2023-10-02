@@ -6,30 +6,6 @@ defmodule BotchiniTest.Services.ServicesTest do
   alias Botchini.Services
   alias Botchini.Services.{Twitch, Youtube}
 
-  describe "exists_video_by_video_id?" do
-    test "returns true if finds existing video" do
-      video = generate_video()
-
-      true = Services.exists_video_by_video_id?(video.video_id)
-    end
-
-    test "returns false if no video" do
-      false = Services.exists_video_by_video_id?(Faker.String.base64())
-    end
-  end
-
-  describe "insert_video" do
-    test "can insert a video" do
-      channel_id = Faker.String.base64()
-      video_id = Faker.String.base64()
-
-      video = Services.insert_video({channel_id, video_id})
-
-      assert(video.channel_id, channel_id)
-      assert(video.video_id, video_id)
-    end
-  end
-
   describe "twitch_user_info" do
     test "calls Twitch API" do
       patch(Twitch, :get_user, nil)

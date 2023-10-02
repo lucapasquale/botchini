@@ -3,25 +3,8 @@ defmodule Botchini.Services do
   Handles calling external services
   """
 
-  import Ecto.Query
-
   alias Botchini.Creators.Schema.Creator
-  alias Botchini.Repo
-  alias Botchini.Services.Schema.Video
   alias Botchini.Services.{Twitch, Youtube}
-
-  @spec exists_video_by_video_id?(String.t()) :: boolean()
-  def exists_video_by_video_id?(video_id) do
-    from(v in Video, where: v.video_id == ^video_id)
-    |> Repo.exists?()
-  end
-
-  @spec insert_video({String.t(), String.t()}) :: Video.t()
-  def insert_video({channel_id, video_id}) do
-    %Video{}
-    |> Video.changeset(%{channel_id: channel_id, video_id: video_id})
-    |> Repo.insert!()
-  end
 
   @spec twitch_user_info(String.t()) :: Twitch.Structs.User.t()
   def twitch_user_info(user_id) do

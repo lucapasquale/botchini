@@ -111,9 +111,6 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
       voice_channel_id ->
         {term, _autocomplete} = Helpers.get_option!(options, "term")
 
-        IO.inspect(term)
-        IO.inspect(get_play_type_from_term(term))
-
         Music.insert_track(
           %{
             term: term,

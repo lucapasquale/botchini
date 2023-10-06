@@ -89,4 +89,17 @@ defmodule Botchini.Services.Youtube do
     {:ok, _} = post("https://pubsubhubbub.appspot.com/subscribe", mp)
     {:ok}
   end
+
+  @spec get_video_id_from_url(String.t()) :: String.t()
+  def get_video_id_from_url(url) do
+    video_id_regex = ~r/^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/
+
+    case Regex.run(video_id_regex, url) do
+      nil ->
+        nil
+
+      match ->
+        List.last(match)
+    end
+  end
 end

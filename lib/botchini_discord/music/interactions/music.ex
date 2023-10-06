@@ -7,7 +7,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
   alias Nostrum.Constants.{ApplicationCommandOptionType, InteractionCallbackType}
   alias Nostrum.Struct.ApplicationCommand
 
-  alias Botchini.{Discord, Music}
+  alias Botchini.{Discord, Music, Services}
   alias BotchiniDiscord.{Helpers, InteractionBehaviour}
   alias BotchiniDiscord.Music.Responses.Components
 
@@ -110,7 +110,15 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
 
       voice_channel_id ->
         {term, _autocomplete} = Helpers.get_option!(options, "term")
-        Music.insert_track(term, guild)
+
+        Music.insert_track(
+          %{
+            term: term,
+            play_url: get_play_url_from_term(term),
+            play_type: get_play_type_from_term(term)
+          },
+          guild
+        )
 
         if Nostrum.Voice.get_channel_id(interaction.guild_id) != voice_channel_id do
           Nostrum.Voice.join_channel(interaction.guild_id, voice_channel_id)
@@ -244,5 +252,36 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
     |> Map.get(:voice_states)
     |> Enum.find(%{}, fn v -> v.user_id == interaction.member.user_id end)
     |> Map.get(:channel_id)
+  end
+
+  defp get_play_url_from_term(term) do
+    if String.starts_with?(term, "http") do
+      term
+    else
+      "ytsearch:#{term}"
+    end
+  end
+
+  defp get_play_type_from_term(term) do
+    cond do
+      String.starts_with?(term, "https://www.twitch.tv") ->
+        :stream
+
+      Regex.match?(
+        ~r/^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/,
+        term
+      ) ->
+        video_id = Services.Youtube.get_video_id_from_url(term)
+        yt_video = Services.Youtube.get_video(video_id)
+
+        if is_nil(yt_video.liveStreamingDetails) do
+          :ytdl
+        else
+          :stream
+        end
+
+      true ->
+        :ytdl
+    end
   end
 end

@@ -37,7 +37,6 @@ defmodule Botchini.Cache do
   def get_or_set(key, ttl \\ @default_ttl, resolver) when is_function(resolver) do
     case get(key) do
       {:ok, nil} -> set(key, ttl, resolver)
-
       {:ok, value} -> {:ok, value}
     end
   end

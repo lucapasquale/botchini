@@ -9,7 +9,7 @@ defmodule Botchini.Cache do
   @table :cache
 
   # 30 minutes
-  @default_ttl 30 * 60 * 1_000
+  @default_ttl 1_000 * 60 * 30
 
   @spec start_link(any()) :: :ignore | {:error, any()} | {:ok, pid}
   def start_link(_), do: GenServer.start_link(__MODULE__, [], name: @name)
@@ -20,17 +20,24 @@ defmodule Botchini.Cache do
     {:ok, nil}
   end
 
-  @spec get_value(String.t(), pos_integer(), (-> any())) :: {:ok, any()}
-  def get_value(key, ttl \\ @default_ttl, resolver) when is_function(resolver) do
-    case GenServer.call(@name, {:get, key}) do
-      nil ->
-        with result <- resolver.() do
-          GenServer.call(@name, {:insert, {key, result, ttl}})
-          {:ok, result}
-        end
+  @spec get(String.t()) :: {:ok, any() | nil}
+  def get(key) do
+    {:ok, GenServer.call(@name, {:get, key})}
+  end
 
-      cached_value ->
-        {:ok, cached_value}
+  @spec set(String.t(), pos_integer(), (-> any())) :: {:ok, any()}
+  def set(key, ttl \\ @default_ttl, resolver) when is_function(resolver) do
+    with result <- resolver.() do
+      GenServer.call(@name, {:insert, {key, result, ttl}})
+      {:ok, result}
+    end
+  end
+
+  @spec get_or_set(String.t(), pos_integer(), (-> any())) :: {:ok, any()}
+  def get_or_set(key, ttl \\ @default_ttl, resolver) when is_function(resolver) do
+    case get(key) do
+      {:ok, nil} -> set(key, ttl, resolver)
+      {:ok, value} -> {:ok, value}
     end
   end
 

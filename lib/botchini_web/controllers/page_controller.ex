@@ -5,8 +5,8 @@ defmodule BotchiniWeb.PageController do
 
   @spec index(Plug.Conn.t(), any()) :: Plug.Conn.t()
   def index(conn, _params) do
-    {:ok, total_servers} = Cache.get_value("total_servers", &Discord.count_guilds/0)
-    {:ok, total_creators} = Cache.get_value("total_creators", &Creators.count_creators/0)
+    {:ok, total_servers} = Cache.get_or_set("total_servers", &Discord.count_guilds/0)
+    {:ok, total_creators} = Cache.get_or_set("total_creators", &Creators.count_creators/0)
 
     conn
     |> Plug.Conn.assign(:page_title, "Home")

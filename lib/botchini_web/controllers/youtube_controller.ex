@@ -3,8 +3,11 @@ defmodule BotchiniWeb.YoutubeController do
 
   require Logger
 
-  alias Botchini.{Creators, Services}
+  alias Botchini.{Cache, Creators, Services}
   alias BotchiniDiscord.Creators.Responses.{Components, Embeds}
+
+  # 30 days
+  @event_ttl 1_000 * 60 * 60 * 24 * 30
 
   @spec challenge(Plug.Conn.t(), any) :: Plug.Conn.t()
   def challenge(conn, _params) do
@@ -55,17 +58,24 @@ defmodule BotchiniWeb.YoutubeController do
 
     Logger.info("Received webhook from youtube channel #{channel_id}, video #{video_id}")
 
-    if should_notify?(event) do
+    cache_key = "youtube_event:#{channel_id}:#{video_id}"
+
+    if should_notify?(event, cache_key) do
       send_new_video_messages(channel_id, video_id)
+
+      {:ok, _} = Cache.set(cache_key, @event_ttl, fn -> true end)
     end
 
     text(conn, "ok")
   end
 
-  defp should_notify?(event) do
-    {:ok, published_at, _} = DateTime.from_iso8601(event["published"])
+  defp should_notify?(event, cache_key) do
+    {:ok, notified} = Cache.get(cache_key)
 
-    abs(DateTime.diff(published_at, DateTime.utc_now(), :hour)) <= 24
+    {:ok, published_at, _} = DateTime.from_iso8601(event["published"])
+    published_recently = abs(DateTime.diff(published_at, DateTime.utc_now(), :hour)) <= 24
+
+    !notified && published_recently
   end
 
   defp send_new_video_messages(channel_id, video_id) do

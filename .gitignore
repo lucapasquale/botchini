@@ -35,3 +35,5 @@ botchini-*.tar
 npm-debug.log
 /assets/node_modules/
 
+# Ignore secret env vars
+/config/dev.secret.exs

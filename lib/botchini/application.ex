@@ -9,16 +9,19 @@ defmodule Botchini.Application do
   def start(_type, _args) do
     children =
       [
+        BotchiniWeb.Telemetry,
         Botchini.Repo,
         Botchini.Cache,
         Botchini.Scheduler,
-        # Start the Telemetry supervisor
-        BotchiniWeb.Telemetry,
-        # Start the PubSub system
+        Botchini.Services.Twitch.AuthMiddleware,
+        {DNSCluster, query: Application.get_env(:botchini, :dns_cluster_query) || :ignore},
         {Phoenix.PubSub, name: Botchini.PubSub},
+         # Start the Finch HTTP client for sending emails
+        {Finch, name: Botchini.Finch},
+        # Start a worker by calling: Botchini.Worker.start_link(arg)
+        # {Botchini.Worker, arg},
+        # Start to serve requests, typically the last entry
         BotchiniWeb.Endpoint,
-        # Twitch auth middleware
-        Botchini.Services.Twitch.AuthMiddleware
       ]
       |> start_nostrum(Application.fetch_env!(:botchini, :environment))
 
@@ -30,4 +33,12 @@ defmodule Botchini.Application do
 
   defp start_nostrum(children, :test), do: children
   defp start_nostrum(children, _env), do: children ++ [BotchiniDiscord.Consumer]
+
+  # Tell Phoenix to update the endpoint configuration
+  # whenever the application is updated.
+  @impl true
+  def config_change(changed, _new, removed) do
+    BotchiniWeb.Endpoint.config_change(changed, removed)
+    :ok
+  end
 end

@@ -3,12 +3,6 @@ defmodule BotchiniWeb.PageController do
 
   alias Botchini.{Cache, Creators, Discord}
 
-  def home(conn, _params) do
-    # The home page is often custom made,
-    # so skip the default app layout.
-    render(conn, :home, layout: false)
-  end
-
   @spec index(Plug.Conn.t(), any()) :: Plug.Conn.t()
   def index(conn, _params) do
     {:ok, total_servers} = Cache.get_or_set("total_servers", &Discord.count_guilds/0)

@@ -21,8 +21,7 @@ defmodule BotchiniWeb.Router do
   scope "/", BotchiniWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
-    get "/home", PageController, :index
+    get "/", PageController, :index
   end
 
   scope "/api", BotchiniWeb do

@@ -16,12 +16,12 @@ defmodule Botchini.Application do
         Botchini.Services.Twitch.AuthMiddleware,
         {DNSCluster, query: Application.get_env(:botchini, :dns_cluster_query) || :ignore},
         {Phoenix.PubSub, name: Botchini.PubSub},
-         # Start the Finch HTTP client for sending emails
+        # Start the Finch HTTP client for sending emails
         {Finch, name: Botchini.Finch},
         # Start a worker by calling: Botchini.Worker.start_link(arg)
         # {Botchini.Worker, arg},
         # Start to serve requests, typically the last entry
-        BotchiniWeb.Endpoint,
+        BotchiniWeb.Endpoint
       ]
       |> start_nostrum(Application.fetch_env!(:botchini, :environment))
 

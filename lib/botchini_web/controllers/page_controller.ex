@@ -14,7 +14,7 @@ defmodule BotchiniWeb.PageController do
     |> Plug.Conn.assign(:total_servers, total_servers)
     |> Plug.Conn.assign(:total_streams, total_creators)
     |> Plug.Conn.assign(:invite_bot_url, generate_bot_url())
-    |> render(:index)
+    |> render("index.html")
   end
 
   defp generate_bot_url do

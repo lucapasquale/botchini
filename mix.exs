@@ -4,8 +4,9 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "9.0.0",
+      version: "8.9.0",
       elixir: "~> 1.16.1",
+      build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
@@ -13,9 +14,6 @@ defmodule Botchini.MixProject do
     ]
   end
 
-  # Configuration for the OTP application.
-  #
-  # Type `mix help compile.app` for more information.
   def application do
     [
       mod: {Botchini.Application, []},
@@ -24,11 +22,7 @@ defmodule Botchini.MixProject do
   end
 
   defp extra_applications(:dev), do: extra_applications(:all) ++ [:exsync]
-  defp extra_applications(_all), do: [:logger, :runtime_tools]
-
-  # Specifies which paths to compile per environment.
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
+  defp extra_applications(_all), do: [:logger, :elixir_xml_to_map]
 
   defp deps do
     [
@@ -36,58 +30,51 @@ defmodule Botchini.MixProject do
       {:nostrum, git: "https://github.com/Kraigie/nostrum.git", runtime: Mix.env() != :test},
       {:cowlib, "~> 2.11", hex: :remedy_cowlib, override: true},
       # Phoenix
-      {:phoenix, "~> 1.7.11"},
-      {:phoenix_ecto, "~> 4.4"},
-      {:phoenix_html, "~> 4.0"},
-      {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.20.2"},
-      {:floki, ">= 0.30.0", only: :test},
-      {:phoenix_live_dashboard, "~> 0.8.3"},
-      {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
-      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
-      {:heroicons,
-       github: "tailwindlabs/heroicons",
-       tag: "v2.1.1",
-       sparse: "optimized",
-       app: false,
-       compile: false,
-       depth: 1},
-      {:swoosh, "~> 1.5"},
-      {:finch, "~> 0.13"},
+      {:phoenix, "~> 1.6.16"},
+      {:phoenix_html, "~> 3.3.1"},
+      {:phoenix_live_dashboard, "~> 0.6"},
+      {:phoenix_live_reload, "~> 1.4.1", only: :dev},
+      {:phoenix_live_view, "~> 0.17.14"},
+      {:floki, ">= 0.34.2", only: :test},
+      {:esbuild, "~> 0.7", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 0.20"},
-      {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.1.1"},
-      {:bandit, "~> 1.2"},
+      {:gettext, "~> 0.22.1"},
+      {:jason, "~> 1.4.0"},
+      {:plug_cowboy, "~> 2.6.1"},
+      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
+      {:petal_components, "~> 0.17"},
+      {:elixir_xml_to_map, "~> 2.0"},
       # Ecto
-      {:ecto_sql, "~> 3.11.1"},
-      {:postgrex, ">= 0.17.4"},
+      {:phoenix_ecto, "~> 4.4"},
+      {:ecto_sql, "~> 3.9.2"},
+      {:postgrex, ">= 0.16.5"},
       # HTTP Client
-      {:tesla, "~> 1.8.0"},
+      {:tesla, "~> 1.6.0"},
       {:gun, "~> 2.0", override: true},
-      {:hackney, "~> 1.20.1"},
-      {:exconstructor, "~> 1.2.10"},
+      {:hackney, "~> 1.17.0"},
+      {:exconstructor, "~> 1.1.0"},
       # Helpers
       {:ink, "~> 1.0"},
       {:quantum, "~> 3.0"},
       # Development and testing
       {:exsync, "~> 0.2", only: :dev},
       {:credo, "~> 1.7.0", only: [:dev, :test], runtime: false},
-      {:patch, "~> 0.13.0", only: [:test]},
+      {:patch, "~> 0.12.0", only: [:test]},
       {:faker, "~> 0.16", only: :test}
     ]
   end
 
   defp aliases do
     [
-      setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
-      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+      setup: ["deps.get", "ecto.setup"],
+      "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.drop --quiet", "ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["tailwind botchini", "esbuild botchini"],
       "assets.deploy": ["tailwind default --minify", "esbuild default --minify", "phx.digest"]
     ]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 end

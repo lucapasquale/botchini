@@ -1,4 +1,4 @@
-defmodule BotchiniWeb.Api.YoutubeController do
+defmodule BotchiniWeb.YoutubeController do
   use BotchiniWeb, :controller
 
   require Logger
@@ -18,7 +18,7 @@ defmodule BotchiniWeb.Api.YoutubeController do
 
   @spec notification(Plug.Conn.t(), any) :: Plug.Conn.t()
   def notification(conn, _params) do
-    case request_valid?(conn, Application.fetch_env!(:botchini, :environment)) do
+    case is_request_valid?(conn, Application.fetch_env!(:botchini, :environment)) do
       false ->
         conn
         |> put_status(:not_found)
@@ -29,9 +29,9 @@ defmodule BotchiniWeb.Api.YoutubeController do
     end
   end
 
-  defp request_valid?(_conn, :dev), do: true
+  defp is_request_valid?(_conn, :dev), do: true
 
-  defp request_valid?(conn, _) do
+  defp is_request_valid?(conn, _) do
     [raw_body] = Map.get(conn.assigns, :raw_body)
     webhook_secret = Application.fetch_env!(:botchini, :youtube_webhook_secret)
 

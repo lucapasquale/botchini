@@ -1,0 +1,23 @@
+<main class="">
+  <header class="border-b border-gray-700">
+    <.container max_width="lg" class="">
+      <div class="flex items-center justify-between py-3">
+        <.link link_type="live_patch" to="/" class="tracking-wider uppercase">
+          <.h3 class="!mb-0">Botchini</.h3>
+        </.link>
+
+        <nav class="flex items-center gap-4">
+          <.link to={@github_url} target="_blank" rel="noopener noreferrer" class="flex items-center gap-1">
+            <BotchiniWeb.Components.Icons.github class="h-4" />
+            GitHub
+          </.link>
+
+          <.button color="white" variant="outline" link_type="a" to={@invite_bot_url} target="_blank"
+            rel="noopener noreferrer" label="Invite" />
+        </nav>
+      </div>
+    </.container>
+  </header>
+
+  <%= @inner_content %>
+</main>

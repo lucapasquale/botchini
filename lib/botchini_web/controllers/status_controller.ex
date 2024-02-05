@@ -1,4 +1,4 @@
-defmodule BotchiniWeb.Api.StatusController do
+defmodule BotchiniWeb.StatusController do
   use BotchiniWeb, :controller
 
   def index(conn, _params) do

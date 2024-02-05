@@ -1,11 +1,13 @@
 // See the Tailwind configuration guide for advanced usage
 // https://tailwindcss.com/docs/configuration
 
+const colors = require("tailwindcss/colors")
 const plugin = require("tailwindcss/plugin")
 const fs = require("fs")
 const path = require("path")
 
 module.exports = {
+  darkMode: "class",
   content: [
     "./js/**/*.js",
     "../lib/botchini_web.ex",
@@ -15,6 +17,9 @@ module.exports = {
     extend: {
       colors: {
         brand: "#FD4F00",
+
+        primary: colors.blue,
+        secondary: colors.pink,
       }
     },
   },

@@ -4,7 +4,7 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "8.9.1",
+      version: "8.9.2",
       elixir: "~> 1.16.1",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -51,9 +51,6 @@ defmodule Botchini.MixProject do
       # HTTP Client
       {:req, "~> 0.4.0"},
       {:exconstructor, "~> 1.2.13"},
-      # {:tesla, "~> 1.9.0"},
-      # {:gun, "~> 2.1.0"},
-      # {:hackney, "~> 1.20.1"},
       # Helpers
       {:ink, "~> 1.0"},
       {:quantum, "~> 3.0"},

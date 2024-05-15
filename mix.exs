@@ -47,8 +47,8 @@ defmodule Botchini.MixProject do
       {:elixir_xml_to_map, "~> 2.0"},
       # Ecto
       {:phoenix_ecto, "~> 4.4"},
-      {:ecto_sql, "~> 3.9.2"},
-      {:postgrex, ">= 0.16.5"},
+      {:ecto_sql, "~> 3.11.1"},
+      {:postgrex, "~> 0.17.5"},
       # HTTP Client
       {:tesla, "~> 1.6.0"},
       {:gun, "~> 2.0", override: true},

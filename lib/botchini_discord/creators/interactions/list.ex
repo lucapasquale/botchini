@@ -3,9 +3,8 @@ defmodule BotchiniDiscord.Creators.Interactions.List do
   Handles /list slash command
   """
 
-  alias Nostrum.Cache.ChannelCache
   alias Nostrum.Constants.InteractionCallbackType
-  alias Nostrum.Struct.{ApplicationCommand, Embed, Interaction}
+  alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias Botchini.{Creators, Discord}
   alias BotchiniDiscord.InteractionBehaviour
@@ -51,30 +50,14 @@ defmodule BotchiniDiscord.Creators.Interactions.List do
       {:ok, following} ->
         %{
           type: InteractionCallbackType.channel_message_with_source(),
-          data: %{embeds: [guild_following_embed(following)]}
+          data: guild_following_embed(following)
         }
     end
   end
 
   defp guild_following_embed(following) do
-    channel_groups = Enum.group_by(following, fn {channel_id, _} -> channel_id end)
+    stream_codes = Enum.map(following, fn {_channel_id, name} -> " - #{name}" end)
 
-    fields =
-      channel_groups
-      |> Enum.reduce([], fn {channel_id, following}, acc ->
-        {:ok, channel} = ChannelCache.get(String.to_integer(channel_id))
-        stream_codes = Enum.map(following, &elem(&1, 1))
-
-        acc ++
-          [
-            %Embed.Field{
-              name: "#" <> channel.name,
-              value: Enum.join(stream_codes, "\n"),
-              inline: true
-            }
-          ]
-      end)
-
-    %Embed{title: "Following streams", fields: fields}
+    %{content: "Following streams:\n#{Enum.join(stream_codes, "\n")}"}
   end
 end

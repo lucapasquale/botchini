@@ -8,7 +8,7 @@ defmodule BotchiniWeb.TwitchController do
 
   @spec callback(Plug.Conn.t(), any) :: Plug.Conn.t()
   def callback(conn, _params) do
-    case is_request_valid?(conn, Application.fetch_env!(:botchini, :environment)) do
+    case request_is_valid?(conn, Application.fetch_env!(:botchini, :environment)) do
       false ->
         conn
         |> put_status(:not_found)
@@ -20,9 +20,9 @@ defmodule BotchiniWeb.TwitchController do
     end
   end
 
-  defp is_request_valid?(_conn, :dev), do: true
+  defp request_is_valid?(_conn, :dev), do: true
 
-  defp is_request_valid?(conn, _) do
+  defp request_is_valid?(conn, _) do
     message_id = get_header(conn, "twitch-eventsub-message-id")
     message_timestamp = get_header(conn, "twitch-eventsub-message-timestamp")
     [body] = Map.get(conn.assigns, :raw_body)

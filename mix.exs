@@ -4,8 +4,8 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "8.9.0",
-      elixir: "~> 1.16.1",
+      version: "8.9.1",
+      elixir: "~> 1.16.2",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -27,7 +27,7 @@ defmodule Botchini.MixProject do
   defp deps do
     [
       # Discord
-      {:nostrum, git: "https://github.com/Kraigie/nostrum.git", runtime: Mix.env() != :test},
+      {:nostrum, "~> 0.9.1", runtime: Mix.env() != :test},
       {:cowlib, "~> 2.11", hex: :remedy_cowlib, override: true},
       # Phoenix
       {:phoenix, "~> 1.6.16"},

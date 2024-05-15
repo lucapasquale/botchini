@@ -18,7 +18,7 @@ defmodule BotchiniDiscord.Consumer do
     Logger.info("Bot started! v#{version}")
   end
 
-  def handle_event({:GUILD_CREATE, {guild}, _ws_state}) do
+  def handle_event({:GUILD_CREATE, guild, _ws_state}) do
     Discord.upsert_guild(Integer.to_string(guild.id))
   end
 

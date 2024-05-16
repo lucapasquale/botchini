@@ -5,7 +5,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
 
   alias Nostrum.Cache.GuildCache
   alias Nostrum.Constants.{ApplicationCommandOptionType, InteractionCallbackType}
-  alias Nostrum.Struct.ApplicationCommand
+  alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias Botchini.{Discord, Music, Services}
   alias BotchiniDiscord.{Helpers, InteractionBehaviour}

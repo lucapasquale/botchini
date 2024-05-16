@@ -51,8 +51,7 @@ defmodule Botchini.MixProject do
       # HTTP Client
       {:req, "~> 0.4.0"},
       {:exconstructor, "~> 1.2.13"},
-      # Helpers
-      {:ink, "~> 1.0"},
+      # Cron
       {:quantum, "~> 3.0"},
       # Development and testing
       {:exsync, "~> 0.2", only: :dev},

@@ -14,8 +14,6 @@ config :botchini, BotchiniWeb.Endpoint, cache_static_manifest: "priv/static/cach
 # Do not print debug messages in production
 config :logger, level: :info
 
-config :logger, Ink, name: "botchini"
-
 # ## SSL Support
 #
 # To get SSL working, you will need to add the `https` key

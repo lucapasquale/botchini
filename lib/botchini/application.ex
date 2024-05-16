@@ -9,16 +9,18 @@ defmodule Botchini.Application do
   def start(_type, _args) do
     children =
       [
-        Botchini.Repo,
-        Botchini.Cache,
-        Botchini.Scheduler,
-        # Start the Telemetry supervisor
         BotchiniWeb.Telemetry,
-        # Start the PubSub system
+        Botchini.Repo,
+        {DNSCluster, query: Application.get_env(:botchini, :dns_cluster_query) || :ignore},
         {Phoenix.PubSub, name: Botchini.PubSub},
-        BotchiniWeb.Endpoint,
+        # Start the Finch HTTP client for sending emails
+        {Finch, name: Hello.Finch},
         # Twitch auth middleware
-        Botchini.Services.Twitch.AuthMiddleware
+        Botchini.Services.Twitch.AuthMiddleware,
+        # Start a worker by calling: Hello.Worker.start_link(arg)
+        # {Hello.Worker, arg},
+        # Start to serve requests, typically the last entry
+        BotchiniWeb.Endpoint
       ]
       |> start_nostrum(Application.fetch_env!(:botchini, :environment))
 

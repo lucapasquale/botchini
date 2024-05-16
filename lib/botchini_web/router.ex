@@ -14,16 +14,30 @@ defmodule BotchiniWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :xml_api do
+    plug :accepts, ["xml"]
+  end
+
   scope "/", BotchiniWeb do
     pipe_through :browser
 
     get "/", PageController, :home
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", BotchiniWeb do
-  #   pipe_through :api
-  # end
+  scope "/api", BotchiniWeb do
+    pipe_through :api
+
+    get "/status", StatusController, :index
+
+    post "/twitch/webhooks/callback", TwitchController, :callback
+    get "/youtube/webhooks/callback", YoutubeController, :challenge
+  end
+
+  scope "/api", BotchiniWeb do
+    pipe_through :xml_api
+
+    post "/youtube/webhooks/callback", YoutubeController, :notification
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:botchini, :dev_routes) do

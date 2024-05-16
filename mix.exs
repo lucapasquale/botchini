@@ -22,7 +22,7 @@ defmodule Botchini.MixProject do
   end
 
   defp extra_applications(:dev), do: extra_applications(:all) ++ [:exsync]
-  defp extra_applications(_all), do: [:logger, :runtime_tools]
+  defp extra_applications(_all), do: [:logger, :runtime_tools, :elixir_xml_to_map]
 
   defp deps do
     [
@@ -52,6 +52,7 @@ defmodule Botchini.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.2"},
+      {:elixir_xml_to_map, "~> 3.1.0"},
       # Ecto
       {:phoenix_ecto, "~> 4.4"},
       {:ecto_sql, "~> 3.11.1"},

@@ -60,8 +60,9 @@ defmodule Botchini.MixProject do
       # HTTP Client
       {:req, "~> 0.4.0"},
       {:exconstructor, "~> 1.2.13"},
-      # Cron
+      # Others
       {:quantum, "~> 3.0"},
+      {:sentry, "~> 10.2.0"},
       # Development and testing
       {:exsync, "~> 0.2", only: :dev},
       {:credo, "~> 1.7.0", only: [:dev, :test], runtime: false},

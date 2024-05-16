@@ -103,7 +103,7 @@ defmodule Botchini.Services.Twitch do
     )
   end
 
-  defp api() do
+  defp api do
     Req.new(
       base_url: "https://api.twitch.tv/helix",
       auth: {:bearer, AuthMiddleware.get_token()},

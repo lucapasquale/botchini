@@ -97,7 +97,7 @@ defmodule Botchini.Services.Youtube do
     end
   end
 
-  defp api() do
+  defp api do
     Req.new(
       base_url: "https://www.googleapis.com/youtube/v3",
       params: [key: Application.fetch_env!(:botchini, :youtube_api_key)]

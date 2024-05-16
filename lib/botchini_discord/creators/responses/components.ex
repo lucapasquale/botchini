@@ -8,9 +8,6 @@ defmodule BotchiniDiscord.Creators.Responses.Components do
 
   @spec follow_creator(Creator.services(), String.t()) :: map()
   def follow_creator(service, service_id) do
-    IO.inspect(service)
-    IO.inspect(service_id)
-
     %{
       type: ComponentType.action_row(),
       components: [

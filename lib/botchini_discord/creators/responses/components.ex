@@ -6,7 +6,7 @@ defmodule BotchiniDiscord.Creators.Responses.Components do
   alias Botchini.Creators.Schema.Creator
   alias Nostrum.Constants.{ButtonStyle, ComponentType}
 
-  @spec follow_creator(Creator.service(), String.t()) :: map()
+  @spec follow_creator(Creator.services(), String.t()) :: map()
   def follow_creator(service, service_id) do
     %{
       type: ComponentType.action_row(),
@@ -21,7 +21,7 @@ defmodule BotchiniDiscord.Creators.Responses.Components do
     }
   end
 
-  @spec unfollow_creator(Creator.service(), String.t()) :: map()
+  @spec unfollow_creator(Creator.services(), String.t()) :: map()
   def unfollow_creator(service, service_id) do
     %{
       type: ComponentType.action_row(),
@@ -36,7 +36,7 @@ defmodule BotchiniDiscord.Creators.Responses.Components do
     }
   end
 
-  @spec confirm_unfollow_creator(Creator.service(), String.t()) :: map()
+  @spec confirm_unfollow_creator(Creator.services(), String.t()) :: map()
   def confirm_unfollow_creator(service, service_id) do
     %{
       type: ComponentType.action_row(),

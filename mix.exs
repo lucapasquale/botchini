@@ -4,7 +4,7 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "8.9.1",
+      version: "8.9.2",
       elixir: "~> 1.16.1",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -28,7 +28,6 @@ defmodule Botchini.MixProject do
     [
       # Discord
       {:nostrum, "~> 0.9.1", runtime: Mix.env() != :test},
-      {:cowlib, "~> 2.11", hex: :remedy_cowlib, override: true},
       # Phoenix
       {:phoenix, "~> 1.6.16"},
       {:phoenix_html, "~> 3.3.1"},
@@ -47,13 +46,11 @@ defmodule Botchini.MixProject do
       {:elixir_xml_to_map, "~> 2.0"},
       # Ecto
       {:phoenix_ecto, "~> 4.4"},
-      {:ecto_sql, "~> 3.9.2"},
-      {:postgrex, ">= 0.16.5"},
+      {:ecto_sql, "~> 3.11.1"},
+      {:postgrex, "~> 0.17.5"},
       # HTTP Client
-      {:tesla, "~> 1.6.0"},
-      {:gun, "~> 2.0", override: true},
-      {:hackney, "~> 1.17.0"},
-      {:exconstructor, "~> 1.1.0"},
+      {:req, "~> 0.4.0"},
+      {:exconstructor, "~> 1.2.13"},
       # Helpers
       {:ink, "~> 1.0"},
       {:quantum, "~> 3.0"},

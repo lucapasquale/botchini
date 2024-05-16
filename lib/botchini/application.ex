@@ -11,14 +11,16 @@ defmodule Botchini.Application do
       [
         BotchiniWeb.Telemetry,
         Botchini.Repo,
+        Botchini.Cache,
+        Botchini.Scheduler,
         {DNSCluster, query: Application.get_env(:botchini, :dns_cluster_query) || :ignore},
         {Phoenix.PubSub, name: Botchini.PubSub},
         # Start the Finch HTTP client for sending emails
-        {Finch, name: Hello.Finch},
+        {Finch, name: Botchini.Finch},
         # Twitch auth middleware
         Botchini.Services.Twitch.AuthMiddleware,
-        # Start a worker by calling: Hello.Worker.start_link(arg)
-        # {Hello.Worker, arg},
+        # Start a worker by calling: Botchini.Worker.start_link(arg)
+        # {Botchini.Worker, arg},
         # Start to serve requests, typically the last entry
         BotchiniWeb.Endpoint
       ]

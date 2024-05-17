@@ -61,17 +61,6 @@ config :botchini, BotchiniWeb.Endpoint,
     ]
   ]
 
-# Watch static and templates for browser reloading.
-config :botchini, BotchiniWeb.Endpoint,
-  live_reload: [
-    patterns: [
-      ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
-      ~r"priv/gettext/.*(po)$",
-      ~r"lib/botchini_web/(live|views)/.*(ex)$",
-      ~r"lib/botchini_web/templates/.*(eex)$"
-    ]
-  ]
-
 # Enable dev routes for dashboard and mailbox
 config :botchini, dev_routes: true
 

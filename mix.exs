@@ -4,7 +4,7 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "8.10.1",
+      version: "8.10.2",
       elixir: "~> 1.16.1",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -17,12 +17,9 @@ defmodule Botchini.MixProject do
   def application do
     [
       mod: {Botchini.Application, []},
-      extra_applications: extra_applications(Mix.env())
+      extra_applications: [:logger, :runtime_tools, :elixir_xml_to_map]
     ]
   end
-
-  defp extra_applications(:dev), do: extra_applications(:all) ++ [:exsync]
-  defp extra_applications(_all), do: [:logger, :runtime_tools, :elixir_xml_to_map]
 
   defp deps do
     [
@@ -65,7 +62,6 @@ defmodule Botchini.MixProject do
       {:sentry, "~> 10.2.0"},
       {:hackney, "~> 1.8"},
       # Development and testing
-      {:exsync, "~> 0.2", only: :dev},
       {:credo, "~> 1.7.0", only: [:dev, :test], runtime: false},
       {:patch, "~> 0.12.0", only: [:test]},
       {:faker, "~> 0.16", only: :test}

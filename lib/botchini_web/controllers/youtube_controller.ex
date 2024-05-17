@@ -49,19 +49,19 @@ defmodule BotchiniWeb.YoutubeController do
   end
 
   defp process_webhook(conn) do
-    event =
+    entry =
       conn.body_params
       |> Map.get("feed")
       |> Map.get("entry")
 
-    channel_id = Map.get(event, "{http://www.youtube.com/xml/schemas/2015}channelId")
-    video_id = Map.get(event, "{http://www.youtube.com/xml/schemas/2015}videoId")
+    channel_id = Map.get(entry, "yt:channelId")
+    video_id = Map.get(entry, "yt:videoId")
 
     Logger.info("Received webhook from youtube channel #{channel_id}, video #{video_id}")
 
     cache_key = "youtube_event:#{channel_id}:#{video_id}"
 
-    if should_notify?(event, cache_key) do
+    if should_notify?(entry, cache_key) do
       send_new_video_messages(channel_id, video_id)
 
       {:ok, _} = Cache.set(cache_key, @event_ttl, fn -> true end)
@@ -70,10 +70,10 @@ defmodule BotchiniWeb.YoutubeController do
     text(conn, "ok")
   end
 
-  defp should_notify?(event, cache_key) do
+  defp should_notify?(entry, cache_key) do
     {:ok, notified} = Cache.get(cache_key)
 
-    {:ok, published_at, _} = DateTime.from_iso8601(event["published"])
+    {:ok, published_at, _} = DateTime.from_iso8601(entry["published"])
     published_recently = abs(DateTime.diff(published_at, DateTime.utc_now(), :hour)) <= 24
 
     !notified && published_recently

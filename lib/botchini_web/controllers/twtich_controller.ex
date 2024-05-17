@@ -26,10 +26,9 @@ defmodule BotchiniWeb.TwitchController do
     message_id = get_header(conn, "twitch-eventsub-message-id")
     message_timestamp = get_header(conn, "twitch-eventsub-message-timestamp")
     [body] = Map.get(conn.assigns, :raw_body)
-    Logger.info(body)
+    payload = message_id <> message_timestamp <> body
 
     webhook_secret = Application.fetch_env!(:botchini, :twitch_webhook_secret)
-    payload = message_id <> message_timestamp <> body
 
     hmac =
       :crypto.mac(:hmac, :sha256, webhook_secret, payload)

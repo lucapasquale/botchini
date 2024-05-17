@@ -42,9 +42,63 @@ Grab your bot's token from [Discord Applications](https://discord.com/developers
 
 Create an account on [Google Cloud Platform](https://console.cloud.google.com), and create a new API Key for your bot. You can limit the key to only have access to `YouTube Data API v3`
 
+<details>
+  <summary>Example webhook payload</summary>
+
+  ```xml
+  <?xml version='1.0' encoding='UTF-8'?>
+   <feed
+      xmlns:yt="http://www.youtube.com/xml/schemas/2015"
+      xmlns="http://www.w3.org/2005/Atom">
+      <link rel="hub" href="https://pubsubhubbub.appspot.com"/>
+      <link rel="self" href="https://www.youtube.com/xml/feeds/videos.xml?channel_id=UCHDxYLv8iovIbhrfl16CNyg"/>
+      <title>YouTube video feed</title>
+      <updated>2024-05-17T01:37:49.636216015+00:00</updated>
+      <entry>
+         <id>yt:video:TBXAlFqn93E</id>
+         <yt:videoId>TBXAlFqn93E</yt:videoId>
+         <yt:channelId>UCHDxYLv8iovIbhrfl16CNyg</yt:channelId>
+         <title>I wish this wasn’t an Ubisoft game</title>
+         <link rel="alternate" href="https://www.youtube.com/watch?v=TBXAlFqn93E"/>
+         <author>
+            <name>GameLinked</name>
+            <uri>https://www.youtube.com/channel/UCHDxYLv8iovIbhrfl16CNyg</uri>
+         </author>
+         <published>2024-05-17T01:37:38+00:00</published>
+         <updated>2024-05-17T01:37:49.636216015+00:00</updated>
+      </entry>
+   </feed>
+  ```
+</details>
+
 ### Twitch
 
 To be able to search and receive webhooks from streams, you need to register an application on the [Twitch Applications](https://dev.twitch.tv/console/apps). After that, you'll be able to get the `client_id` and `client_secret` tokens.
+
+<details>
+  <summary>Example webhook payload</summary>
+
+  ```json
+  {
+      "challenge":"6gepqopldUA-K7p_CJDK3gmndD6mxyxjWSS7wCTFxZ8",
+      "subscription":{
+         "id":"3ce498e8-44d4-446f-886c-66bc256af5d9",
+         "status":"webhook_callback_verification_pending",
+         "type":"stream.online",
+         "version":"1",
+         "condition":{
+            "broadcaster_user_id":"35958947"
+         },
+         "transport":{
+            "method":"webhook",
+            "callback":"https://botchini.lucapasquale.dev/api/twitch/webhooks/callback"
+         },
+         "created_at":"2024-05-17T01:46:52.47828845Z",
+         "cost":1
+      }
+   }
+  ```
+</details>
 
 ## Running locally
 

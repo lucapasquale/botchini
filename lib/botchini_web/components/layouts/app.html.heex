@@ -1,24 +1,42 @@
-<header class="flex items-center justify-between border-b border-zinc-100 py-3 text-sm px-8">
+<header class="flex items-center justify-between border-b border-gray-700 py-3 text-sm px-16">
   <div class="flex items-center gap-4">
-    <a href="/">
-      <h2 class="text-brand flex items-center text-sm font-semibold leading-6 my-0">
+    <a href={~p"/"}>
+      <h2 class="text-lg font-semibold leading-6 my-0 hover:underline">
         Botchini
       </h2>
     </a>
-
-    <h3 class="">Get notified on Discord whenever your favorite creators goes live!</h3>
   </div>
 
-  <div class="flex items-center gap-4 font-semibold leading-6 text-zinc-900">
+  <nav class="flex items-center gap-4 font-semibold leading-6 ">
+    <.link
+      target="_blank"
+      rel="noopener noreferrer"
+      navigate={@github_url}
+      class="flex items-center gap-1"
+    >
+      <svg
+        class="h-6"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+      </svg>
+      GitHub
+    </.link>
+
     <a
       target="_blank"
       rel="noopener noreferrer"
       href={@invite_bot_url}
-      class="rounded-lg bg-zinc-100 px-2 py-1 hover:bg-zinc-200/80"
+      class="rounded-lg text-zinc-900 bg-zinc-100 px-2 py-1 hover:bg-zinc-200/80"
     >
-      Add to your server
+      Invite
     </a>
-  </div>
+  </nav>
 </header>
 
 <main>

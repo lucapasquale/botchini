@@ -1,4 +1,14 @@
-<main class="flex flex-col items-center w-full p-12">
+<main class="flex flex-col items-center w-full">
+  <header class="flex flex-col items-center mb-8 ">
+    <h1 class="text-6xl uppercase text-purple-400">Botchini</h1>
+    <h3 class="text-md">Get notified on Discord whenever your favorite creators goes live!</h3>
+  </header>
+
+  <section class="flex items-center justify-center gap-6 mb-8">
+    <img class="w-96" src="/images/twitch_example.png" />
+    <img class="w-96" src="/images/youtube_example.png" />
+  </section>
+
   <div class="flex flex-col items-center w-full mb-8">
     <section class="grid grid-cols-2 gap-x-10 gap-y-1 text-center w-auto">
       <div class="text-6xl text-purple-400">
@@ -16,14 +26,11 @@
   </div>
 
   <a
-    href={@invite_bot_url}
     target="_blank"
     rel="noopener noreferrer"
-    class={[
-      "phx-submit-loading:opacity-75 rounded-lg bg-zinc-900 hover:bg-zinc-700 py-2 px-3",
-      "text-sm font-semibold leading-6 text-white active:text-white/80"
-    ]}
+    href={@invite_bot_url}
+    class="rounded-lg text-zinc-900 bg-zinc-100 px-2 py-1 hover:bg-zinc-200/80"
   >
-    Add it to your server
+    Add to your server
   </a>
 </main>

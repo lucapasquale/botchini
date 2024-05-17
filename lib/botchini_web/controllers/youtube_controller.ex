@@ -34,6 +34,7 @@ defmodule BotchiniWeb.YoutubeController do
   defp request_is_valid?(conn, _) do
     webhook_secret = Application.fetch_env!(:botchini, :youtube_webhook_secret)
     [body] = Map.get(conn.assigns, :raw_body)
+    Logger.info(body)
 
     hmac =
       :crypto.mac(:hmac, :sha, webhook_secret, body)

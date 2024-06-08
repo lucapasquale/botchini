@@ -83,8 +83,8 @@ defmodule BotchiniWeb.YoutubeController do
     followers = Creators.find_followers_for_creator(creator)
     Logger.info("Channel #{creator.name} posted, sending to #{length(followers)} channels")
 
-    yt_channel = Services.youtube_channel_info(creator.service_id)
-    yt_video = Services.youtube_video_info(video_id)
+    {:ok, yt_channel} = Services.youtube_channel_info(creator.service_id)
+    {:ok, yt_video} = Services.youtube_video_info(video_id)
 
     Enum.each(followers, fn follower ->
       Task.start(fn -> notify_followers(creator, follower, {yt_channel, yt_video}) end)

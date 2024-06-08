@@ -8,10 +8,10 @@ defmodule BotchiniTest.Services.ServicesTest do
 
   describe "twitch_user_info" do
     test "calls Twitch API" do
-      patch(Twitch, :get_user, nil)
+      patch(Twitch, :get_user, {:error, nil})
 
       user_id = Faker.String.base64()
-      nil = Services.twitch_user_info(user_id)
+      {:error, nil} = Services.twitch_user_info(user_id)
 
       assert_called(Twitch.get_user(user_id))
     end
@@ -19,10 +19,10 @@ defmodule BotchiniTest.Services.ServicesTest do
 
   describe "twitch_stream_info" do
     test "calls Twitch API" do
-      patch(Twitch, :get_stream, nil)
+      patch(Twitch, :get_stream, {:error, nil})
 
       service_id = Faker.String.base64()
-      nil = Services.twitch_stream_info(service_id)
+      {:error, nil} = Services.twitch_stream_info(service_id)
 
       assert_called(Twitch.get_stream(service_id))
     end
@@ -30,10 +30,10 @@ defmodule BotchiniTest.Services.ServicesTest do
 
   describe "youtube_channel_info" do
     test "calls Youtube API" do
-      patch(Youtube, :get_channel, nil)
+      patch(Youtube, :get_channel, {:error, nil})
 
       channel_id = Faker.String.base64()
-      nil = Services.youtube_channel_info(channel_id)
+      {:error, nil} = Services.youtube_channel_info(channel_id)
 
       assert_called(Youtube.get_channel(channel_id))
     end
@@ -41,10 +41,10 @@ defmodule BotchiniTest.Services.ServicesTest do
 
   describe "youtube_video_info" do
     test "calls Youtube API" do
-      patch(Youtube, :get_video, nil)
+      patch(Youtube, :get_video, {:error, nil})
 
       video_id = Faker.String.base64()
-      nil = Services.youtube_video_info(video_id)
+      {:error, nil} = Services.youtube_video_info(video_id)
 
       assert_called(Youtube.get_video(video_id))
     end
@@ -52,7 +52,7 @@ defmodule BotchiniTest.Services.ServicesTest do
 
   describe "get_user" do
     test "calls Twitch API returning nil" do
-      patch(Twitch, :get_user, nil)
+      patch(Twitch, :get_user, {:error, nil})
 
       {:error, :not_found} = Services.get_user(:twitch, Faker.String.base64())
     end
@@ -61,13 +61,13 @@ defmodule BotchiniTest.Services.ServicesTest do
       id = Faker.String.base64()
       name = Faker.String.base64()
 
-      patch(Twitch, :get_user, %{id: id, display_name: name})
+      patch(Twitch, :get_user, {:ok, %{id: id, display_name: name}})
 
       {:ok, {^id, ^name}} = Services.get_user(:twitch, Faker.String.base64())
     end
 
     test "calls Youtube API returning nil" do
-      patch(Youtube, :get_channel, nil)
+      patch(Youtube, :get_channel, {:error, nil})
 
       {:error, :not_found} = Services.get_user(:youtube, Faker.String.base64())
     end
@@ -75,7 +75,7 @@ defmodule BotchiniTest.Services.ServicesTest do
     test "calls Youtube API returning user" do
       id = Faker.String.base64()
       name = Faker.String.base64()
-      patch(Youtube, :get_channel, %{id: id, snippet: %{"title" => name}})
+      patch(Youtube, :get_channel, {:ok, %{id: id, snippet: %{"title" => name}}})
 
       {:ok, {^id, ^name}} = Services.get_user(:youtube, Faker.String.base64())
     end
@@ -83,7 +83,7 @@ defmodule BotchiniTest.Services.ServicesTest do
 
   describe "search_channel" do
     test "calls Twitch API returning nil to both" do
-      patch(Twitch, :get_user_by_user_login, nil)
+      patch(Twitch, :get_user_by_user_login, {:error, nil})
       patch(Twitch, :search_channels, [])
 
       term = Faker.String.base64()
@@ -97,7 +97,7 @@ defmodule BotchiniTest.Services.ServicesTest do
       id = Faker.String.base64()
       name = Faker.String.base64()
 
-      patch(Twitch, :get_user_by_user_login, nil)
+      patch(Twitch, :get_user_by_user_login, {:error, nil})
       patch(Twitch, :search_channels, [%{id: id, display_name: name}])
 
       {:ok, {^id, ^name}} = Services.search_channel(:twitch, Faker.String.base64())
@@ -107,7 +107,7 @@ defmodule BotchiniTest.Services.ServicesTest do
       id = Faker.String.base64()
       name = Faker.String.base64()
 
-      patch(Twitch, :get_user_by_user_login, %{id: id, display_name: name})
+      patch(Twitch, :get_user_by_user_login, {:ok, %{id: id, display_name: name}})
 
       {:ok, {^id, ^name}} = Services.search_channel(:twitch, Faker.String.base64())
 

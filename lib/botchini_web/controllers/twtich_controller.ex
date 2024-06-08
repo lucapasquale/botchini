@@ -74,7 +74,6 @@ defmodule BotchiniWeb.TwitchController do
 
       creator ->
         send_stream_online_messages(conn, creator)
-        text(conn, "ok")
     end
   end
 

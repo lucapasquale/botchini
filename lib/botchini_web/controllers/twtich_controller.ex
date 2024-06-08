@@ -73,8 +73,7 @@ defmodule BotchiniWeb.TwitchController do
         |> render(:"404")
 
       creator ->
-        send_stream_online_messages(creator)
-        text(conn, "ok")
+        send_stream_online_messages(conn, creator)
     end
   end
 
@@ -84,16 +83,25 @@ defmodule BotchiniWeb.TwitchController do
     |> text("not found")
   end
 
-  defp send_stream_online_messages(creator) do
-    followers = Creators.find_followers_for_creator(creator)
-    Logger.info("Stream #{creator.name} is online, sending to #{length(followers)} channels")
+  defp send_stream_online_messages(conn, creator) do
+    with followers <- Creators.find_followers_for_creator(creator),
+         {:ok, user} <- Services.twitch_user_info(creator.service_id),
+         {:ok, stream} <- Services.twitch_stream_info(creator.service_id) do
+      Logger.info("Stream #{creator.name} is online, sending to #{length(followers)} channels")
 
-    user = Services.twitch_user_info(creator.service_id)
-    stream = Services.twitch_stream_info(creator.service_id)
+      Enum.each(followers, fn follower ->
+        Task.start(fn -> notify_followers(creator, follower, {user, stream}) end)
+      end)
 
-    Enum.each(followers, fn follower ->
-      Task.start(fn -> notify_followers(creator, follower, {user, stream}) end)
-    end)
+      text(conn, "ok")
+    else
+      _ ->
+        Logger.warning("Failed to load Twitch stream for #{creator.name}")
+
+        conn
+        |> put_status(:not_found)
+        |> render(:"404")
+    end
   end
 
   defp notify_followers(creator, follower, {user, stream}) do

@@ -27,7 +27,7 @@ defmodule Botchini.Services.Youtube do
     end
   end
 
-  @spec get_channel(String.t()) :: Channel.t() | nil
+  @spec get_channel(String.t()) :: {:ok, Channel.t()} | {:error, nil}
   def get_channel(channel_id) do
     resp =
       Req.get!(
@@ -38,15 +38,14 @@ defmodule Botchini.Services.Youtube do
 
     case Map.get(resp.body, "items") do
       nil ->
-        nil
+        {:error, nil}
 
       items ->
-        List.first(items)
-        |> Channel.new()
+        {:ok, Channel.new(List.first(items))}
     end
   end
 
-  @spec get_video(String.t()) :: Video.t() | nil
+  @spec get_video(String.t()) :: {:ok, Video.t()} | {:error, nil}
   def get_video(video_id) do
     resp =
       Req.get!(
@@ -57,11 +56,10 @@ defmodule Botchini.Services.Youtube do
 
     case Map.get(resp.body, "items") do
       nil ->
-        nil
+        {:error, nil}
 
       items ->
-        List.first(items)
-        |> Video.new()
+        {:ok, Video.new(List.first(items))}
     end
   end
 

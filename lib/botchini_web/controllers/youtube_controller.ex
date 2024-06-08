@@ -79,16 +79,16 @@ defmodule BotchiniWeb.YoutubeController do
   end
 
   defp send_new_video_messages(channel_id, video_id) do
-    creator = Creators.find_by_service(:youtube, channel_id)
-    followers = Creators.find_followers_for_creator(creator)
-    Logger.info("Channel #{creator.name} posted, sending to #{length(followers)} channels")
+    with creator <- Creators.find_by_service(:youtube, channel_id),
+         followers <- Creators.find_followers_for_creator(creator),
+         {:ok, yt_channel} = Services.youtube_channel_info(creator.service_id),
+         {:ok, yt_video} <- Services.youtube_video_info(video_id) do
+      Logger.info("Channel #{creator.name} posted, sending to #{length(followers)} channels")
 
-    {:ok, yt_channel} = Services.youtube_channel_info(creator.service_id)
-    {:ok, yt_video} = Services.youtube_video_info(video_id)
-
-    Enum.each(followers, fn follower ->
-      Task.start(fn -> notify_followers(creator, follower, {yt_channel, yt_video}) end)
-    end)
+      Enum.each(followers, fn follower ->
+        Task.start(fn -> notify_followers(creator, follower, {yt_channel, yt_video}) end)
+      end)
+    end
   end
 
   defp notify_followers(creator, follower, {channel, video}) do

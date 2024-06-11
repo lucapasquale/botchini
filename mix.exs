@@ -4,7 +4,7 @@ defmodule Botchini.MixProject do
   def project do
     [
       app: :botchini,
-      version: "8.11.1",
+      version: "8.11.2",
       elixir: "~> 1.16.1",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,

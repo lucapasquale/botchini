@@ -70,7 +70,7 @@ defmodule BotchiniWeb.TwitchController do
       nil ->
         conn
         |> put_status(:not_found)
-        |> render(:"404")
+        |> text("not found")
 
       creator ->
         send_stream_online_messages(conn, creator)
@@ -100,7 +100,7 @@ defmodule BotchiniWeb.TwitchController do
 
         conn
         |> put_status(:not_found)
-        |> render(:"404")
+        |> text("not found")
     end
   end
 

@@ -24,13 +24,11 @@ defmodule BotchiniDiscord.Common.Interactions.About do
   def handle_interaction(_interaction, _options) do
     embed =
       %Nostrum.Struct.Embed{}
-      |> put_title("Botchini information")
+      |> put_title("Botchini")
+      |> put_url("https://botchini.lucapasquale.dev")
       |> put_field("Version", Application.spec(:botchini, :vsn) |> to_string(), true)
-      |> put_field("Author", "Luca\#1813", true)
-      |> put_field("Website", "[Link](https://botchini.lucapasquale.dev)", true)
+      |> put_field("Author", "lucapasquale", true)
       |> put_field("Uptime", uptime(), true)
-      |> put_field("Processes", "#{length(:erlang.processes())}", true)
-      |> put_field("Memory Usage", "#{div(:erlang.memory(:total), 1_000_000)} MB", true)
 
     %{
       type: InteractionCallbackType.channel_message_with_source(),

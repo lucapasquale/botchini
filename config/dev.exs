@@ -55,9 +55,11 @@ config :botchini, BotchiniWeb.Endpoint,
 config :botchini, BotchiniWeb.Endpoint,
   live_reload: [
     patterns: [
+      ~r"lib/botchini/.*.*ex$",
+      ~r"lib/botchini_discord/.*.*ex$",
+      ~r"lib/botchini_web/(controllers|live|components)/.*(ex|heex)$",
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
-      ~r"priv/gettext/.*(po)$",
-      ~r"lib/botchini_web/(controllers|live|components)/.*(ex|heex)$"
+      ~r"priv/gettext/.*(po)$"
     ]
   ]
 

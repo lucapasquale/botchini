@@ -62,7 +62,7 @@ defmodule Botchini.MixProject do
       {:sentry, "~> 10.2.0"},
       {:hackney, "~> 1.8"},
       # Development and testing
-      {:credo, "~> 1.7.0", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.7.7", only: [:dev, :test], runtime: false},
       {:patch, "~> 0.12.0", only: [:test]},
       {:faker, "~> 0.16", only: :test}
     ]

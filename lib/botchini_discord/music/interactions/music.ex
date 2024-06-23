@@ -272,7 +272,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
         term
       ) ->
         video_id = Services.Youtube.get_video_id_from_url(term)
-        yt_video = Services.Youtube.get_video(video_id)
+        {:ok, yt_video} = Services.Youtube.get_video(video_id)
 
         if is_nil(yt_video.liveStreamingDetails) do
           :ytdl

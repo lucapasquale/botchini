@@ -98,6 +98,4 @@ COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/botchini ./
 
 USER nobody
 
-RUN /app/bin/migrate
-
 CMD ["/app/bin/server"]

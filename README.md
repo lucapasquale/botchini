@@ -19,6 +19,14 @@ Uses modern features like [Slash Commands](https://blog.discord.com/slash-comman
     - `/follow <service> <term>` : Follow a creator and get notified when it starts streaming or uploads a video
     - `/unfollow <service> <term>` : Stops following a creator
     - `/list` : Lists all creators being followed on the server
+ - Music
+    - `/play <term>`: Play a song from YouTube
+    - `/pause`: Pauses current song
+    - `/resume`: Resumes current song
+    - `/skip`: Skips current song
+    - `/stop`: Stops playing and clears the queue
+    - `/queue`: Lists current songs in queue
+
 
 ## Installation
 

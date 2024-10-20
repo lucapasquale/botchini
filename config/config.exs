@@ -14,6 +14,7 @@ config :botchini,
 
 config :nostrum,
   youtubedl: "yt-dlp",
+  streamlink: false,
   audio_timeout: 60_000
 
 config :botchini, Botchini.Scheduler,

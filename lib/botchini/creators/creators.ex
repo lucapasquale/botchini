@@ -12,7 +12,7 @@ defmodule Botchini.Creators do
 
   @type creator_input :: {Creator.services(), String.t()}
 
-  @spec count_creators() :: Integer.t()
+  @spec count_creators() :: integer()
   def count_creators do
     Query.from(s in Creator, select: count())
     |> Repo.one!()

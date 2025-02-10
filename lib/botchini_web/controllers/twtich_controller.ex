@@ -108,7 +108,7 @@ defmodule BotchiniWeb.TwitchController do
     channel_id = follower.discord_channel_id
 
     msg_response =
-      Nostrum.Api.create_message(
+      Nostrum.Api.Message.create(
         String.to_integer(channel_id),
         embed: Embeds.twitch_stream_online(user, stream),
         components: [Components.unfollow_creator(creator.service, creator.service_id)]

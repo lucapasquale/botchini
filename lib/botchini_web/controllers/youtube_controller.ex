@@ -95,7 +95,7 @@ defmodule BotchiniWeb.YoutubeController do
     channel_id = follower.discord_channel_id
 
     msg_response =
-      Nostrum.Api.create_message(
+      Nostrum.Api.Message.create(
         String.to_integer(channel_id),
         embed: Embeds.youtube_video_posted(channel, video),
         components: [Components.unfollow_creator(creator.service, creator.service_id)]

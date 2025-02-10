@@ -39,9 +39,9 @@ defmodule BotchiniDiscord.Interactions do
         end
       end)
 
-    Api.bulk_overwrite_global_application_commands(public_commands)
+    Api.ApplicationCommand.bulk_overwrite_global_commands(public_commands)
 
-    Api.bulk_overwrite_guild_application_commands(
+    Api.ApplicationCommand.bulk_overwrite_guild_commands(
       Application.fetch_env!(:botchini, :test_guild_id),
       private_commands
     )

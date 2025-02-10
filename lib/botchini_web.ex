@@ -43,7 +43,7 @@ defmodule BotchiniWeb do
         layouts: [html: BotchiniWeb.Layouts]
 
       import Plug.Conn
-      import BotchiniWeb.Gettext
+      use Gettext, backend: Botchini.Gettext
 
       unquote(verified_routes())
     end
@@ -85,7 +85,7 @@ defmodule BotchiniWeb do
       import Phoenix.HTML
       # Core UI components and translation
       import BotchiniWeb.CoreComponents
-      import BotchiniWeb.Gettext
+      use Gettext, backend: Botchini.Gettext
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS

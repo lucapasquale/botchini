@@ -13,7 +13,7 @@ defmodule BotchiniDiscord.Consumer do
     Interactions.register_commands()
 
     version = to_string(Application.spec(:botchini, :vsn))
-    Nostrum.Api.update_status(:online, "on v#{version}")
+    Nostrum.Api.Self.update_status(:online, "on v#{version}")
 
     Logger.info("Bot started! v#{version}")
   end

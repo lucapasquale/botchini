@@ -18,7 +18,7 @@ defmodule BotchiniWeb.CoreComponents do
 
   alias Phoenix.HTML.Form
   alias Phoenix.LiveView.JS
-  import BotchiniWeb.Gettext
+  use Gettext, backend: Botchini.Gettext
 
   @doc """
   Renders a modal.

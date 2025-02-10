@@ -12,7 +12,7 @@ defmodule Botchini.Services.Twitch.AuthMiddleware do
   def get_token do
     %{exp: exp, access_token: access_token} = Agent.get(__MODULE__, & &1)
 
-    if NaiveDateTime.utc_now() < exp do
+    if NaiveDateTime.compare(NaiveDateTime.utc_now(), exp) == :gt do
       access_token
     else
       auth_resp =

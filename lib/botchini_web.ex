@@ -83,8 +83,6 @@ defmodule BotchiniWeb do
     quote do
       # HTML escaping functionality
       import Phoenix.HTML
-      # Core UI components and translation
-      import BotchiniWeb.CoreComponents
       use Gettext, backend: Botchini.Gettext
 
       # Shortcut for generating JS commands

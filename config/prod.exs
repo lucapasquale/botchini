@@ -21,5 +21,19 @@ config :sentry,
   enable_source_code_context: true,
   root_source_code_paths: [File.cwd!()]
 
+# Configures Prometheus/Grafana
+config :botchini, Botchini.PromEx,
+  disabled: false,
+  manual_metrics_start_delay: :no_delay,
+  drop_metrics_groups: [],
+  grafana: [
+    host: System.get_env("GRAFANA_HOST", "http://localhost:3000"),
+    # Authenticate via Basic Auth
+    username: System.get_env("GRAFANA_USERNAME", "admin"),
+    password: System.get_env("GRAFANA_PASSWORD"),
+    upload_dashboards_on_start: true
+  ],
+  metrics_server: :disabled
+
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.

@@ -13,6 +13,7 @@ defmodule Botchini.Application do
 
     children =
       [
+        Botchini.PromEx,
         BotchiniWeb.Telemetry,
         Botchini.Repo,
         Botchini.Cache,

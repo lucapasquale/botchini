@@ -41,10 +41,9 @@ defmodule BotchiniDiscord.Interactions do
 
     Api.ApplicationCommand.bulk_overwrite_global_commands(public_commands)
 
-    Api.ApplicationCommand.bulk_overwrite_guild_commands(
-      Application.fetch_env!(:botchini, :test_guild_id),
-      private_commands
-    )
+    Enum.each(Application.fetch_env!(:botchini, :test_guild_ids), fn guild_id ->
+      Api.ApplicationCommand.bulk_overwrite_guild_commands(guild_id, private_commands)
+    end)
   end
 
   @spec handle_interaction(Interaction.t()) :: any()
@@ -75,7 +74,7 @@ defmodule BotchiniDiscord.Interactions do
   end
 
   # Set all commands as private while in dev mode
-  defp command_is_public(_command_tupple, :dev), do: false
+  # defp command_is_public(_command_tupple, :dev), do: false
 
   defp command_is_public({access, _command}, _env) do
     access == :public

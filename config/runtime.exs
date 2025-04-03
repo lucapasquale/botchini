@@ -73,7 +73,7 @@ if config_env() == :prod do
     twitch_client_id: System.get_env("TWITCH_CLIENT_ID"),
     twitch_client_secret: System.get_env("TWITCH_CLIENT_SECRET"),
     twitch_webhook_secret: System.get_env("TWITCH_WEBHOOK_SECRET"),
-    test_guild_id: System.get_env("TEST_GUILD_ID")
+    test_guild_ids: String.split(System.get_env("TEST_GUILD_IDS", ""), ",")
 
   config :nostrum,
     token: System.get_env("DISCORD_TOKEN"),

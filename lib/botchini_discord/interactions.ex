@@ -74,7 +74,7 @@ defmodule BotchiniDiscord.Interactions do
   end
 
   # Set all commands as private while in dev mode
-  # defp command_is_public(_command_tupple, :dev), do: false
+  defp command_is_public(_command_tupple, :dev), do: false
 
   defp command_is_public({access, _command}, _env) do
     access == :public

@@ -9,7 +9,6 @@ defmodule Botchini.Application do
   def start(_type, _args) do
     children =
       [
-        Botchini.PromEx,
         BotchiniWeb.Telemetry,
         Botchini.Repo,
         Botchini.Cache,

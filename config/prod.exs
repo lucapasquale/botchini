@@ -15,20 +15,22 @@ config :swoosh, local: false
 
 # Do not print debug messages in production
 config :logger, level: :info
+config :logger, :backends, [:console, Svadilfari]
 
-# Configures Prometheus/Grafana
-config :botchini, Botchini.PromEx,
-  disabled: false,
-  manual_metrics_start_delay: :no_delay,
-  drop_metrics_groups: [],
-  grafana: [
-    host: System.get_env("GRAFANA_HOST", "http://localhost:3000"),
-    # Authenticate via Basic Auth
-    username: System.get_env("GRAFANA_USERNAME", "admin"),
-    password: System.get_env("GRAFANA_PASSWORD"),
-    upload_dashboards_on_start: true
+# This setting is needed because Loki will complain if timestamps are too much off,
+# and Logger sends timestamps without time zone information.
+config :logger, utc_log: true
+
+config :logger, :svadilfari,
+  max_buffer: 10,
+  client: [
+    url: System.get_env("GRAFANA_HOST", "http://localhost:3000")
   ],
-  metrics_server: :disabled
+  labels: [
+    {"service", "botchini"},
+    {"env", "production"},
+    {"version", Application.spec(:botchini, :vsn)}
+  ]
 
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.

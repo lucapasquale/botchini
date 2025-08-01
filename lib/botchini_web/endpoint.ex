@@ -34,8 +34,6 @@ defmodule BotchiniWeb.Endpoint do
     plug Phoenix.Ecto.CheckRepoStatus, otp_app: :botchini
   end
 
-  plug PromEx.Plug, prom_ex_module: Botchini.PromEx
-
   plug Phoenix.LiveDashboard.RequestLogger,
     param_key: "request_logger",
     cookie_key: "request_logger"

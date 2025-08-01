@@ -59,7 +59,6 @@ defmodule Botchini.MixProject do
       {:exconstructor, "~> 1.2.13"},
       # Others
       {:quantum, "~> 3.0"},
-      {:sentry, "~> 10.2.0"},
       {:hackney, "~> 1.8"},
       {:prom_ex, "~> 1.11.0"},
       # Development and testing

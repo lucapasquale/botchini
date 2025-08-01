@@ -1,5 +1,4 @@
 defmodule BotchiniWeb.Endpoint do
-  use Sentry.PlugCapture
   use Phoenix.Endpoint, otp_app: :botchini
 
   # The session will be stored in the cookie and signed,
@@ -54,5 +53,4 @@ defmodule BotchiniWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
   plug BotchiniWeb.Router
-  plug Sentry.PlugContext
 end

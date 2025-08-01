@@ -61,7 +61,7 @@ RUN mix compile
 COPY config/runtime.exs config/
 
 COPY rel rel
-RUN mix release && mix sentry.package_source_code
+RUN mix release
 
 # start a new build stage so that the final image will only contain
 # the compiled release and other runtime necessities

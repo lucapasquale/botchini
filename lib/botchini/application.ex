@@ -7,10 +7,6 @@ defmodule Botchini.Application do
 
   @impl true
   def start(_type, _args) do
-    :logger.add_handler(:my_sentry_handler, Sentry.LoggerHandler, %{
-      config: %{metadata: [:file, :line]}
-    })
-
     children =
       [
         Botchini.PromEx,

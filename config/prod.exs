@@ -15,22 +15,6 @@ config :swoosh, local: false
 
 # Do not print debug messages in production
 config :logger, level: :info
-config :logger, :backends, [:console, Svadilfari]
-
-# This setting is needed because Loki will complain if timestamps are too much off,
-# and Logger sends timestamps without time zone information.
-config :logger, utc_log: true
-
-config :logger, :svadilfari,
-  max_buffer: 10,
-  client: [
-    url: System.get_env("GRAFANA_HOST", "http://localhost:3000")
-  ],
-  labels: [
-    {"service", "botchini"},
-    {"env", "production"},
-    {"version", Application.spec(:botchini, :vsn)}
-  ]
 
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.

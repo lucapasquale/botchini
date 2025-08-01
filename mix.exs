@@ -17,7 +17,7 @@ defmodule Botchini.MixProject do
   def application do
     [
       mod: {Botchini.Application, []},
-      extra_applications: [:svadilfari, :logger, :runtime_tools, :elixir_xml_to_map]
+      extra_applications: [:logger, :runtime_tools, :elixir_xml_to_map]
     ]
   end
 
@@ -60,7 +60,6 @@ defmodule Botchini.MixProject do
       # Others
       {:quantum, "~> 3.0"},
       {:hackney, "~> 1.8"},
-      {:svadilfari, "~> 0.1"},
       # Development and testing
       {:credo, "~> 1.7.7", only: [:dev, :test], runtime: false},
       {:patch, "~> 0.12.0", only: [:test]},

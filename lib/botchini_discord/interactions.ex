@@ -55,7 +55,7 @@ defmodule BotchiniDiscord.Interactions do
       user_id: interaction.user.id
     )
 
-    Logger.info("Interaction received")
+    Logger.info("Interaction received: #{inspect(interaction.data)}")
 
     try do
       data = Helpers.parse_interaction_data(interaction.data)

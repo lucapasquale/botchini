@@ -68,16 +68,16 @@ RUN mix release
 FROM ${RUNNER_IMAGE}
 
 RUN apt-get update -y \
-  && apt-get install -y software-properties-common libstdc++6 openssl libncurses5 locales ffmpeg curl fuse libfuse2 \
+  && apt-get install -y software-properties-common libstdc++6 openssl libncurses5 locales ffmpeg curl fuse libfuse2 python3 python3-pip \
   && apt-get clean \
   && rm -f /var/lib/apt/lists/*_*
 
 # Install yt-dlp
-RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/download/2025.08.11/yt-dlp -o /usr/local/bin/yt-dlp \
   && chmod a+rx /usr/local/bin/yt-dlp
 
 # Install streamlink
-RUN curl -L https://github.com/streamlink/streamlink-appimage/releases/download/6.11.0-1/streamlink-6.11.0-1-cp312-cp312-manylinux2014_x86_64.AppImage -o /usr/local/bin/streamlink \
+RUN curl -L https://github.com/streamlink/streamlink-appimage/releases/download/7.5.0-1/streamlink-7.5.0-1-cp313-cp313-manylinux_2_28_x86_64.AppImage -o /usr/local/bin/streamlink \
   && chmod a+rx /usr/local/bin/streamlink
 
 # Set the locale

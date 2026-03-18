@@ -33,5 +33,14 @@ defmodule Botchini.Application do
   end
 
   defp start_nostrum(children, :test), do: children
-  defp start_nostrum(children, _env), do: children ++ [BotchiniDiscord.Consumer]
+
+  defp start_nostrum(children, _env) do
+    bot_options = %{
+      consumer: BotchiniDiscord.Consumer,
+      intents: [:guilds, :guild_voice_states],
+      wrapped_token: fn -> Application.fetch_env!(:botchini, :discord_token) end
+    }
+
+    children ++ [{Nostrum.Bot, bot_options}]
+  end
 end

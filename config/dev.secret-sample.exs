@@ -16,6 +16,6 @@ config :botchini,
   # to sync the commands globally. Copy from the server you are testing on
   test_guild_ids: ["123123123123123123,456456456456456456"]
 
-config :nostrum,
+config :botchini,
   # Create a separarate development account on discord API
-  token: "YOUR_DISCORD_TOKEN"
+  discord_token: "YOUR_DISCORD_TOKEN"

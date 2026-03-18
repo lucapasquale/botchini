@@ -10,7 +10,8 @@ defmodule Botchini.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
-      elixirc_paths: elixirc_paths(Mix.env())
+      elixirc_paths: elixirc_paths(Mix.env()),
+      listeners: [Phoenix.CodeReloader]
     ]
   end
 
@@ -24,16 +25,16 @@ defmodule Botchini.MixProject do
   defp deps do
     [
       # Discord
-      {:nostrum, "~> 0.10", runtime: Mix.env() != :test},
+      {:nostrum, github: "Kraigie/nostrum"},
       # Phoenix
-      {:phoenix, "~> 1.7.21"},
-      {:phoenix_html, "~> 4.2.1"},
-      {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.20.2"},
+      {:phoenix, "~> 1.8"},
+      {:phoenix_html, "~> 4.3"},
+      {:phoenix_live_reload, "~> 1.6", only: :dev},
+      {:phoenix_live_view, "~> 1.1"},
       {:floki, ">= 0.37.1", only: :test},
-      {:phoenix_live_dashboard, "~> 0.8.3"},
-      {:esbuild, "~> 0.9", runtime: Mix.env() == :dev},
-      {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
+      {:phoenix_live_dashboard, "~> 0.8.7"},
+      {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
       {:heroicons,
        github: "tailwindlabs/heroicons",
        tag: "v2.1.1",
@@ -41,28 +42,28 @@ defmodule Botchini.MixProject do
        app: false,
        compile: false,
        depth: 1},
-      {:swoosh, "~> 1.5"},
-      {:finch, "~> 0.13"},
+      {:swoosh, "~> 1.23"},
+      {:finch, "~> 0.21"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 0.20"},
+      {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.1.1"},
-      {:bandit, "~> 1.6.10"},
+      {:dns_cluster, "~> 0.2.0"},
+      {:bandit, "~> 1.10"},
       {:elixir_xml_to_map, "~> 3.1.0"},
       # Ecto
       {:phoenix_ecto, "~> 4.4"},
-      {:ecto_sql, "~> 3.11.1"},
-      {:postgrex, "~> 0.17.5"},
+      {:ecto_sql, "~> 3.13"},
+      {:postgrex, "~> 0.22"},
       # HTTP Client
-      {:req, "~> 0.4.0"},
-      {:exconstructor, "~> 1.2.13"},
+      {:req, "~> 0.5"},
+      {:exconstructor, "~> 1.3"},
       # Others
       {:quantum, "~> 3.0"},
       {:hackney, "~> 1.8"},
       # Development and testing
-      {:credo, "~> 1.7.7", only: [:dev, :test], runtime: false},
-      {:patch, "~> 0.12.0", only: [:test]},
+      {:credo, "~> 1.7.17", only: [:dev, :test], runtime: false},
+      {:patch, "~> 0.16.0", only: [:test]},
       {:faker, "~> 0.16", only: :test}
     ]
   end

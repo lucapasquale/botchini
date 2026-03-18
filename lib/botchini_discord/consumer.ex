@@ -1,10 +1,11 @@
 defmodule BotchiniDiscord.Consumer do
+  @behaviour Nostrum.Consumer
+
   @moduledoc """
   Consumes events from the Discord API connection
   """
 
   require Logger
-  use Nostrum.Consumer
 
   alias Botchini.Discord
   alias BotchiniDiscord.{Interactions, Music}
@@ -13,7 +14,7 @@ defmodule BotchiniDiscord.Consumer do
     Interactions.register_commands()
 
     version = to_string(Application.spec(:botchini, :vsn))
-    Nostrum.Api.Self.update_status(:online, "on v#{version}")
+    Nostrum.Api.Self.update_status(:online, {:playing, "on v#{version}"})
 
     Logger.info("Bot started! v#{version}")
   end

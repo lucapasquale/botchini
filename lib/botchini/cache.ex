@@ -9,7 +9,7 @@ defmodule Botchini.Cache do
   @table :cache
 
   # 30 minutes
-  @default_ttl 1_000 * 60 * 30
+  @default_ttl :timer.minutes(30)
 
   @spec start_link(any()) :: :ignore | {:error, any()} | {:ok, pid}
   def start_link(_), do: GenServer.start_link(__MODULE__, [], name: @name)
@@ -27,10 +27,9 @@ defmodule Botchini.Cache do
 
   @spec set(String.t(), pos_integer(), (-> any())) :: {:ok, any()}
   def set(key, ttl \\ @default_ttl, resolver) when is_function(resolver) do
-    with result <- resolver.() do
-      GenServer.call(@name, {:insert, {key, result, ttl}})
-      {:ok, result}
-    end
+    result = resolver.()
+    GenServer.call(@name, {:insert, {key, result, ttl}})
+    {:ok, result}
   end
 
   @spec get_or_set(String.t(), pos_integer(), (-> any())) :: {:ok, any()}

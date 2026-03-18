@@ -56,7 +56,7 @@ defmodule BotchiniWeb.YoutubeController do
     channel_id = Map.get(entry, "yt:channelId")
     video_id = Map.get(entry, "yt:videoId")
 
-    Logger.info("Received webhook from youtube channel #{channel_id}, video #{video_id}")
+    Logger.info("Received youtube webhook", channel_id: channel_id, video_id: video_id)
 
     cache_key = "youtube_event:#{channel_id}:#{video_id}"
 
@@ -83,7 +83,10 @@ defmodule BotchiniWeb.YoutubeController do
          followers <- Creators.find_followers_for_creator(creator),
          {:ok, yt_channel} = Services.youtube_channel_info(creator.service_id),
          {:ok, yt_video} <- Services.youtube_video_info(video_id) do
-      Logger.info("Channel #{creator.name} posted, sending to #{length(followers)} channels")
+      Logger.info("Channel posted, sending notifications",
+        creator: creator.name,
+        follower_count: length(followers)
+      )
 
       Enum.each(followers, fn follower ->
         Task.start(fn -> notify_followers(creator, follower, {yt_channel, yt_video}) end)

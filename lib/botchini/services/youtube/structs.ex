@@ -28,7 +28,14 @@ defmodule Botchini.Services.Youtube.Structs.Channel do
           snippet: snippet()
         }
 
-  use ExConstructor
+  @spec new(map()) :: t()
+  def new(attrs) when is_map(attrs) do
+    attrs = for {k, v} <- attrs, into: %{}, do: {to_existing_atom(k), v}
+    struct!(__MODULE__, attrs)
+  end
+
+  defp to_existing_atom(k) when is_atom(k), do: k
+  defp to_existing_atom(k) when is_binary(k), do: String.to_existing_atom(k)
 end
 
 defmodule Botchini.Services.Youtube.Structs.Video do
@@ -71,5 +78,12 @@ defmodule Botchini.Services.Youtube.Structs.Video do
           liveStreamingDetails: liveStreamingDetails() | nil
         }
 
-  use ExConstructor
+  @spec new(map()) :: t()
+  def new(attrs) when is_map(attrs) do
+    attrs = for {k, v} <- attrs, into: %{}, do: {to_existing_atom(k), v}
+    struct!(__MODULE__, attrs)
+  end
+
+  defp to_existing_atom(k) when is_atom(k), do: k
+  defp to_existing_atom(k) when is_binary(k), do: String.to_existing_atom(k)
 end

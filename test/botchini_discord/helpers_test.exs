@@ -1,5 +1,5 @@
 defmodule BotchiniDiscordTest.HelpersTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias BotchiniDiscord.Helpers
 

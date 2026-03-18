@@ -126,8 +126,11 @@ defmodule Botchini.Services.Twitch do
   end
 
   defp print_response({request, response}) do
-    Logger.info("Request made: #{request.method} #{request.url}")
-    Logger.info("Response received: #{response.status}")
+    Logger.info("Twitch API request",
+      method: request.method,
+      url: to_string(request.url),
+      status: response.status
+    )
 
     {request, response}
   end

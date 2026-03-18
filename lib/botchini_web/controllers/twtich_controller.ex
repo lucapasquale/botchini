@@ -64,7 +64,7 @@ defmodule BotchiniWeb.TwitchController do
 
   defp process_event({:stream_online, subscription}, conn) do
     twitch_user_id = subscription["condition"]["broadcaster_user_id"]
-    Logger.info("Received webhook for twitch user #{twitch_user_id}")
+    Logger.info("Received twitch webhook", twitch_user_id: twitch_user_id)
 
     case Creators.find_by_service(:twitch, twitch_user_id) do
       nil ->
@@ -87,7 +87,10 @@ defmodule BotchiniWeb.TwitchController do
     with followers <- Creators.find_followers_for_creator(creator),
          {:ok, user} <- Services.twitch_user_info(creator.service_id),
          {:ok, stream} <- Services.twitch_stream_info(creator.service_id) do
-      Logger.info("Stream #{creator.name} is online, sending to #{length(followers)} channels")
+      Logger.info("Stream online, sending notifications",
+        creator: creator.name,
+        follower_count: length(followers)
+      )
 
       Enum.each(followers, fn follower ->
         Task.start(fn -> notify_followers(creator, follower, {user, stream}) end)
@@ -96,7 +99,7 @@ defmodule BotchiniWeb.TwitchController do
       text(conn, "ok")
     else
       _ ->
-        Logger.warning("Failed to load Twitch stream for #{creator.name}")
+        Logger.warning("Failed to load Twitch stream", creator: creator.name)
 
         conn
         |> put_status(:not_found)

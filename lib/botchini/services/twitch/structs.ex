@@ -27,7 +27,14 @@ defmodule Botchini.Services.Twitch.Structs.User do
           created_at: String.t()
         }
 
-  use ExConstructor
+  @spec new(map()) :: t()
+  def new(attrs) when is_map(attrs) do
+    attrs = for {k, v} <- attrs, into: %{}, do: {to_existing_atom(k), v}
+    struct!(__MODULE__, attrs)
+  end
+
+  defp to_existing_atom(k) when is_atom(k), do: k
+  defp to_existing_atom(k) when is_binary(k), do: String.to_existing_atom(k)
 end
 
 defmodule Botchini.Services.Twitch.Structs.Stream do
@@ -67,7 +74,14 @@ defmodule Botchini.Services.Twitch.Structs.Stream do
           is_mature: boolean()
         }
 
-  use ExConstructor
+  @spec new(map()) :: t()
+  def new(attrs) when is_map(attrs) do
+    attrs = for {k, v} <- attrs, into: %{}, do: {to_existing_atom(k), v}
+    struct!(__MODULE__, attrs)
+  end
+
+  defp to_existing_atom(k) when is_atom(k), do: k
+  defp to_existing_atom(k) when is_binary(k), do: String.to_existing_atom(k)
 end
 
 defmodule Botchini.Services.Twitch.Structs.Channel do
@@ -101,5 +115,12 @@ defmodule Botchini.Services.Twitch.Structs.Channel do
           tag_id: [String.t()]
         }
 
-  use ExConstructor
+  @spec new(map()) :: t()
+  def new(attrs) when is_map(attrs) do
+    attrs = for {k, v} <- attrs, into: %{}, do: {to_existing_atom(k), v}
+    struct!(__MODULE__, attrs)
+  end
+
+  defp to_existing_atom(k) when is_atom(k), do: k
+  defp to_existing_atom(k) when is_binary(k), do: String.to_existing_atom(k)
 end

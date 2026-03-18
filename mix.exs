@@ -57,10 +57,8 @@ defmodule Botchini.MixProject do
       {:postgrex, "~> 0.22"},
       # HTTP Client
       {:req, "~> 0.5"},
-      {:exconstructor, "~> 1.3"},
       # Others
       {:quantum, "~> 3.0"},
-      {:hackney, "~> 1.8"},
       # Development and testing
       {:credo, "~> 1.7.17", only: [:dev, :test], runtime: false},
       {:patch, "~> 0.16.0", only: [:test]},

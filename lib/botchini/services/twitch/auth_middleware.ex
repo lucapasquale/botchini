@@ -12,7 +12,7 @@ defmodule Botchini.Services.Twitch.AuthMiddleware do
   def get_token do
     %{exp: exp, access_token: access_token} = Agent.get(__MODULE__, & &1)
 
-    if NaiveDateTime.compare(NaiveDateTime.utc_now(), exp) == :gt do
+    if exp != nil and DateTime.before?(DateTime.utc_now(), exp) do
       access_token
     else
       auth_resp =
@@ -27,7 +27,7 @@ defmodule Botchini.Services.Twitch.AuthMiddleware do
       Agent.update(__MODULE__, fn _ ->
         %{
           access_token: auth_resp["access_token"],
-          exp: NaiveDateTime.add(NaiveDateTime.utc_now(), auth_resp["expires_in"])
+          exp: DateTime.add(DateTime.utc_now(), auth_resp["expires_in"])
         }
       end)
 

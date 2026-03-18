@@ -62,6 +62,18 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# OpenTelemetry - disabled by default, enabled in prod
+config :opentelemetry,
+  span_processor: :batch,
+  traces_exporter: :none
+
+# PromEx
+config :botchini, Botchini.PromEx,
+  manual_metrics_start_delay: :no_delay,
+  drop_metrics_groups: [],
+  grafana: :disabled,
+  metrics_server: :disabled
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{Mix.env()}.exs"

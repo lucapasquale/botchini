@@ -78,6 +78,18 @@ if config_env() == :prod do
   config :botchini,
     discord_token: System.get_env("DISCORD_TOKEN")
 
+  # OpenTelemetry OTLP exporter configuration
+  # Set OTEL_EXPORTER_OTLP_ENDPOINT to the internal IP of the Portainer/grafana-stack VM
+  config :opentelemetry_exporter,
+    otlp_protocol: :grpc,
+    otlp_endpoint: System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+
+  config :opentelemetry,
+    resource: %{
+      "service.name" => "botchini",
+      "deployment.environment" => "production"
+    }
+
   config :nostrum,
     youtubedl: "yt-dlp"
 

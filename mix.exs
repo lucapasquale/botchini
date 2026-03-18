@@ -57,6 +57,16 @@ defmodule Botchini.MixProject do
       {:postgrex, "~> 0.22"},
       # HTTP Client
       {:req, "~> 0.5"},
+      # Observability - OpenTelemetry (traces)
+      {:opentelemetry, "~> 1.5"},
+      {:opentelemetry_api, "~> 1.4"},
+      {:opentelemetry_exporter, "~> 1.8"},
+      {:opentelemetry_phoenix, "~> 2.0"},
+      {:opentelemetry_ecto, "~> 1.2"},
+      # Observability - Prometheus metrics
+      {:prom_ex, "~> 1.9"},
+      # Observability - Structured JSON logging
+      {:logger_json, "~> 6.0"},
       # Others
       {:quantum, "~> 3.0"},
       # Development and testing

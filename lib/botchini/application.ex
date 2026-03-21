@@ -8,7 +8,7 @@ defmodule Botchini.Application do
   @impl true
   def start(_type, _args) do
     # Setup OpenTelemetry instrumentation for Phoenix and Ecto
-    OpentelemetryPhoenix.setup()
+    OpentelemetryPhoenix.setup(adapter: :bandit)
     OpentelemetryEcto.setup([:botchini, :repo])
 
     children =

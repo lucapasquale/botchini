@@ -81,8 +81,8 @@ if config_env() == :prod do
   # OpenTelemetry OTLP exporter configuration
   # Set OTEL_EXPORTER_OTLP_ENDPOINT to the internal IP of the Portainer/grafana-stack VM
   config :opentelemetry_exporter,
-    otlp_protocol: :grpc,
-    otlp_endpoint: System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"),
+    otlp_protocol: :http_protobuf,
+    otlp_endpoint: System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
     otlp_headers: [
       {"CF-Access-Client-Id", System.get_env("OTEL_EXPORTER_OTLP_CLIENT_ID") || ""},
       {"CF-Access-Client-Secret", System.get_env("OTEL_EXPORTER_OTLP_CLIENT_SECRET") || ""}

@@ -15,6 +15,7 @@ defmodule Botchini.Application do
       [
         Botchini.PromEx,
         BotchiniWeb.Telemetry,
+        Botchini.LokiLogger,
         Botchini.Repo,
         Botchini.Cache,
         Botchini.Scheduler,

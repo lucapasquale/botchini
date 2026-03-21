@@ -78,6 +78,15 @@ if config_env() == :prod do
   config :botchini,
     discord_token: System.get_env("DISCORD_TOKEN")
 
+  # Loki log shipping via Alloy's Loki push API
+  config :botchini, Botchini.LokiLogger,
+    endpoint: System.get_env("LOKI_PUSH_ENDPOINT", "https://grafana-alloy.luca.codes"),
+    headers: [
+      {"CF-Access-Client-Id", System.get_env("OTEL_EXPORTER_OTLP_CLIENT_ID") || ""},
+      {"CF-Access-Client-Secret", System.get_env("OTEL_EXPORTER_OTLP_CLIENT_SECRET") || ""}
+    ],
+    labels: %{"service" => "botchini", "environment" => "production"}
+
   # OpenTelemetry OTLP exporter configuration
   # Set OTEL_EXPORTER_OTLP_ENDPOINT to the internal IP of the Portainer/grafana-stack VM
   config :opentelemetry_exporter,

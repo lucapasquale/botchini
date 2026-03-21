@@ -21,8 +21,8 @@ config :opentelemetry,
   span_processor: :batch,
   traces_exporter: :otlp
 
-# PromEx - start a dedicated metrics server for Prometheus scraping
-config :botchini, Botchini.PromEx, metrics_server: [port: 4021, path: "/metrics"]
+# PromEx - disable standalone metrics server (requires Plug.Cowboy which is not available with Bandit)
+config :botchini, Botchini.PromEx, metrics_server: :disabled
 
 # Structured JSON logging for Loki ingestion
 config :logger, :default_handler, formatter: {LoggerJSON.Formatters.Basic, [metadata: :all]}

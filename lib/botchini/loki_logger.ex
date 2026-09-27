@@ -2,6 +2,8 @@ defmodule Botchini.LokiLogger do
   @moduledoc false
   use GenServer
 
+  alias LoggerJSON.Formatters.Basic
+
   @flush_interval :timer.seconds(5)
   @max_buffer_size 100
 
@@ -50,7 +52,7 @@ defmodule Botchini.LokiLogger do
       opts ->
         :logger.add_handler(:loki, __MODULE__, %{
           level: :all,
-          formatter: LoggerJSON.Formatters.Basic.new(metadata: :all)
+          formatter: Basic.new(metadata: :all)
         })
 
         schedule_flush()

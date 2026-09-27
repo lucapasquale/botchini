@@ -32,12 +32,12 @@ defmodule Botchini.MixProject do
       {:phoenix_live_reload, "~> 1.6", only: :dev},
       {:phoenix_live_view, "~> 1.1"},
       {:floki, ">= 0.37.1", only: :test},
-      {:phoenix_live_dashboard, "~> 0.8.7"},
+      {:phoenix_live_dashboard, "~> 0.9"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
       {:heroicons,
        github: "tailwindlabs/heroicons",
-       tag: "v2.1.1",
+       tag: "v2.2.0",
        sparse: "optimized",
        app: false,
        compile: false,
@@ -48,7 +48,7 @@ defmodule Botchini.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.2.0"},
+      {:dns_cluster, "~> 0.3"},
       {:bandit, "~> 1.10"},
       {:elixir_xml_to_map, "~> 3.1.0"},
       # Ecto
@@ -66,7 +66,7 @@ defmodule Botchini.MixProject do
       # Observability - Prometheus metrics
       {:prom_ex, "~> 1.9"},
       # Observability - Structured JSON logging
-      {:logger_json, "~> 6.0"},
+      {:logger_json, "~> 7.0"},
       # Others
       {:quantum, "~> 3.0"},
       # Development and testing

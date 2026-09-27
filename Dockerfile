@@ -73,11 +73,11 @@ RUN apt-get update -y \
   && rm -f /var/lib/apt/lists/*_*
 
 # Install yt-dlp
-RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/download/2025.08.11/yt-dlp -o /usr/local/bin/yt-dlp \
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/download/2026.08.19/yt-dlp -o /usr/local/bin/yt-dlp \
   && chmod a+rx /usr/local/bin/yt-dlp
 
 # Install streamlink
-RUN curl -L https://github.com/streamlink/streamlink-appimage/releases/download/7.5.0-1/streamlink-7.5.0-1-cp313-cp313-manylinux_2_28_x86_64.AppImage -o /usr/local/bin/streamlink \
+RUN curl -L https://github.com/streamlink/streamlink-appimage/releases/download/8.6.1-1/streamlink-8.6.1-1-cp314-cp314-manylinux_2_28_x86_64.AppImage -o /usr/local/bin/streamlink \
   && chmod a+rx /usr/local/bin/streamlink
 
 # Set the locale

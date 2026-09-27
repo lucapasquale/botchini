@@ -50,7 +50,7 @@ defmodule Botchini.LokiLogger do
       opts ->
         :logger.add_handler(:loki, __MODULE__, %{
           level: :all,
-          formatter: {LoggerJSON.Formatters.Basic, [metadata: :all]}
+          formatter: LoggerJSON.Formatters.Basic.new(metadata: :all)
         })
 
         schedule_flush()

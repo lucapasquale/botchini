@@ -87,6 +87,8 @@ if config_env() == :prod do
     ],
     labels: %{"service" => "botchini", "environment" => "production"}
 
+  config :botchini, :metrics_port, String.to_integer(System.get_env("METRICS_PORT", "9568"))
+
   # OpenTelemetry OTLP exporter configuration
   # Set OTEL_EXPORTER_OTLP_ENDPOINT to the internal IP of the Portainer/grafana-stack VM
   config :opentelemetry_exporter,

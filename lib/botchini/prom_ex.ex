@@ -8,7 +8,8 @@ defmodule Botchini.PromEx do
       PromEx.Plugins.Beam,
       {PromEx.Plugins.Phoenix, router: BotchiniWeb.Router, endpoint: BotchiniWeb.Endpoint},
       {PromEx.Plugins.Ecto, repos: [Botchini.Repo]},
-      PromEx.Plugins.PhoenixLiveView
+      PromEx.Plugins.PhoenixLiveView,
+      Botchini.PromEx.BotchiniPlugin
     ]
   end
 

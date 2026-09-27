@@ -16,6 +16,9 @@ config :nostrum,
   youtubedl: "yt-dlp",
   audio_timeout: 60_000
 
+# Port serving the Prometheus metrics scraped by Grafana Alloy, nil disables it
+config :botchini, :metrics_port, 9568
+
 config :botchini, Botchini.Scheduler,
   jobs: [
     # Runs every day:
@@ -57,7 +60,19 @@ config :tailwind,
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id, :interaction_data, :guild_id, :channel_id, :user_id]
+  metadata: [
+    :request_id,
+    :interaction_data,
+    :guild_id,
+    :channel_id,
+    :user_id,
+    :event,
+    :reason,
+    :error,
+    :track_title,
+    :play_url,
+    :play_type
+  ]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason

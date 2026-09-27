@@ -31,11 +31,18 @@ defmodule Botchini.Application do
         BotchiniWeb.Endpoint
       ]
       |> start_nostrum(Application.fetch_env!(:botchini, :environment))
+      |> start_metrics_server(Application.get_env(:botchini, :metrics_port))
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Botchini.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  defp start_metrics_server(children, nil), do: children
+
+  defp start_metrics_server(children, port) do
+    children ++ [{Bandit, plug: BotchiniWeb.MetricsPlug, port: port}]
   end
 
   defp start_nostrum(children, :test), do: children

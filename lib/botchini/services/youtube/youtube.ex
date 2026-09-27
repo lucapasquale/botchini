@@ -3,6 +3,7 @@ defmodule Botchini.Services.Youtube do
   Handles communication with YouTube API
   """
 
+  alias Botchini.Services.Telemetry
   alias Botchini.Services.Youtube.Structs.{Channel, Video}
 
   @spec search_channels(String.t()) :: list(Channel.t())
@@ -98,5 +99,6 @@ defmodule Botchini.Services.Youtube do
       base_url: "https://www.googleapis.com/youtube/v3",
       params: [key: Application.fetch_env!(:botchini, :youtube_api_key)]
     )
+    |> Telemetry.attach(:youtube)
   end
 end

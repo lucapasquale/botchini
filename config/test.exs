@@ -23,6 +23,8 @@ config :botchini, BotchiniWeb.Endpoint,
 # In test we don't send emails.
 config :botchini, Botchini.Mailer, adapter: Swoosh.Adapters.Test
 
+config :botchini, :metrics_port, nil
+
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
 

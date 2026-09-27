@@ -4,6 +4,8 @@ defmodule BotchiniDiscord.Interactions do
   """
 
   require Logger
+  require OpenTelemetry.Tracer, as: Tracer
+
   alias Nostrum.Api
   alias Nostrum.Constants.{InteractionCallbackType, InteractionType}
   alias Nostrum.Struct.Interaction
@@ -15,6 +17,11 @@ defmodule BotchiniDiscord.Interactions do
   alias BotchiniDiscord.Squads.Interactions.Squad
 
   @deferred_commands ["follow", "info", "music"]
+
+  @error_response %{
+    type: InteractionCallbackType.channel_message_with_source(),
+    data: %{content: "Something went wrong :("}
+  }
 
   @spec register_commands() :: any()
   def register_commands do
@@ -60,31 +67,86 @@ defmodule BotchiniDiscord.Interactions do
 
     Logger.info("Interaction received", interaction_data: interaction.data)
 
-    deferred = defer_response?(interaction)
+    command = command_name(interaction)
 
-    if deferred do
-      Api.Interaction.create_response(interaction, %{
-        type: InteractionCallbackType.deferred_channel_message_with_source()
-      })
-    end
+    Tracer.with_span "discord.#{command}", %{kind: :server} do
+      start_time = System.monotonic_time()
+      deferred = defer_response?(interaction)
 
-    response =
-      try do
-        data = Helpers.parse_interaction_data(interaction.data)
-        call_interaction(interaction, data) |> put_default_allowed_mentions()
-      catch
-        kind, reason ->
-          Logger.error(
-            "Failed to handle interaction: " <> Exception.format(kind, reason, __STACKTRACE__)
-          )
-
-          %{
-            type: InteractionCallbackType.channel_message_with_source(),
-            data: %{content: "Something went wrong :("}
-          }
+      if deferred do
+        Api.Interaction.create_response(interaction, %{
+          type: InteractionCallbackType.deferred_channel_message_with_source()
+        })
       end
 
-    send_response(interaction, response, deferred)
+      {subcommand, result} = run_interaction(interaction)
+
+      status =
+        interaction
+        |> send_response(response_of(result), deferred)
+        |> interaction_status(result)
+
+      tags = %{
+        command: command,
+        subcommand: subcommand,
+        kind: interaction_kind(interaction),
+        status: status
+      }
+
+      Tracer.set_attributes(Map.new(tags, fn {key, value} -> {"discord.#{key}", value} end))
+      if status == :error, do: Tracer.set_status(:error, "interaction failed")
+
+      :telemetry.execute(
+        [:botchini, :discord, :interaction, :stop],
+        %{duration: System.monotonic_time() - start_time},
+        tags
+      )
+    end
+  end
+
+  defp run_interaction(interaction) do
+    {_command, options} = data = Helpers.parse_interaction_data(interaction.data)
+    response = call_interaction(interaction, data) |> put_default_allowed_mentions()
+
+    {subcommand_name(options), {:ok, response}}
+  catch
+    kind, reason ->
+      stacktrace = __STACKTRACE__
+      Logger.error("Failed to handle interaction: " <> Exception.format(kind, reason, stacktrace))
+      Tracer.record_exception(Exception.normalize(kind, reason, stacktrace), stacktrace)
+
+      {"none", {:error, @error_response}}
+  end
+
+  defp response_of({_result, response}), do: response
+
+  # A handler can succeed and Discord still reject its response (an invalid
+  # payload, or an interaction that expired), which the user sees as a failure too
+  defp interaction_status(_send_result, {:error, _response}), do: :error
+
+  defp interaction_status({:error, error}, {:ok, _response}) do
+    Logger.error("Discord rejected the interaction response", error: inspect(error))
+    :error
+  end
+
+  defp interaction_status(_send_result, {:ok, _response}), do: :ok
+
+  defp command_name(%{data: %{custom_id: custom_id}}) when is_binary(custom_id),
+    do: custom_id |> String.split("|") |> hd()
+
+  defp command_name(%{data: %{name: name}}) when is_binary(name), do: name
+  defp command_name(_interaction), do: "unknown"
+
+  # Subcommands and button actions are parsed as options with an empty value
+  defp subcommand_name([%{name: name, value: ""} | _rest]), do: name
+  defp subcommand_name(_options), do: "none"
+
+  defp interaction_kind(interaction) do
+    cond do
+      interaction.type == InteractionType.message_component() -> "button"
+      interaction.type == InteractionType.application_command_autocomplete() -> "autocomplete"
+      true -> "command"
+    end
   end
 
   # Discord only waits 3 seconds for a response, so commands that call external

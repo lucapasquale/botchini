@@ -4,6 +4,7 @@ defmodule Botchini.Services.Twitch do
   """
 
   require Logger
+  alias Botchini.Services.Telemetry
   alias Botchini.Services.Twitch.AuthMiddleware
   alias Botchini.Services.Twitch.Structs.{Channel, Stream, User}
 
@@ -123,6 +124,7 @@ defmodule Botchini.Services.Twitch do
       headers: [{"client-id", Application.fetch_env!(:botchini, :twitch_client_id)}]
     )
     |> Req.Request.prepend_response_steps(print_response: &print_response/1)
+    |> Telemetry.attach(:twitch)
   end
 
   defp print_response({request, response}) do

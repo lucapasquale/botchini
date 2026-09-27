@@ -5,6 +5,8 @@ defmodule Botchini.Services.Twitch.AuthMiddleware do
 
   use Agent
 
+  alias Botchini.Services.Telemetry
+
   def start_link(_initial_value) do
     Agent.start_link(fn -> %{exp: nil, access_token: ""} end, name: __MODULE__)
   end
@@ -16,7 +18,9 @@ defmodule Botchini.Services.Twitch.AuthMiddleware do
       access_token
     else
       auth_resp =
-        Req.post!("https://id.twitch.tv/oauth2/token",
+        Req.new(url: "https://id.twitch.tv/oauth2/token")
+        |> Telemetry.attach(:twitch_auth)
+        |> Req.post!(
           params: [
             grant_type: "client_credentials",
             client_id: Application.fetch_env!(:botchini, :twitch_client_id),

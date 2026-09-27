@@ -3,9 +3,22 @@ defmodule BotchiniDiscord.Music do
   Handles music connections with Discord
   """
 
+  require Logger
+
   alias Botchini.Discord
   alias Botchini.Discord.Schema.Guild
+  alias Botchini.Music.PlaybackFailure
   alias Nostrum.Api.Message
+
+  @failure_messages %{
+    age_restricted: "it's age-restricted",
+    bot_check: "YouTube is blocking the bot",
+    forbidden: "YouTube blocked the download",
+    rate_limited: "YouTube is rate limiting the bot",
+    unavailable: "it's unavailable",
+    unsupported_url: "the link isn't supported",
+    stream_offline: "the stream is offline"
+  }
 
   @spec handle_voice_ready(Nostrum.Struct.Event.VoiceReady.t()) :: any()
   def handle_voice_ready(event) do
@@ -33,23 +46,53 @@ defmodule BotchiniDiscord.Music do
     if cur_track && cur_track.status == :paused do
       :noop
     else
-      if event.timed_out, do: notify_failed_track(cur_track)
-
       play_next_track(guild)
+
+      if event.timed_out && cur_track, do: report_failed_track(cur_track)
     end
   end
 
   # Nostrum sets timed_out when a track produced no audio at all, usually
-  # because yt-dlp or streamlink failed to fetch it
-  defp notify_failed_track(%{discord_channel_id: channel_id} = track)
+  # because yt-dlp or streamlink failed to fetch it. The next track is already
+  # playing by now, so diagnosing the failure doesn't hold up the queue
+  defp report_failed_track(track) do
+    {reason, error} = PlaybackFailure.diagnose(track)
+
+    Logger.warning("Track playback failed",
+      event: "track_failed",
+      reason: reason,
+      error: error,
+      track_title: track.title,
+      play_url: track.play_url,
+      play_type: track.play_type
+    )
+
+    emit_track_failure(track, reason)
+    notify_failed_track(track, reason)
+  end
+
+  defp notify_failed_track(%{discord_channel_id: channel_id} = track, reason)
        when is_binary(channel_id) do
+    because =
+      case Map.fetch(@failure_messages, reason) do
+        {:ok, message} -> " because #{message}"
+        :error -> ""
+      end
+
     Message.create(String.to_integer(channel_id), %{
-      content: "Couldn't play **#{track.title}**, skipping it",
+      content: "Couldn't play **#{track.title}**#{because}, skipping it",
       allowed_mentions: %{parse: []}
     })
   end
 
-  defp notify_failed_track(_track), do: :noop
+  defp notify_failed_track(_track, _reason), do: :noop
+
+  defp emit_track_failure(track, reason) do
+    :telemetry.execute([:botchini, :music, :track, :failure], %{count: 1}, %{
+      play_type: track.play_type,
+      reason: reason
+    })
+  end
 
   @doc """
   Marks the current track as done and plays the next one, leaving the voice channel when the queue is empty
@@ -68,6 +111,21 @@ defmodule BotchiniDiscord.Music do
   end
 
   defp play_track(guild_id, track) do
-    Nostrum.Voice.play(guild_id, track.play_url, track.play_type)
+    case Nostrum.Voice.play(guild_id, track.play_url, track.play_type) do
+      :ok ->
+        :telemetry.execute([:botchini, :music, :track, :start], %{count: 1}, %{
+          play_type: track.play_type
+        })
+
+      {:error, error} ->
+        Logger.error("Failed to start track playback",
+          event: "track_failed",
+          reason: :player_error,
+          error: error,
+          track_title: track.title
+        )
+
+        emit_track_failure(track, :player_error)
+    end
   end
 end

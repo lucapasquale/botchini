@@ -4,7 +4,6 @@ defmodule Botchini.Discord.Schema.Guild do
   """
 
   use Ecto.Schema
-  require Ecto.Query
   import Ecto.Changeset
 
   alias Botchini.Creators.Schema.Follower

@@ -4,7 +4,6 @@ defmodule Botchini.Squads.Schema.SquadMember do
   """
 
   use Ecto.Schema
-  require Ecto.Query
   import Ecto.Changeset
 
   alias Botchini.Squads.Schema.{Squad, SquadMember}

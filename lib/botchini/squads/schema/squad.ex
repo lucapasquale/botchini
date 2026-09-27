@@ -4,7 +4,6 @@ defmodule Botchini.Squads.Schema.Squad do
   """
 
   use Ecto.Schema
-  require Ecto.Query
   import Ecto.Changeset
 
   alias Botchini.Discord.Schema.Guild

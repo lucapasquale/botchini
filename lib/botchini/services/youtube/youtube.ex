@@ -3,8 +3,6 @@ defmodule Botchini.Services.Youtube do
   Handles communication with YouTube API
   """
 
-  require Logger
-
   alias Botchini.Services.Youtube.Structs.{Channel, Video}
 
   @spec search_channels(String.t()) :: list(Channel.t())

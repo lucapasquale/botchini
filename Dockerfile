@@ -72,6 +72,9 @@ RUN apt-get update -y \
   && apt-get clean \
   && rm -f /var/lib/apt/lists/*_*
 
+# Install deno, the JS runtime yt-dlp needs to solve YouTube's JS challenges
+COPY --from=denoland/deno:bin-2.9.7 /deno /usr/local/bin/deno
+
 # Install yt-dlp
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/download/2026.08.19/yt-dlp -o /usr/local/bin/yt-dlp \
   && chmod a+rx /usr/local/bin/yt-dlp

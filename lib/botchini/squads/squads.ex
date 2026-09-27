@@ -12,11 +12,21 @@ defmodule Botchini.Squads do
 
   @spec get_by_id!(Guild.t(), String.t()) :: Squad.t()
   def get_by_id!(guild, id) do
+    guild_squad_query(guild, id)
+    |> Repo.one!()
+  end
+
+  @spec get_by_id(Guild.t(), integer()) :: Squad.t() | nil
+  def get_by_id(guild, id) do
+    guild_squad_query(guild, id)
+    |> Repo.one()
+  end
+
+  defp guild_squad_query(guild, id) do
     from(s in Squad,
       where: s.id == ^id,
       where: s.guild_id == ^guild.id
     )
-    |> Repo.one!()
   end
 
   @spec search_by_term(Guild.t(), String.t()) :: Squad.t()

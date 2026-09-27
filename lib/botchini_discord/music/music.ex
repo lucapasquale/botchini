@@ -4,6 +4,7 @@ defmodule BotchiniDiscord.Music do
   """
 
   alias Botchini.Discord
+  alias Botchini.Discord.Schema.Guild
 
   @spec handle_voice_ready(Nostrum.Struct.Event.VoiceReady.t()) :: any()
   def handle_voice_ready(event) do
@@ -31,13 +32,23 @@ defmodule BotchiniDiscord.Music do
     if cur_track && cur_track.status == :paused do
       :noop
     else
-      case Botchini.Music.start_next_track(guild) do
-        {:ok, nil} ->
-          Nostrum.Voice.leave_channel(event.guild_id)
+      play_next_track(guild)
+    end
+  end
 
-        {:ok, track} ->
-          play_track(event.guild_id, track)
-      end
+  @doc """
+  Marks the current track as done and plays the next one, leaving the voice channel when the queue is empty
+  """
+  @spec play_next_track(Guild.t()) :: any()
+  def play_next_track(guild) do
+    guild_id = String.to_integer(guild.discord_guild_id)
+
+    case Botchini.Music.start_next_track(guild) do
+      {:ok, nil} ->
+        Nostrum.Voice.leave_channel(guild_id)
+
+      {:ok, track} ->
+        play_track(guild_id, track)
     end
   end
 

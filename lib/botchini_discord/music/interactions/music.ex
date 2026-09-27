@@ -4,11 +4,12 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
   """
 
   alias Nostrum.Cache.GuildCache
-  alias Nostrum.Constants.{ApplicationCommandOptionType, InteractionCallbackType}
+  alias Nostrum.Constants.{ApplicationCommandOptionType, InteractionCallbackType, InteractionType}
   alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias Botchini.{Discord, Music, Services}
   alias BotchiniDiscord.{Helpers, InteractionBehaviour}
+  alias BotchiniDiscord.Music, as: DiscordMusic
   alias BotchiniDiscord.Music.Responses.Components
 
   @behaviour InteractionBehaviour
@@ -147,13 +148,10 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
       {:ok, cur_track} ->
         Nostrum.Voice.pause(interaction.guild_id)
 
-        %{
-          type: InteractionCallbackType.update_message(),
-          data: %{
-            content: "Paused **#{cur_track.title}**",
-            components: [Components.resume_controls()]
-          }
-        }
+        update_or_reply(interaction, %{
+          content: "Paused **#{cur_track.title}**",
+          components: [Components.resume_controls()]
+        })
     end
   end
 
@@ -170,13 +168,10 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
       Music.resume(guild)
       Nostrum.Voice.resume(interaction.guild_id)
 
-      %{
-        type: InteractionCallbackType.update_message(),
-        data: %{
-          content: "Resuming **#{cur_track.title}**",
-          components: [Components.pause_controls()]
-        }
-      }
+      update_or_reply(interaction, %{
+        content: "Resuming **#{cur_track.title}**",
+        components: [Components.pause_controls()]
+      })
     end
   end
 
@@ -187,6 +182,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
       nil ->
         Music.clear_queue(guild)
         Nostrum.Voice.stop(interaction.guild_id)
+        Nostrum.Voice.leave_channel(interaction.guild_id)
 
         %{
           type: InteractionCallbackType.channel_message_with_source(),
@@ -194,7 +190,7 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
         }
 
       track ->
-        Nostrum.Voice.stop(interaction.guild_id)
+        skip_current_track(interaction.guild_id, guild)
 
         %{
           type: InteractionCallbackType.channel_message_with_source(),
@@ -244,6 +240,25 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
           }
         }
     end
+  end
+
+  # A paused track has no running player for Voice.stop to end (and no speaking
+  # update to trigger the next track), so start the next track directly
+  defp skip_current_track(guild_id, guild) do
+    case Music.get_current_track(guild) do
+      %{status: :paused} -> DiscordMusic.play_next_track(guild)
+      _ -> Nostrum.Voice.stop(guild_id)
+    end
+  end
+
+  # Buttons edit the message they belong to, while slash commands must reply with a new one
+  defp update_or_reply(interaction, data) do
+    type =
+      if interaction.type == InteractionType.message_component(),
+        do: InteractionCallbackType.update_message(),
+        else: InteractionCallbackType.channel_message_with_source()
+
+    %{type: type, data: data}
   end
 
   defp get_voice_channel_of_msg(interaction) do

@@ -32,6 +32,30 @@ defmodule BotchiniTest.Squads.SquadsTest do
     end
   end
 
+  describe "get_by_id" do
+    test "gets a squad by guild and id" do
+      guild = generate_guild()
+      squad = generate_squad(%{guild_id: guild.id})
+
+      assert Squads.get_by_id(guild, squad.id) == squad
+    end
+
+    test "returns nil if uses an invalid id" do
+      guild = generate_guild()
+
+      assert Squads.get_by_id(guild, Faker.random_between(999_999, 9_999_999)) == nil
+    end
+
+    test "returns nil if uses a different guild" do
+      guild = generate_guild()
+      squad = generate_squad(%{guild_id: guild.id})
+
+      other_guild = generate_guild()
+
+      assert Squads.get_by_id(other_guild, squad.id) == nil
+    end
+  end
+
   describe "searh_by_term" do
     test "returns all squads if term is empty" do
       guild = generate_guild()

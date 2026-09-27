@@ -5,6 +5,7 @@ defmodule BotchiniDiscord.Interactions do
 
   require Logger
   alias Nostrum.Api
+  alias Nostrum.Constants.InteractionCallbackType
   alias Nostrum.Struct.Interaction
 
   alias BotchiniDiscord.Common.Interactions.About
@@ -59,7 +60,7 @@ defmodule BotchiniDiscord.Interactions do
 
     try do
       data = Helpers.parse_interaction_data(interaction.data)
-      response = call_interaction(interaction, data)
+      response = call_interaction(interaction, data) |> put_default_allowed_mentions()
 
       Nostrum.Api.create_interaction_response(interaction, response)
     rescue
@@ -72,6 +73,21 @@ defmodule BotchiniDiscord.Interactions do
         })
     end
   end
+
+  # Responses echo user input (song terms, squad names), so block @everyone,
+  # role and user pings unless an interaction explicitly allows them
+  defp put_default_allowed_mentions(%{type: type, data: data} = response) do
+    message_types = [
+      InteractionCallbackType.channel_message_with_source(),
+      InteractionCallbackType.update_message()
+    ]
+
+    if type in message_types,
+      do: %{response | data: Map.put_new(data, :allowed_mentions, %{parse: []})},
+      else: response
+  end
+
+  defp put_default_allowed_mentions(response), do: response
 
   # Set all commands as private while in dev mode
   defp command_is_public(_command_tupple, :dev), do: false

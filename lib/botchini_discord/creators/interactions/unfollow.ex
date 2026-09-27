@@ -66,18 +66,20 @@ defmodule BotchiniDiscord.Creators.Interactions.Unfollow do
     }
   end
 
-  defp unfollow_stream({_service, follower_id}, follow_info) do
-    case Creators.unfollow(String.to_integer(follower_id), follow_info) do
-      {:error, :not_found} ->
+  # On submit the term holds the creator id of the picked suggestion, or
+  # free text if the user submitted without picking one
+  defp unfollow_stream({_service, creator_id}, follow_info) do
+    with {id, ""} <- Integer.parse(creator_id),
+         {:ok, creator} <- Creators.unfollow(id, follow_info) do
+      %{
+        type: 4,
+        data: %{content: "Stopped following **#{creator.name}**"}
+      }
+    else
+      _ ->
         %{
           type: 4,
           data: %{content: "Creator was not being followed!"}
-        }
-
-      {:ok, creator} ->
-        %{
-          type: 4,
-          data: %{content: "Stopped following **#{creator.name}**"}
         }
     end
   end

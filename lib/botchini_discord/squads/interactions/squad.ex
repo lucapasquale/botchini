@@ -142,30 +142,18 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
   end
 
   defp handle_delete(interaction, options) do
-    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
-    {term_or_id, autocomplete} = Helpers.get_option!(options, "term")
-
-    if autocomplete do
-      search_squads(guild, term_or_id)
-    else
-      squad = Squads.get_by_id!(guild, term_or_id)
+    with_selected_squad(interaction, options, fn squad ->
       {:ok, _squad} = Squads.delete(squad)
 
       %{
         type: InteractionCallbackType.channel_message_with_source(),
         data: %{content: "Deleted squad **#{squad.name}**!"}
       }
-    end
+    end)
   end
 
   defp handle_join(interaction, options) do
-    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
-    {term_or_id, autocomplete} = Helpers.get_option!(options, "term")
-
-    if autocomplete do
-      search_squads(guild, term_or_id)
-    else
-      squad = Squads.get_by_id!(guild, term_or_id)
+    with_selected_squad(interaction, options, fn squad ->
       discord_user_id = Integer.to_string(interaction.member.user_id)
 
       case Squads.insert_member(squad, %{discord_user_id: discord_user_id}) do
@@ -181,17 +169,11 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
             data: %{content: "Joined squad **#{squad.name}**!"}
           }
       end
-    end
+    end)
   end
 
   defp handle_notify(interaction, options) do
-    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
-    {term_or_id, autocomplete} = Helpers.get_option!(options, "term")
-
-    if autocomplete do
-      search_squads(guild, term_or_id)
-    else
-      squad = Squads.get_by_id!(guild, term_or_id)
+    with_selected_squad(interaction, options, fn squad ->
       members = Squads.all_members(squad)
 
       users_in_voice = users_in_caller_voice_channel(interaction)
@@ -202,17 +184,11 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
         end)
 
       notify_squad(squad, {members, members_to_notify})
-    end
+    end)
   end
 
   defp handle_leave(interaction, options) do
-    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
-    {term_or_id, autocomplete} = Helpers.get_option!(options, "term")
-
-    if autocomplete do
-      search_squads(guild, term_or_id)
-    else
-      squad = Squads.get_by_id!(guild, term_or_id)
+    with_selected_squad(interaction, options, fn squad ->
       discord_user_id = Integer.to_string(interaction.member.user_id)
 
       case Squads.remove_member(squad, %{discord_user_id: discord_user_id}) do
@@ -228,6 +204,35 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
             data: %{content: "Left squad **#{squad.name}**!"}
           }
       end
+    end)
+  end
+
+  # While typing, the term is answered with squad suggestions. On submit it holds the
+  # id of the picked suggestion, or free text if the user submitted without picking one
+  defp with_selected_squad(interaction, options, fun) do
+    {:ok, guild} = Discord.upsert_guild(Integer.to_string(interaction.guild_id))
+    {term_or_id, autocomplete} = Helpers.get_option!(options, "term")
+
+    if autocomplete do
+      search_squads(guild, term_or_id)
+    else
+      case find_squad(guild, term_or_id) do
+        nil ->
+          %{
+            type: InteractionCallbackType.channel_message_with_source(),
+            data: %{content: "Squad not found, please pick one from the suggestions"}
+          }
+
+        squad ->
+          fun.(squad)
+      end
+    end
+  end
+
+  defp find_squad(guild, term_or_id) do
+    case Integer.parse(term_or_id) do
+      {id, ""} -> Squads.get_by_id(guild, id)
+      _ -> nil
     end
   end
 
@@ -284,6 +289,10 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
         Calling all members from the #{squad.name} squad!
         #{Enum.map_join(members_to_notify, "\n", fn member -> "<@#{member.discord_user_id}>" end)}
         """,
+        # Only ping the squad members, Discord allows at most 100 users here
+        allowed_mentions: %{
+          users: members_to_notify |> Enum.map(& &1.discord_user_id) |> Enum.take(100)
+        },
         components: [Components.join_and_leave_squad(squad.id)]
       }
     }

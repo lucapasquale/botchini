@@ -3,7 +3,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Unfollow do
   Handles /unfollow slash command
   """
 
-  alias Nostrum.Constants.ApplicationCommandOptionType
+  alias Nostrum.Constants.{ApplicationCommandOptionType, InteractionCallbackType}
   alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias Botchini.Creators
@@ -61,7 +61,7 @@ defmodule BotchiniDiscord.Creators.Interactions.Unfollow do
       |> Enum.map(fn {id, name} -> %{name: name, value: Integer.to_string(id)} end)
 
     %{
-      type: 8,
+      type: InteractionCallbackType.application_command_autocomplete_result(),
       data: %{choices: choices}
     }
   end
@@ -72,13 +72,13 @@ defmodule BotchiniDiscord.Creators.Interactions.Unfollow do
     with {id, ""} <- Integer.parse(creator_id),
          {:ok, creator} <- Creators.unfollow(id, follow_info) do
       %{
-        type: 4,
+        type: InteractionCallbackType.channel_message_with_source(),
         data: %{content: "Stopped following **#{creator.name}**"}
       }
     else
       _ ->
         %{
-          type: 4,
+          type: InteractionCallbackType.channel_message_with_source(),
           data: %{content: "Creator was not being followed!"}
         }
     end

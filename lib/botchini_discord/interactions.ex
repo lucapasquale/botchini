@@ -5,7 +5,7 @@ defmodule BotchiniDiscord.Interactions do
 
   require Logger
   alias Nostrum.Api
-  alias Nostrum.Constants.InteractionCallbackType
+  alias Nostrum.Constants.{InteractionCallbackType, InteractionType}
   alias Nostrum.Struct.Interaction
 
   alias BotchiniDiscord.Common.Interactions.About
@@ -13,6 +13,8 @@ defmodule BotchiniDiscord.Interactions do
   alias BotchiniDiscord.Creators.Interactions.{ConfirmUnfollow, Follow, Info, List, Unfollow}
   alias BotchiniDiscord.Music.Interactions.Music
   alias BotchiniDiscord.Squads.Interactions.Squad
+
+  @deferred_commands ["follow", "info", "music"]
 
   @spec register_commands() :: any()
   def register_commands do
@@ -58,21 +60,45 @@ defmodule BotchiniDiscord.Interactions do
 
     Logger.info("Interaction received", interaction_data: interaction.data)
 
-    try do
-      data = Helpers.parse_interaction_data(interaction.data)
-      response = call_interaction(interaction, data) |> put_default_allowed_mentions()
+    deferred = defer_response?(interaction)
 
-      Nostrum.Api.create_interaction_response(interaction, response)
-    rescue
-      err ->
-        Logger.error(err)
-
-        Nostrum.Api.create_interaction_response(interaction, %{
-          type: 4,
-          data: %{content: "Something went wrong :("}
-        })
+    if deferred do
+      Api.Interaction.create_response(interaction, %{
+        type: InteractionCallbackType.deferred_channel_message_with_source()
+      })
     end
+
+    response =
+      try do
+        data = Helpers.parse_interaction_data(interaction.data)
+        call_interaction(interaction, data) |> put_default_allowed_mentions()
+      catch
+        kind, reason ->
+          Logger.error(
+            "Failed to handle interaction: " <> Exception.format(kind, reason, __STACKTRACE__)
+          )
+
+          %{
+            type: InteractionCallbackType.channel_message_with_source(),
+            data: %{content: "Something went wrong :("}
+          }
+      end
+
+    send_response(interaction, response, deferred)
   end
+
+  # Discord only waits 3 seconds for a response, so commands that call external
+  # APIs acknowledge the interaction first and fill in the message when done
+  defp defer_response?(interaction) do
+    interaction.type == InteractionType.application_command() and
+      interaction.data.name in @deferred_commands
+  end
+
+  defp send_response(interaction, response, true),
+    do: Api.Interaction.edit_response(interaction, response.data)
+
+  defp send_response(interaction, response, false),
+    do: Api.Interaction.create_response(interaction, response)
 
   # Responses echo user input (song terms, squad names), so block @everyone,
   # role and user pings unless an interaction explicitly allows them

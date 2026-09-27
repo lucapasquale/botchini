@@ -242,7 +242,7 @@ defmodule BotchiniDiscord.Squads.Interactions.Squad do
       |> Enum.map(fn {id, name} -> %{name: name, value: Integer.to_string(id)} end)
 
     %{
-      type: 8,
+      type: InteractionCallbackType.application_command_autocomplete_result(),
       data: %{choices: choices}
     }
   end

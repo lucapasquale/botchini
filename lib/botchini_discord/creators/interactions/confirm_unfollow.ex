@@ -60,7 +60,7 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
 
   defp confirm_unfollow(interaction, "cancel", creator) do
     %{
-      type: 7,
+      type: InteractionCallbackType.update_message(),
       data: %{
         content: """
         #{unfollow_message(interaction, creator)}
@@ -79,7 +79,7 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
     case Creators.unfollow(creator.id, follow_info) do
       {:error, :not_found} ->
         %{
-          type: 7,
+          type: InteractionCallbackType.update_message(),
           data: %{
             content: """
             #{unfollow_message(interaction, creator)}
@@ -91,7 +91,7 @@ defmodule BotchiniDiscord.Creators.Interactions.ConfirmUnfollow do
 
       {:ok, _creator} ->
         %{
-          type: 7,
+          type: InteractionCallbackType.update_message(),
           data: %{
             content: """
             #{unfollow_message(interaction, creator)}

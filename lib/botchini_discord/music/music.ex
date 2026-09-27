@@ -5,6 +5,7 @@ defmodule BotchiniDiscord.Music do
 
   alias Botchini.Discord
   alias Botchini.Discord.Schema.Guild
+  alias Nostrum.Api.Message
 
   @spec handle_voice_ready(Nostrum.Struct.Event.VoiceReady.t()) :: any()
   def handle_voice_ready(event) do
@@ -32,9 +33,23 @@ defmodule BotchiniDiscord.Music do
     if cur_track && cur_track.status == :paused do
       :noop
     else
+      if event.timed_out, do: notify_failed_track(cur_track)
+
       play_next_track(guild)
     end
   end
+
+  # Nostrum sets timed_out when a track produced no audio at all, usually
+  # because yt-dlp or streamlink failed to fetch it
+  defp notify_failed_track(%{discord_channel_id: channel_id} = track)
+       when is_binary(channel_id) do
+    Message.create(String.to_integer(channel_id), %{
+      content: "Couldn't play **#{track.title}**, skipping it",
+      allowed_mentions: %{parse: []}
+    })
+  end
+
+  defp notify_failed_track(_track), do: :noop
 
   @doc """
   Marks the current track as done and plays the next one, leaving the voice channel when the queue is empty

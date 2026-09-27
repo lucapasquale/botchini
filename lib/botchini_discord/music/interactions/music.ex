@@ -14,6 +14,14 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
 
   @behaviour InteractionBehaviour
 
+  @youtube_hosts [
+    "youtube.com",
+    "www.youtube.com",
+    "m.youtube.com",
+    "music.youtube.com",
+    "youtu.be"
+  ]
+
   @impl BotchiniDiscord.InteractionBehaviour
   @spec get_command() :: ApplicationCommand.application_command_map()
   def get_command,
@@ -116,7 +124,8 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
           %{
             term: term,
             play_url: get_play_url_from_term(term),
-            play_type: get_play_type_from_term(term)
+            play_type: get_play_type_from_term(term),
+            discord_channel_id: Integer.to_string(interaction.channel_id)
           },
           guild
         )
@@ -282,21 +291,27 @@ defmodule BotchiniDiscord.Music.Interactions.Music do
       String.starts_with?(term, "https://www.twitch.tv") ->
         :stream
 
-      Regex.match?(
-        ~r/^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/,
-        term
-      ) ->
-        video_id = Services.Youtube.get_video_id_from_url(term)
-        {:ok, yt_video} = Services.Youtube.get_video(video_id)
-
-        if is_nil(yt_video.liveStreamingDetails) do
-          :ytdl
-        else
-          :stream
-        end
+      youtube_url?(term) ->
+        youtube_play_type(term)
 
       true ->
         :ytdl
+    end
+  end
+
+  defp youtube_url?(term) do
+    URI.parse(term).host in @youtube_hosts
+  end
+
+  # Live streams are played with streamlink, anything else (or a video that
+  # can't be looked up) is left for yt-dlp
+  defp youtube_play_type(url) do
+    with video_id when is_binary(video_id) <- Services.Youtube.get_video_id_from_url(url),
+         {:ok, %{liveStreamingDetails: details}} when not is_nil(details) <-
+           Services.Youtube.get_video(video_id) do
+      :stream
+    else
+      _ -> :ytdl
     end
   end
 end

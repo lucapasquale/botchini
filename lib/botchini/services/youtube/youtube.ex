@@ -53,7 +53,7 @@ defmodule Botchini.Services.Youtube do
       )
 
     case Map.get(resp.body, "items") do
-      nil ->
+      items when items in [nil, []] ->
         {:error, nil}
 
       items ->

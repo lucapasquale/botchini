@@ -43,17 +43,23 @@ defmodule Botchini.Music do
   end
 
   @spec insert_track(
-          %{term: String.t(), play_url: String.t(), play_type: :ytdl | :stream},
+          %{
+            required(:term) => String.t(),
+            required(:play_url) => String.t(),
+            required(:play_type) => :ytdl | :stream,
+            optional(:discord_channel_id) => String.t()
+          },
           Guild.t()
         ) :: {:ok, Track.t()}
-  def insert_track(%{term: term, play_url: play_url, play_type: play_type}, guild) do
+  def insert_track(%{term: term, play_url: play_url, play_type: play_type} = attrs, guild) do
     %Track{}
     |> Track.changeset(%{
       guild_id: guild.id,
       status: :waiting,
       title: term,
       play_url: play_url,
-      play_type: play_type
+      play_type: play_type,
+      discord_channel_id: Map.get(attrs, :discord_channel_id)
     })
     |> Repo.insert!()
   end

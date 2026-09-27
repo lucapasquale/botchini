@@ -11,7 +11,12 @@ defmodule BotchiniDiscord.Consumer do
   alias BotchiniDiscord.{Interactions, Music}
 
   def handle_event({:READY, _data, _ws_state}) do
-    Interactions.register_commands()
+    # READY is sent again every time the gateway starts a new session,
+    # but commands only change on deploys so register them once per boot
+    unless :persistent_term.get(:botchini_commands_registered, false) do
+      Interactions.register_commands()
+      :persistent_term.put(:botchini_commands_registered, true)
+    end
 
     version = to_string(Application.spec(:botchini, :vsn))
     Nostrum.Api.Self.update_status(:online, {:playing, "on v#{version}"})

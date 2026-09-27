@@ -13,6 +13,7 @@ defmodule Botchini.Music.Schema.Track do
           guild_id: String.t(),
           play_url: String.t(),
           title: String.t(),
+          discord_channel_id: String.t() | nil,
           play_type: :ytdl | :stream,
           status: :waiting | :playing | :paused | :done
         }
@@ -20,6 +21,7 @@ defmodule Botchini.Music.Schema.Track do
   schema "music_tracks" do
     field(:play_url, :string)
     field(:title, :string)
+    field(:discord_channel_id, :string)
     field(:play_type, Ecto.Enum, values: [:ytdl, :stream])
     field(:status, Ecto.Enum, values: [:waiting, :playing, :paused, :done])
 
@@ -31,7 +33,7 @@ defmodule Botchini.Music.Schema.Track do
   @spec changeset(Track.t() | map(), any()) :: Ecto.Changeset.t()
   def changeset(%Track{} = track, attrs \\ %{}) do
     track
-    |> cast(attrs, [:play_url, :play_type, :title, :status, :guild_id])
+    |> cast(attrs, [:play_url, :play_type, :title, :status, :guild_id, :discord_channel_id])
     |> validate_required([:play_url, :play_type, :title, :status, :guild_id])
   end
 end

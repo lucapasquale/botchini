@@ -41,6 +41,9 @@ defmodule BotchiniDiscord.Screens.Responses.Components do
   @spec watch_all_url(String.t()) :: String.t()
   def watch_all_url(guild_id), do: url(~p"/screens") <> "#" <> Guild.sign_token(guild_id)
 
+  @spec whip_url() :: String.t()
+  def whip_url, do: url(~p"/api/whip")
+
   @spec watch_url(Room.t()) :: String.t()
   def watch_url(room), do: url(~p"/screens/#{room.id}")
 

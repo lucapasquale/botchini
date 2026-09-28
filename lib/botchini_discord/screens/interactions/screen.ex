@@ -33,6 +33,11 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
           type: ApplicationCommandOptionType.sub_command()
         },
         %{
+          name: "obs",
+          description: "Get a stream key to share your screen from OBS",
+          type: ApplicationCommandOptionType.sub_command()
+        },
+        %{
           name: "list",
           description: "List the screens being shared in this server",
           type: ApplicationCommandOptionType.sub_command()
@@ -50,6 +55,7 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
     cond do
       Helpers.get_option(options, "start") -> handle_start(interaction)
       Helpers.get_option(options, "stop") -> handle_stop(interaction)
+      Helpers.get_option(options, "obs") -> handle_obs(interaction)
       Helpers.get_option(options, "list") -> handle_list(interaction)
       true -> reply("Invalid command")
     end
@@ -88,6 +94,29 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
         Screens.stop_room(room)
         reply("Stopped sharing **#{Helpers.escape_markdown(room.title)}**")
     end
+  end
+
+  defp handle_obs(interaction) do
+    {:ok, key} =
+      Screens.create_stream_key(%{
+        guild_id: Integer.to_string(interaction.guild_id),
+        owner_id: Integer.to_string(interaction.user.id),
+        channel_id: Integer.to_string(interaction.channel_id),
+        owner_name: owner_name(interaction)
+      })
+
+    reply("""
+    In OBS, open **Settings → Stream** and set:
+    - **Service:** WHIP
+    - **Server:** `#{Components.whip_url()}`
+    - **Bearer Token:** ||`#{key}`||
+
+    In **Settings → Output**, pick an **H.264** encoder with a **1s** keyframe interval.
+    Then **Start Streaming**, and I'll post the watch link here.
+
+    For game audio without Discord, turn on **Capture audio** in Game Capture or add an \
+    **Application Audio Capture** source. Keep the token to yourself, running this again replaces it.
+    """)
   end
 
   defp handle_list(interaction) do

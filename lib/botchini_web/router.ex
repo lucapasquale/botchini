@@ -39,6 +39,12 @@ defmodule BotchiniWeb.Router do
     get "/youtube/webhooks/callback", YoutubeController, :challenge
   end
 
+  scope "/api/whip", BotchiniWeb do
+    post "/", WhipController, :create
+    patch "/:room_id/:session_id", WhipController, :update
+    delete "/:room_id/:session_id", WhipController, :delete
+  end
+
   scope "/api", BotchiniWeb do
     pipe_through :xml_api
 

@@ -238,6 +238,7 @@ export const ScreenViewer = {
     this.status = this.el.querySelector("[data-screen-status]")
     this.handleEvent(`screen:${this.roomId}:ice_candidate`, candidate => this.connection?.addRemoteCandidate(candidate))
     this.handleEvent(`screen:${this.roomId}:ended`, () => this.teardown())
+    this.handleEvent(`screen:${this.roomId}:reconnect`, () => this.connect())
     this.connect()
   },
 

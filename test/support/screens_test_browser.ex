@@ -12,7 +12,7 @@ defmodule Botchini.Screens.TestBrowser do
 
   alias Botchini.Screens.Room
 
-  @spec start_link(String.t(), :publisher | :viewer) :: GenServer.on_start()
+  @spec start_link(String.t(), :publisher | :whip_publisher | :viewer) :: GenServer.on_start()
   def start_link(room_id, role), do: GenServer.start_link(__MODULE__, {room_id, role, self()})
 
   @spec send_rtp(pid(), :video | :audio, ExRTP.Packet.t()) :: :ok
@@ -24,21 +24,43 @@ defmodule Botchini.Screens.TestBrowser do
   @impl true
   def init({room_id, role, test_pid}) do
     {:ok, pc} =
-      PeerConnection.start_link(ice_servers: [], audio_codecs: [:opus], video_codecs: [:vp8])
+      PeerConnection.start_link(
+        ice_servers: [],
+        audio_codecs: [:opus],
+        video_codecs: video_codecs(role)
+      )
 
     tracks = add_transceivers(pc, role)
     {:ok, offer} = PeerConnection.create_offer(pc)
     :ok = PeerConnection.set_local_description(pc, offer)
+    :ok = connect(role, room_id, pc, offer)
 
+    {:ok, %{room_id: room_id, pc: pc, role: role, test_pid: test_pid, tracks: tracks}}
+  end
+
+  defp video_codecs(:publisher), do: [:vp8]
+  defp video_codecs(:whip_publisher), do: [:h264]
+  defp video_codecs(:viewer), do: [:vp8, :h264]
+
+  defp connect(:whip_publisher, room_id, pc, _offer) do
+    receive do
+      {:ex_webrtc, ^pc, {:ice_gathering_state_change, :complete}} -> :ok
+    end
+
+    {:ok, answer, _session_id} =
+      Room.publish_whip(room_id, PeerConnection.get_local_description(pc).sdp)
+
+    PeerConnection.set_remote_description(pc, %SessionDescription{type: :answer, sdp: answer})
+  end
+
+  defp connect(role, room_id, pc, offer) do
     connect = if role == :publisher, do: &Room.publish/2, else: &Room.watch/2
     {:ok, answer} = connect.(room_id, SessionDescription.to_json(offer))
-    :ok = PeerConnection.set_remote_description(pc, SessionDescription.from_json(answer))
-
-    {:ok, %{room_id: room_id, pc: pc, test_pid: test_pid, tracks: tracks}}
+    PeerConnection.set_remote_description(pc, SessionDescription.from_json(answer))
   end
 
   # Publishers map kind => outbound track id, viewers map inbound track id => kind
-  defp add_transceivers(pc, :publisher) do
+  defp add_transceivers(pc, role) when role in [:publisher, :whip_publisher] do
     Map.new([:video, :audio], fn kind ->
       track = MediaStreamTrack.new(kind)
       {:ok, _transceiver} = PeerConnection.add_transceiver(pc, track, direction: :sendonly)
@@ -61,10 +83,21 @@ defmodule Botchini.Screens.TestBrowser do
   end
 
   @impl true
+  def handle_info({:screens, _room_id, :reconnect}, state) do
+    report(state, :reconnect)
+    {:noreply, state}
+  end
+
   def handle_info({:screens, _room_id, {:ice_candidate, candidate}}, state) do
     PeerConnection.add_ice_candidate(state.pc, ICECandidate.from_json(candidate))
     {:noreply, state}
   end
+
+  def handle_info(
+        {:ex_webrtc, _pc, {:ice_candidate, _candidate}},
+        %{role: :whip_publisher} = state
+      ),
+      do: {:noreply, state}
 
   def handle_info({:ex_webrtc, _pc, {:ice_candidate, candidate}}, state) do
     Room.add_ice_candidate(state.room_id, ICECandidate.to_json(candidate))

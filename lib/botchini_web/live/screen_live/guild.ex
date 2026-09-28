@@ -111,6 +111,10 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     {:noreply, push_event(socket, "screen:#{room_id}:ice_candidate", candidate)}
   end
 
+  def handle_info({:screens, room_id, :reconnect}, socket) do
+    {:noreply, push_event(socket, "screen:#{room_id}:reconnect", %{})}
+  end
+
   def handle_info({:screen_room, :ended, room}, socket) do
     {:noreply, update(socket, :rooms, &Enum.reject(&1, fn r -> r.id == room.id end))}
   end

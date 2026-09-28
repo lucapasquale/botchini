@@ -33,13 +33,14 @@ defmodule Botchini.Screens.Room do
           custom_title?: boolean()
         }
 
-  @type source :: :screen | :window | :tab
+  @type source :: :screen | :window | :tab | :obs
 
   @enforce_keys [:id, :broadcast_key, :title, :guild_id, :channel_id, :owner_id, :owner_name]
   defstruct @enforce_keys ++
               [:started_at, :source, live?: false, viewer_count: 0, custom_title?: false]
 
   @max_title_length 100
+  @whip_gathering_timeout_ms 2_000
 
   # Keyframes are expensive for the broadcaster, so viewers joining or
   # recovering from packet loss at the same time share a single request
@@ -56,6 +57,12 @@ defmodule Botchini.Screens.Room do
   """
   @spec publish(String.t(), map()) :: {:ok, map()} | {:error, term()}
   def publish(room_id, offer), do: call(room_id, {:publish, self(), offer})
+
+  @spec publish_whip(String.t(), String.t()) :: {:ok, String.t(), String.t()} | {:error, term()}
+  def publish_whip(room_id, sdp) when is_binary(sdp), do: call(room_id, {:publish_whip, sdp})
+
+  @spec end_whip(String.t(), String.t()) :: :ok | {:error, :not_found}
+  def end_whip(room_id, session_id), do: call(room_id, {:end_whip, session_id})
 
   @doc """
   Connects the calling process as a viewer, answering its SDP offer
@@ -81,6 +88,7 @@ defmodule Botchini.Screens.Room do
   @spec default_title(String.t(), source() | nil) :: String.t()
   def default_title(owner_name, :tab), do: "#{owner_name}'s tab"
   def default_title(owner_name, :window), do: "#{owner_name}'s window"
+  def default_title(owner_name, :obs), do: "#{owner_name}'s stream"
   def default_title(owner_name, _source), do: "#{owner_name}'s screen"
 
   @spec info(String.t()) :: {:ok, t()} | {:error, :not_found}
@@ -138,6 +146,8 @@ defmodule Botchini.Screens.Room do
         # One munger per track kind keeps sequence numbers and timestamps
         # continuous for viewers when the broadcaster reconnects
         mungers: %{video: Munger.new(:vp8, 90_000), audio: Munger.new(:opus, 48_000)},
+        video_codec: :vp8,
+        whip_answers: %{},
         last_keyframe_request: nil,
         idle_timer: nil,
         peak_viewers: 0,
@@ -167,13 +177,8 @@ defmodule Botchini.Screens.Room do
     {:reply, :ok, rename(state, changes)}
   end
 
-  def handle_call({:set_source, source}, _from, %{room: room} = state) do
-    changes =
-      if room.custom_title?,
-        do: %{source: source},
-        else: %{source: source, title: default_title(room.owner_name, source)}
-
-    {:reply, :ok, rename(state, changes)}
+  def handle_call({:set_source, source}, _from, state) do
+    {:reply, :ok, rename(state, source_changes(state.room, source))}
   end
 
   def handle_call({:stop, reason}, _from, state) do
@@ -186,19 +191,50 @@ defmodule Botchini.Screens.Room do
       |> drop_lv_peer(lv)
       |> drop_publisher()
 
-    case negotiate(state, offer, fn _pc -> :ok end) do
+    case negotiate(state, offer, :vp8, fn _pc -> :ok end) do
       {:ok, pc, answer} ->
         state =
           state
           |> put_peer(pc, new_peer(:publisher, lv, %{}))
           |> Map.put(:publisher, pc)
-          |> update_in([:mungers], &Map.new(&1, fn {kind, m} -> {kind, Munger.update(m)} end))
+          |> use_codec(:vp8)
 
         {:reply, {:ok, answer}, state}
 
       {:error, reason} ->
         Logger.warning("Failed to connect screen broadcaster", reason: inspect(reason))
         {:reply, {:error, reason}, state}
+    end
+  end
+
+  def handle_call({:publish_whip, sdp}, from, state) do
+    state = drop_publisher(state)
+
+    case negotiate(state, %{"type" => "offer", "sdp" => sdp}, :h264, fn _pc -> :ok end) do
+      {:ok, pc, _answer} ->
+        peer = Map.put(new_peer(:publisher, nil, %{}), :session_id, random_id())
+        Process.send_after(self(), {:whip_answer_timeout, pc}, @whip_gathering_timeout_ms)
+
+        state =
+          state
+          |> put_peer(pc, peer)
+          |> Map.put(:publisher, pc)
+          |> use_codec(:h264)
+          |> rename(source_changes(state.room, :obs))
+          |> put_in([:whip_answers, pc], from)
+
+        {:noreply, state}
+
+      {:error, reason} ->
+        Logger.warning("Failed to connect OBS broadcaster", reason: inspect(reason))
+        {:reply, {:error, reason}, state}
+    end
+  end
+
+  def handle_call({:end_whip, session_id}, _from, state) do
+    case state.publisher && state.peers[state.publisher] do
+      %{session_id: ^session_id} -> {:stop, :normal, :ok, %{state | end_reason: :stopped}}
+      _peer -> {:reply, {:error, :not_found}, state}
     end
   end
 
@@ -250,6 +286,8 @@ defmodule Botchini.Screens.Room do
 
   def handle_info({:idle_timeout, _timer}, state), do: {:noreply, state}
 
+  def handle_info({:whip_answer_timeout, pc}, state), do: {:noreply, answer_whip(state, pc)}
+
   def handle_info(:max_duration, state) do
     {:stop, :normal, %{state | end_reason: :max_duration}}
   end
@@ -272,10 +310,15 @@ defmodule Botchini.Screens.Room do
 
   ## Peer events
 
+  defp handle_peer_event({:ice_candidate, _candidate}, _pc, %{lv: nil}, state), do: state
+
   defp handle_peer_event({:ice_candidate, candidate}, _pc, peer, state) do
     send(peer.lv, {:screens, state.room.id, {:ice_candidate, ICECandidate.to_json(candidate)}})
     state
   end
+
+  defp handle_peer_event({:ice_gathering_state_change, :complete}, pc, _peer, state),
+    do: answer_whip(state, pc)
 
   defp handle_peer_event({:track, track}, pc, %{role: :publisher}, state) do
     update_in(state, [:peers, pc, :tracks], &Map.put(&1, track.id, track.kind))
@@ -394,7 +437,7 @@ defmodule Botchini.Screens.Room do
     stream_id = MediaStreamTrack.generate_stream_id()
     tracks = Map.new([:video, :audio], &{&1, MediaStreamTrack.new(&1, [stream_id])})
 
-    case negotiate(state, offer, &add_tracks(&1, Map.values(tracks))) do
+    case negotiate(state, offer, state.video_codec, &add_tracks(&1, Map.values(tracks))) do
       {:ok, pc, answer} ->
         outbound = Map.new(tracks, fn {kind, track} -> {kind, track.id} end)
         {:reply, {:ok, answer}, put_peer(state, pc, new_peer(:viewer, lv, outbound))}
@@ -405,9 +448,11 @@ defmodule Botchini.Screens.Room do
     end
   end
 
-  defp negotiate(state, offer, before_answer) do
+  defp negotiate(state, offer, video_codec, before_answer) do
+    options = peer_connection_options(state.config, video_codec)
+
     with {:ok, offer} <- parse_offer(offer),
-         {:ok, pc} <- PeerConnection.start_link(peer_connection_options(state.config)),
+         {:ok, pc} <- PeerConnection.start_link(options),
          :ok <- negotiate_answer(pc, offer, before_answer) do
       {:ok, pc, SessionDescription.to_json(PeerConnection.get_local_description(pc))}
     end
@@ -441,7 +486,7 @@ defmodule Botchini.Screens.Room do
     end)
   end
 
-  defp peer_connection_options(config) do
+  defp peer_connection_options(config, video_codec) do
     [
       ice_servers: config[:ice_servers],
       ice_port_range: config[:ice_port_range] || [0],
@@ -449,7 +494,7 @@ defmodule Botchini.Screens.Room do
       # Forwarded packets are sent as they arrive, so broadcaster and viewers
       # must agree on one codec per kind, and every browser supports these
       audio_codecs: [:opus],
-      video_codecs: [:vp8]
+      video_codecs: [video_codec]
     ]
   end
 
@@ -461,13 +506,13 @@ defmodule Botchini.Screens.Room do
 
   defp new_peer(role, lv, tracks) do
     # Publisher tracks map inbound track id => kind, viewer tracks map kind => outbound track id
-    %{role: role, lv: lv, lv_ref: Process.monitor(lv), connected?: false, tracks: tracks}
+    %{role: role, lv: lv, lv_ref: lv && Process.monitor(lv), connected?: false, tracks: tracks}
   end
 
   defp put_peer(state, pc, peer) do
     state
     |> put_in([:peers, pc], peer)
-    |> put_in([:lv_peers, peer.lv], pc)
+    |> then(&if(peer.lv, do: put_in(&1, [:lv_peers, peer.lv], pc), else: &1))
   end
 
   defp drop_lv_peer(state, lv) do
@@ -482,10 +527,18 @@ defmodule Botchini.Screens.Room do
 
   defp remove_peer(state, pc, opts \\ []) do
     {peer, peers} = Map.pop(state.peers, pc)
-    Process.demonitor(peer.lv_ref, [:flush])
+    if peer.lv_ref, do: Process.demonitor(peer.lv_ref, [:flush])
     if Keyword.get(opts, :stop_pc, true), do: stop_peer_connection(pc)
 
-    state = %{state | peers: peers, lv_peers: Map.delete(state.lv_peers, peer.lv)}
+    {waiting, whip_answers} = Map.pop(state.whip_answers, pc)
+    if waiting, do: GenServer.reply(waiting, {:error, :closed})
+
+    state = %{
+      state
+      | peers: peers,
+        lv_peers: Map.delete(state.lv_peers, peer.lv),
+        whip_answers: whip_answers
+    }
 
     case peer.role do
       :viewer ->
@@ -502,6 +555,40 @@ defmodule Botchini.Screens.Room do
         state
     end
   end
+
+  defp answer_whip(state, pc) do
+    case Map.pop(state.whip_answers, pc) do
+      {nil, _answers} ->
+        state
+
+      {from, answers} ->
+        sdp = PeerConnection.get_local_description(pc).sdp
+        GenServer.reply(from, {:ok, sdp, state.peers[pc].session_id})
+        %{state | whip_answers: answers}
+    end
+  end
+
+  defp use_codec(%{video_codec: codec} = state, codec) do
+    update_in(state, [:mungers], &Map.new(&1, fn {kind, m} -> {kind, Munger.update(m)} end))
+  end
+
+  defp use_codec(state, codec) do
+    for {_pc, %{role: :viewer, lv: lv}} <- state.peers,
+        do: send(lv, {:screens, state.room.id, :reconnect})
+
+    %{
+      state
+      | video_codec: codec,
+        mungers: %{video: Munger.new(codec, 90_000), audio: Munger.update(state.mungers.audio)}
+    }
+  end
+
+  defp source_changes(%{custom_title?: true}, source), do: %{source: source}
+
+  defp source_changes(room, source),
+    do: %{source: source, title: default_title(room.owner_name, source)}
+
+  defp random_id, do: 16 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
 
   defp stop_peer_connection(pc) do
     Process.unlink(pc)

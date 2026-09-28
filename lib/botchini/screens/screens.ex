@@ -5,7 +5,9 @@ defmodule Botchini.Screens do
   unguessable ids that stop working once it ends
   """
 
+  alias Botchini.Repo
   alias Botchini.Screens.{Room, RoomSupervisor}
+  alias Botchini.Screens.Schema.StreamKey
 
   @topic "screens"
 
@@ -99,6 +101,49 @@ defmodule Botchini.Screens do
     ])
     |> Enum.find_value(&get_room/1)
   end
+
+  @spec create_stream_key(%{
+          guild_id: String.t(),
+          owner_id: String.t(),
+          channel_id: String.t(),
+          owner_name: String.t()
+        }) :: {:ok, String.t()} | {:error, Ecto.Changeset.t()}
+  def create_stream_key(attrs) do
+    key = random_id()
+
+    %StreamKey{}
+    |> StreamKey.changeset(%{
+      discord_guild_id: attrs.guild_id,
+      discord_user_id: attrs.owner_id,
+      discord_channel_id: attrs.channel_id,
+      owner_name: attrs.owner_name,
+      key_hash: hash_key(key)
+    })
+    |> Repo.insert(
+      on_conflict: {:replace, [:discord_channel_id, :owner_name, :key_hash, :updated_at]},
+      conflict_target: [:discord_guild_id, :discord_user_id]
+    )
+    |> case do
+      {:ok, _stream_key} -> {:ok, key}
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  @spec get_stream_key(String.t()) :: StreamKey.t() | nil
+  def get_stream_key(key) when is_binary(key), do: Repo.get_by(StreamKey, key_hash: hash_key(key))
+
+  @spec start_stream_key_room(StreamKey.t()) :: {:ok, Room.t()} | {:error, term()}
+  def start_stream_key_room(%StreamKey{} = stream_key) do
+    start_room(%{
+      title: Room.default_title(stream_key.owner_name, :obs),
+      guild_id: stream_key.discord_guild_id,
+      channel_id: stream_key.discord_channel_id,
+      owner_id: stream_key.discord_user_id,
+      owner_name: stream_key.owner_name
+    })
+  end
+
+  defp hash_key(key), do: :crypto.hash(:sha256, key)
 
   @spec stop_room(Room.t(), atom()) :: :ok | {:error, :not_found}
   def stop_room(%Room{} = room, reason \\ :stopped), do: Room.stop(room.id, reason)

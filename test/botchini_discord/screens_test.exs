@@ -5,6 +5,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
 
   @moduletag :capture_log
 
+  alias Ecto.Adapters.SQL.Sandbox
   alias Nostrum.Error.ApiError
   alias Nostrum.Struct.{Guild.Member, Interaction, User}
 
@@ -77,6 +78,17 @@ defmodule BotchiniDiscordTest.ScreensTest do
       assert response.data.content == "You're not sharing your screen"
       assert Screens.find_owner_room("1", "4")
     end
+  end
+
+  test "/stream obs privately sends a stream key for OBS" do
+    :ok = Sandbox.checkout(Botchini.Repo)
+
+    response = Screen.handle_interaction(interaction(), subcommand("obs"))
+
+    assert response.data.flags == 64
+    assert response.data.content =~ "/api/whip`"
+    assert [_match, key] = Regex.run(~r/\|\|`(.+)`\|\|/, response.data.content)
+    assert %{discord_user_id: "3", discord_channel_id: "2"} = Screens.get_stream_key(key)
   end
 
   test "/stream list only shows rooms that are live" do

@@ -56,9 +56,16 @@ defmodule BotchiniTest.ScreensTest do
 
   # The viewer can report connected a moment before the room does, so the
   # broadcaster keeps sending until a packet arrives
-  defp send_until_received(publisher, viewer, first_sequence_number) do
+  defp h264_packet(sequence_number) do
+    ExRTP.Packet.new(<<0x65, sequence_number::32>>,
+      sequence_number: sequence_number,
+      timestamp: sequence_number * 3_000
+    )
+  end
+
+  defp send_until_received(publisher, viewer, first_sequence_number, packet \\ &vp8_packet/1) do
     Enum.reduce_while(first_sequence_number..(first_sequence_number + 50), nil, fn sn, nil ->
-      TestBrowser.send_rtp(publisher, :video, vp8_packet(sn))
+      TestBrowser.send_rtp(publisher, :video, packet.(sn))
 
       receive do
         {:browser, ^viewer, {:rtp, :video, packet}} -> {:halt, packet}
@@ -213,6 +220,29 @@ defmodule BotchiniTest.ScreensTest do
 
       packet = send_until_received(publisher, viewer, 100)
       assert <<0x10, 0x9D, 0x01, 0x2A, _sequence_number::32>> = packet.payload
+    end
+
+    test "forwards H.264 from OBS, reconnecting viewers of the previous codec" do
+      room = start_room()
+      Screens.subscribe(room.id)
+      early_viewer = connect(room, :viewer)
+
+      {:ok, publisher} = TestBrowser.start_link(room.id, :whip_publisher)
+      assert_receive {:browser, ^early_viewer, :reconnect}
+
+      assert_receive {:screen_room, :live, %Room{source: :obs, title: "Luca's stream"}},
+                     @connect_timeout
+
+      viewer = connect(room, :viewer)
+      packet = send_until_received(publisher, viewer, 100, &h264_packet/1)
+      assert <<0x65, _sequence_number::32>> = packet.payload
+    end
+
+    test "only ends OBS streams with their session" do
+      room = start_room()
+
+      assert Room.end_whip(room.id, "unknown") == {:error, :not_found}
+      assert Screens.get_room(room.id)
     end
 
     test "forwards the broadcaster's audio too" do

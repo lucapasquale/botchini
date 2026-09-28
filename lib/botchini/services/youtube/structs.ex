@@ -3,6 +3,8 @@ defmodule Botchini.Services.Youtube.Structs.Channel do
   Channel from YouTube API
   """
 
+  alias Botchini.Services.Response
+
   defstruct [:id, :snippet]
 
   @type thumbnail :: %{
@@ -29,19 +31,15 @@ defmodule Botchini.Services.Youtube.Structs.Channel do
         }
 
   @spec new(map()) :: t()
-  def new(attrs) when is_map(attrs) do
-    attrs = for {k, v} <- attrs, into: %{}, do: {to_existing_atom(k), v}
-    struct!(__MODULE__, attrs)
-  end
-
-  defp to_existing_atom(k) when is_atom(k), do: k
-  defp to_existing_atom(k) when is_binary(k), do: String.to_existing_atom(k)
+  def new(attrs) when is_map(attrs), do: Response.to_struct(__MODULE__, attrs)
 end
 
 defmodule Botchini.Services.Youtube.Structs.Video do
   @moduledoc """
   Video from YouTube API
   """
+
+  alias Botchini.Services.Response
 
   defstruct [:id, :snippet, liveStreamingDetails: nil]
 
@@ -79,11 +77,5 @@ defmodule Botchini.Services.Youtube.Structs.Video do
         }
 
   @spec new(map()) :: t()
-  def new(attrs) when is_map(attrs) do
-    attrs = for {k, v} <- attrs, into: %{}, do: {to_existing_atom(k), v}
-    struct!(__MODULE__, attrs)
-  end
-
-  defp to_existing_atom(k) when is_atom(k), do: k
-  defp to_existing_atom(k) when is_binary(k), do: String.to_existing_atom(k)
+  def new(attrs) when is_map(attrs), do: Response.to_struct(__MODULE__, attrs)
 end

@@ -3,6 +3,8 @@ defmodule Botchini.Services.Twitch.Structs.User do
   User from Twitch API
   """
 
+  alias Botchini.Services.Response
+
   defstruct id: "",
             login: "",
             display_name: "",
@@ -28,19 +30,15 @@ defmodule Botchini.Services.Twitch.Structs.User do
         }
 
   @spec new(map()) :: t()
-  def new(attrs) when is_map(attrs) do
-    attrs = for {k, v} <- attrs, into: %{}, do: {to_existing_atom(k), v}
-    struct!(__MODULE__, attrs)
-  end
-
-  defp to_existing_atom(k) when is_atom(k), do: k
-  defp to_existing_atom(k) when is_binary(k), do: String.to_existing_atom(k)
+  def new(attrs) when is_map(attrs), do: Response.to_struct(__MODULE__, attrs)
 end
 
 defmodule Botchini.Services.Twitch.Structs.Stream do
   @moduledoc """
   Stream from Twitch API
   """
+
+  alias Botchini.Services.Response
 
   defstruct id: "",
             user_id: "",
@@ -75,19 +73,15 @@ defmodule Botchini.Services.Twitch.Structs.Stream do
         }
 
   @spec new(map()) :: t()
-  def new(attrs) when is_map(attrs) do
-    attrs = for {k, v} <- attrs, into: %{}, do: {to_existing_atom(k), v}
-    struct!(__MODULE__, attrs)
-  end
-
-  defp to_existing_atom(k) when is_atom(k), do: k
-  defp to_existing_atom(k) when is_binary(k), do: String.to_existing_atom(k)
+  def new(attrs) when is_map(attrs), do: Response.to_struct(__MODULE__, attrs)
 end
 
 defmodule Botchini.Services.Twitch.Structs.Channel do
   @moduledoc """
   Channel from Twitch API
   """
+
+  alias Botchini.Services.Response
 
   defstruct id: "",
             display_name: "",
@@ -116,11 +110,5 @@ defmodule Botchini.Services.Twitch.Structs.Channel do
         }
 
   @spec new(map()) :: t()
-  def new(attrs) when is_map(attrs) do
-    attrs = for {k, v} <- attrs, into: %{}, do: {to_existing_atom(k), v}
-    struct!(__MODULE__, attrs)
-  end
-
-  defp to_existing_atom(k) when is_atom(k), do: k
-  defp to_existing_atom(k) when is_binary(k), do: String.to_existing_atom(k)
+  def new(attrs) when is_map(attrs), do: Response.to_struct(__MODULE__, attrs)
 end

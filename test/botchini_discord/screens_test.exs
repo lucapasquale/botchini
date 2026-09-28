@@ -38,7 +38,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
   end
 
   describe "/stream start" do
-    test "privately sends the broadcast and watch links" do
+    test "privately sends the broadcast and watch all links" do
       response = Screen.handle_interaction(interaction(), subcommand("start"))
 
       assert response.data.flags == 64
@@ -47,17 +47,20 @@ defmodule BotchiniDiscordTest.ScreensTest do
       room = Screens.find_owner_room("1", "3")
       assert %Room{title: "Luca's screen", channel_id: "2", owner_name: "Luca"} = room
 
-      assert [broadcast, watch] = buttons(response)
+      assert [broadcast, watch_all] = buttons(response)
       assert broadcast.url =~ ~r"/screens/#{room.id}/broadcast##{room.broadcast_key}$"
-      assert watch.url =~ ~r"/screens/#{room.id}$"
-      refute watch.url =~ room.broadcast_key
+      assert watch_all.label == "Watch all"
+      assert watch_all.url =~ ~r"/screens#.+$"
+      refute watch_all.url =~ room.broadcast_key
     end
 
     test "sends the running room's links again" do
       first = Screen.handle_interaction(interaction(), subcommand("start"))
       response = Screen.handle_interaction(interaction(), subcommand("start"))
 
-      assert buttons(response) == buttons(first)
+      # The watch all link is signed again on every reply
+      assert [broadcast, %{label: "Watch all"}] = buttons(response)
+      assert [^broadcast, _watch_all] = buttons(first)
       assert length(Screens.list_rooms("1")) == 1
     end
   end
@@ -91,30 +94,30 @@ defmodule BotchiniDiscordTest.ScreensTest do
     assert %{discord_user_id: "3", discord_channel_id: "2"} = Screens.get_stream_key(key)
   end
 
-  test "/stream list only shows rooms that are live" do
+  test "/stream watch only shows rooms that are live" do
     Screen.handle_interaction(interaction(), subcommand("start"))
-    response = Screen.handle_interaction(interaction(), subcommand("list"))
+    response = Screen.handle_interaction(interaction(), subcommand("watch"))
 
     assert response.data.content =~ "Nobody is sharing their screen right now"
     assert [%{label: "Watch all", url: url}] = buttons(response)
     assert url =~ ~r"/screens#.+$"
   end
 
-  test "/stream list links to every live room and to all of them" do
+  test "/stream watch names every live room and only links to all of them" do
     Screen.handle_interaction(interaction(), subcommand("start"))
     room = Screens.find_owner_room("1", "3")
     patch(Screens, :list_rooms, [%{room | live?: true}])
 
-    response = Screen.handle_interaction(interaction(), subcommand("list"))
+    response = Screen.handle_interaction(interaction(), subcommand("watch"))
 
     assert response.data.content =~ "**Luca's screen** by <@3>"
-    assert [watch, watch_all] = buttons(response)
-    assert watch.url =~ ~r"/screens/#{room.id}$"
-    assert watch_all.label == "Watch all"
+    assert [%{label: "Watch all", url: url}] = buttons(response)
+    assert url =~ ~r"/screens#.+$"
+    refute url =~ room.id
   end
 
   test "can only be used inside a server" do
-    response = Screen.handle_interaction(%{interaction() | member: nil}, subcommand("list"))
+    response = Screen.handle_interaction(%{interaction() | member: nil}, subcommand("watch"))
 
     assert response.data.content == "Can only be used inside a server!"
   end
@@ -139,7 +142,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
       %{room: room}
     end
 
-    test "posts the watch link once live, and marks it as ended", %{room: room} do
+    test "posts the watch all link once live, and marks it as ended", %{room: room} do
       Screens.broadcast(room, :live)
       Screens.broadcast(room, :ended)
       # Syncs with the announcer, so both events were handled
@@ -148,8 +151,9 @@ defmodule BotchiniDiscordTest.ScreensTest do
       assert_called(Nostrum.Api.request(:post, "/channels/2/messages", live))
       assert live.content =~ "<@3> is sharing their screen: **Elden Ring**"
       assert live.allowed_mentions == %{parse: []}
-      assert [%{components: [%{label: "Watch", url: url}]}] = live.components
-      assert url =~ "/screens/room"
+      assert [%{components: [%{label: "Watch all", url: url}]}] = live.components
+      assert url =~ ~r"/screens#.+$"
+      refute url =~ "/screens/room"
 
       assert_called(Nostrum.Api.request(:patch, "/channels/2/messages/20", ended))
       assert ended.content =~ "stopped sharing"
@@ -166,7 +170,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
 
       assert_called_once(Nostrum.Api.request(:patch, "/channels/2/messages/20", edited))
       assert edited.content =~ "**Boss \\*fight\\***"
-      assert [%{components: [%{label: "Watch"}]}] = edited.components
+      assert [%{components: [%{label: "Watch all"}]}] = edited.components
     end
 
     test "tells the broadcaster when it can't post the watch link", %{room: room} do

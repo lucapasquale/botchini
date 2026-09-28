@@ -10,22 +10,13 @@ defmodule BotchiniDiscord.Screens.Responses.Components do
   alias Botchini.Screens.Room
   alias BotchiniWeb.ScreenLive.Guild
 
-  @spec watch_screen(Room.t(), String.t()) :: map()
-  def watch_screen(room, label \\ "Watch") do
-    %{
-      type: ComponentType.action_row(),
-      # Discord rejects button labels over 80 characters
-      components: [link_button(String.slice(label, 0, 80), watch_url(room))]
-    }
-  end
-
   @spec broadcast_screen(Room.t()) :: map()
   def broadcast_screen(room) do
     %{
       type: ComponentType.action_row(),
       components: [
         link_button("Start sharing", broadcast_url(room)),
-        link_button("Watch link", watch_url(room))
+        link_button("Watch all", Guild.watch_url(room.guild_id))
       ]
     }
   end
@@ -34,18 +25,12 @@ defmodule BotchiniDiscord.Screens.Responses.Components do
   def watch_all_screens(guild_id) do
     %{
       type: ComponentType.action_row(),
-      components: [link_button("Watch all", watch_all_url(guild_id))]
+      components: [link_button("Watch all", Guild.watch_url(guild_id))]
     }
   end
 
-  @spec watch_all_url(String.t()) :: String.t()
-  def watch_all_url(guild_id), do: url(~p"/screens") <> "#" <> Guild.sign_token(guild_id)
-
   @spec whip_url() :: String.t()
   def whip_url, do: url(~p"/api/whip")
-
-  @spec watch_url(Room.t()) :: String.t()
-  def watch_url(room), do: url(~p"/screens/#{room.id}")
 
   # The key goes in the fragment, which browsers never send to the server,
   # so it stays out of request logs, traces and Referer headers

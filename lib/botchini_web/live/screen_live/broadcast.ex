@@ -10,6 +10,7 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
 
   alias Botchini.Screens
   alias Botchini.Screens.Room
+  alias BotchiniWeb.ScreenLive.Guild
 
   @impl true
   def mount(%{"id" => room_id}, _session, socket) do
@@ -30,7 +31,7 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
              room: room,
              status: :open,
              page_title: room.title,
-             announcement_failed?: false
+             watch_url: nil
            )}
       end
     else
@@ -81,14 +82,12 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
     </form>
 
     <div
-      :if={@announcement_failed?}
+      :if={@watch_url}
       class="mb-4 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
     >
       I couldn't post the watch link on Discord, probably because I'm not allowed to send
       messages in that channel. Share this link with your friends instead:
-      <a href={~p"/screens/#{@room.id}"} class="break-all font-semibold underline">
-        {url(~p"/screens/#{@room.id}")}
-      </a>
+      <a href={@watch_url} class="break-all font-semibold underline">{@watch_url}</a>
     </div>
 
     <div
@@ -186,7 +185,7 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
   end
 
   def handle_info({:screen_announcement_failed, _room_id}, socket) do
-    {:noreply, assign(socket, announcement_failed?: true)}
+    {:noreply, assign(socket, watch_url: Guild.watch_url(socket.assigns.room.guild_id))}
   end
 
   def handle_info({:screen_room, :ended, room}, socket) do

@@ -13,29 +13,53 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   @token_salt "screens guild"
   @token_max_age 86_400
 
-  @spec sign_token(String.t()) :: String.t()
-  def sign_token(guild_id), do: Phoenix.Token.sign(BotchiniWeb.Endpoint, @token_salt, guild_id)
+  @doc """
+  Signs a key for the guild's page. It expires after a day, unless a screen share
+  that was running by then is still going, so links don't die mid-stream
+  """
+  @spec sign_token(String.t(), integer()) :: String.t()
+  def sign_token(guild_id, signed_at \\ System.system_time(:second)) do
+    # Phoenix.Token can't tell when a token was signed, so it's kept in the payload
+    Phoenix.Token.sign(BotchiniWeb.Endpoint, @token_salt, {guild_id, signed_at})
+  end
+
+  @doc """
+  Link to this page for a guild. Links to a single room are only shown here,
+  so the token lives in the fragment, which browsers never send to the server
+  """
+  @spec watch_url(String.t()) :: String.t()
+  def watch_url(guild_id), do: url(~p"/screens") <> "#" <> sign_token(guild_id)
 
   @impl true
   def mount(_params, _session, socket) do
     socket = assign(socket, page_title: "Screen shares", rooms: [])
 
     with true <- connected?(socket),
-         {:ok, guild_id} <- verify_token(get_connect_params(socket)["key"]) do
+         {:ok, {guild_id, signed_at}} <- verify_token(get_connect_params(socket)["key"]),
+         rooms = Screens.list_rooms(guild_id),
+         false <- expired?(signed_at, rooms) do
       Screens.subscribe_guild(guild_id)
-      rooms = guild_id |> Screens.list_rooms() |> Enum.filter(& &1.live?)
 
-      {:ok, assign(socket, status: :open, rooms: rooms)}
+      {:ok, assign(socket, status: :open, rooms: Enum.filter(rooms, & &1.live?))}
     else
       false -> {:ok, assign(socket, status: :connecting)}
-      {:error, _reason} -> {:ok, assign(socket, status: :not_found)}
+      _invalid -> {:ok, assign(socket, status: :not_found)}
     end
   end
 
   defp verify_token(token) when is_binary(token),
-    do: Phoenix.Token.verify(BotchiniWeb.Endpoint, @token_salt, token, max_age: @token_max_age)
+    do: Phoenix.Token.verify(BotchiniWeb.Endpoint, @token_salt, token, max_age: :infinity)
 
   defp verify_token(_token), do: {:error, :missing}
+
+  # Only rooms already open when the link expired keep it working, otherwise any
+  # old link would work again as soon as someone starts sharing
+  defp expired?(signed_at, rooms) do
+    expires_at = DateTime.from_unix!(signed_at + @token_max_age)
+
+    DateTime.after?(DateTime.utc_now(), expires_at) and
+      not Enum.any?(rooms, &DateTime.before?(&1.started_at, expires_at))
+  end
 
   @impl true
   def render(%{status: :connecting} = assigns) do
@@ -47,7 +71,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   def render(%{status: :not_found} = assigns) do
     ~H"""
     <.notice title="Link expired">
-      The link is invalid or expired. Run <code>/stream list</code> on Discord to get a new one!
+      The link is invalid or expired. Run <code>/stream watch</code> on Discord to get a new one!
     </.notice>
     """
   end

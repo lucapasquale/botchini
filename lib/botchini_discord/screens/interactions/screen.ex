@@ -38,8 +38,8 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
           type: ApplicationCommandOptionType.sub_command()
         },
         %{
-          name: "list",
-          description: "List the screens being shared in this server",
+          name: "watch",
+          description: "Watch the screens being shared in this server",
           type: ApplicationCommandOptionType.sub_command()
         }
       ]
@@ -56,7 +56,7 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
       Helpers.get_option(options, "start") -> handle_start(interaction)
       Helpers.get_option(options, "stop") -> handle_stop(interaction)
       Helpers.get_option(options, "obs") -> handle_obs(interaction)
-      Helpers.get_option(options, "list") -> handle_list(interaction)
+      Helpers.get_option(options, "watch") -> handle_watch(interaction)
       true -> reply("Invalid command")
     end
   end
@@ -111,7 +111,7 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
     - **Server:** `#{Components.whip_url()}`
     - **Bearer Token:** ||`#{key}`||
 
-    In **Settings → Output**, pick an **H.264** encoder with a **1s** keyframe interval.
+    In **Settings → Output**, pick an **H.264** encoder.
     Then **Start Streaming**, and I'll post the watch link here.
 
     For game audio without Discord, turn on **Capture audio** in Game Capture or add an \
@@ -119,7 +119,7 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
     """)
   end
 
-  defp handle_list(interaction) do
+  defp handle_watch(interaction) do
     guild_id = Integer.to_string(interaction.guild_id)
     watch_all = Components.watch_all_screens(guild_id)
 
@@ -136,11 +136,7 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
             "🔴 **#{Helpers.escape_markdown(room.title)}** by <@#{room.owner_id}> (#{viewers(room.viewer_count)})"
           end)
 
-        # Discord allows at most 5 action rows per message
-        watch_rooms =
-          rooms |> Enum.take(4) |> Enum.map(&Components.watch_screen(&1, "Watch #{&1.title}"))
-
-        reply(content, components: watch_rooms ++ [watch_all])
+        reply(content, components: [watch_all])
     end
   end
 

@@ -1,6 +1,8 @@
 defmodule BotchiniWebTest.ScreenLiveTest do
   use BotchiniWeb.ConnCase, async: false
 
+  use Patch, alias: [patch: :patch_function]
+
   @moduletag :capture_log
 
   alias Botchini.Screens
@@ -90,8 +92,10 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
       Screens.broadcast_announcement_failed(room)
 
-      assert render(view) =~ "post the watch link on Discord"
-      assert render(view) =~ "/screens/#{room.id}"
+      html = render(view)
+      assert html =~ "post the watch link on Discord"
+      assert html =~ ~r"/screens#[^\"<]+"
+      refute html =~ ~r"/screens/#{room.id}[\"<]"
     end
 
     test "names the room after the shared source or the owner's title", %{conn: conn, room: room} do
@@ -117,11 +121,13 @@ defmodule BotchiniWebTest.ScreenLiveTest do
   end
 
   describe "guild page" do
-    defp live_guild(conn, guild_id) do
+    defp live_guild(conn, guild_id, signed_at \\ System.system_time(:second)) do
       conn
-      |> put_connect_params(%{"key" => Guild.sign_token(guild_id)})
+      |> put_connect_params(%{"key" => Guild.sign_token(guild_id, signed_at)})
       |> live(~p"/screens")
     end
+
+    defp days_ago(days), do: System.system_time(:second) - days * 86_400
 
     test "requires a valid key", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/screens")
@@ -133,6 +139,26 @@ defmodule BotchiniWebTest.ScreenLiveTest do
         |> live(~p"/screens")
 
       assert html =~ "Link expired"
+    end
+
+    test "expires after a day when nobody is sharing", %{conn: conn, room: room} do
+      Screens.stop_room(room)
+
+      {:ok, _view, html} = live_guild(conn, "1", days_ago(2))
+      assert html =~ "Link expired"
+    end
+
+    test "keeps working after a day while a room from before it expired is open",
+         %{conn: conn, room: room} do
+      # The room started after the link expired, so it doesn't keep it working
+      {:ok, _view, html} = live_guild(conn, "1", days_ago(2))
+      assert html =~ "Link expired"
+
+      started_at = DateTime.add(DateTime.utc_now(), -2, :day)
+      patch_function(Screens, :list_rooms, [%{room | live?: true, started_at: started_at}])
+
+      {:ok, _view, html} = live_guild(conn, "1", days_ago(2))
+      assert html =~ "Elden Ring"
     end
 
     test "shows the guild's rooms while they're live", %{conn: conn, room: room} do

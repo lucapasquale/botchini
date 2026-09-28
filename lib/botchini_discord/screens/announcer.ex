@@ -74,7 +74,7 @@ defmodule BotchiniDiscord.Screens.Announcer do
     %{
       content:
         "🔴 <@#{room.owner_id}> is sharing their screen: **#{Helpers.escape_markdown(room.title)}**",
-      components: [Components.watch_screen(room)],
+      components: [Components.watch_all_screens(room.guild_id)],
       allowed_mentions: :none
     }
   end

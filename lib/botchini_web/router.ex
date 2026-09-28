@@ -22,6 +22,11 @@ defmodule BotchiniWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+
+    live_session :screens, layout: {BotchiniWeb.Layouts, :screen} do
+      live "/screens/:id", ScreenLive.Watch
+      live "/screens/:id/broadcast", ScreenLive.Broadcast
+    end
   end
 
   scope "/api", BotchiniWeb do

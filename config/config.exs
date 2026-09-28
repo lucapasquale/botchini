@@ -25,6 +25,10 @@ config :botchini, Botchini.Scheduler,
     {"0 0 * * *", {Botchini.Scheduler, :sync_youtube_subscriptions, []}}
   ]
 
+# Screen sharing WebRTC, see Botchini.Screens for all options. STUN lets the
+# server and browsers find their public addresses
+config :botchini, Botchini.Screens, ice_servers: [%{urls: "stun:stun.l.google.com:19302"}]
+
 # Configures the endpoint
 config :botchini, BotchiniWeb.Endpoint,
   url: [host: "localhost"],
@@ -71,7 +75,8 @@ config :logger, :console,
     :error,
     :track_title,
     :play_url,
-    :play_type
+    :play_type,
+    :screen_room_id
   ]
 
 # Use Jason for JSON parsing in Phoenix

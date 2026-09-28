@@ -1,6 +1,7 @@
 defmodule BotchiniWeb.ScreenLive.Guild do
   @moduledoc """
-  Page where members watch every screen being shared in a guild at once
+  Page where members watch every screen being shared in a guild at once. Pinned
+  screens take most of the page, and the others shrink to a strip below them
   """
 
   use BotchiniWeb, :live_view
@@ -12,6 +13,10 @@ defmodule BotchiniWeb.ScreenLive.Guild do
 
   @token_salt "screens guild"
   @token_max_age 86_400
+
+  # Widths of the screens in rows of two and three, minus the gaps between them
+  @half "lg:w-[calc(50%_-_0.5rem)]"
+  @third "xl:w-[calc(33.333%_-_0.667rem)]"
 
   @doc """
   Signs a key for the guild's page. It expires after a day, unless a screen share
@@ -32,7 +37,13 @@ defmodule BotchiniWeb.ScreenLive.Guild do
 
   @impl true
   def mount(_params, _session, socket) do
-    socket = assign(socket, page_title: "Screen shares", rooms: [])
+    socket =
+      assign(socket,
+        page_title: "Screen shares",
+        rooms: [],
+        pinned: MapSet.new(),
+        full_width?: true
+      )
 
     with true <- connected?(socket),
          {:ok, {guild_id, signed_at}} <- verify_token(get_connect_params(socket)["key"]),
@@ -84,35 +95,125 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     """
   end
 
+  # Pinning only changes the tiles' classes, never their place in the DOM, as
+  # moving a video would remount its hook and restart the connection
   def render(assigns) do
     ~H"""
-    <div class={["grid gap-6", length(@rooms) > 1 && "lg:grid-cols-2"]}>
-      <div :for={room <- @rooms} id={"screen-#{room.id}"}>
-        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-          <div class="min-w-0">
-            <h2 class="truncate font-semibold">{room.title}</h2>
-            <p class="text-sm text-gray-400">Shared by {room.owner_name}</p>
-          </div>
+    <%!-- Rows are spaced with margins, as a row gap would also go around the row break --%>
+    <div class="flex flex-wrap justify-center gap-x-4">
+      <%!-- Starts a new row for the unpinned screens --%>
+      <div :if={MapSet.size(@pinned) > 0} class="order-1 basis-full"></div>
 
-          <div class="flex items-center gap-3 text-sm">
-            <span class="text-gray-400">{viewers(room.viewer_count)}</span>
-            <.link navigate={~p"/screens/#{room.id}"} class="text-indigo-400 hover:underline">
-              Open
-            </.link>
-          </div>
-        </div>
+      <div
+        :for={room <- @rooms}
+        id={"screen-#{room.id}"}
+        class={["mb-4", tile_class(room, @rooms, @pinned)]}
+      >
+        <.viewer room={room}>
+          <div class="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-gradient-to-b from-black/70 to-transparent p-2 text-sm">
+            <div class="min-w-0">
+              <p class="truncate font-semibold text-white">{room.title}</p>
+              <p class="truncate text-xs text-gray-300">
+                {room.owner_name} · {viewers(room.viewer_count)}
+              </p>
+            </div>
 
-        <.viewer room={room} />
+            <div class="pointer-events-auto flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                phx-click="pin"
+                phx-value-room_id={room.id}
+                aria-pressed={to_string(room.id in @pinned)}
+                title={if room.id in @pinned, do: "Unpin", else: "Pin"}
+                class={[
+                  "rounded p-1.5 hover:bg-white/20",
+                  if(room.id in @pinned, do: "bg-indigo-600 text-white", else: "text-gray-200")
+                ]}
+              >
+                <span class="sr-only">{if room.id in @pinned, do: "Unpin", else: "Pin"}</span>
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M16 3a1 1 0 0 1 .7 1.7L15 6.4v4.2l2.7 2.7a1 1 0 0 1-.7 1.7h-4v6a1 1 0 0 1-2 0v-6H7a1 1 0 0 1-.7-1.7L9 10.6V6.4L7.3 4.7A1 1 0 0 1 8 3h8Z" />
+                </svg>
+              </button>
+
+              <.link
+                navigate={~p"/screens/#{room.id}"}
+                title="Open on its own page"
+                class="rounded p-1.5 text-gray-200 hover:bg-white/20"
+              >
+                <span class="sr-only">Open on its own page</span>
+                <svg
+                  class="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+                </svg>
+              </.link>
+            </div>
+          </div>
+        </.viewer>
       </div>
     </div>
 
-    <p class="mt-4 text-sm text-gray-500">
-      Streams start muted, use the video controls to turn the sound on.
+    <p class="text-sm text-gray-500">
+      Streams start muted, use the video controls to turn the sound on. Pin streams to watch
+      them bigger.
     </p>
     """
   end
 
+  defp tile_class(room, rooms, pinned) do
+    if MapSet.size(pinned) == 0,
+      do: grid_tile_class(length(rooms)),
+      else: pinned_tile_class(room, pinned)
+  end
+
+  # With nothing pinned, every screen gets the same size
+  defp grid_tile_class(1), do: "w-full md:max-w-[calc((100dvh_-_7rem)_*_16_/_9)]"
+  defp grid_tile_class(count) when count <= 4, do: "w-full #{@half}"
+  defp grid_tile_class(_count), do: "w-full #{@half} #{@third}"
+
+  # Big screens are capped so they fit the window's height, leaving room for
+  # the header and the strip of unpinned screens
+  defp pinned_tile_class(room, pinned) do
+    cond do
+      room.id not in pinned ->
+        "order-2 w-[calc(50%_-_0.5rem)] sm:w-56 lg:w-64"
+
+      MapSet.size(pinned) == 1 ->
+        "w-full md:max-w-[calc((100dvh_-_16rem)_*_16_/_9)]"
+
+      MapSet.size(pinned) == 2 ->
+        "w-full md:w-[calc(50%_-_0.5rem)] md:max-w-[calc((100dvh_-_16rem)_*_16_/_9)]"
+
+      MapSet.size(pinned) <= 4 ->
+        "w-full md:w-[calc(50%_-_0.5rem)] md:max-w-[calc((100dvh_-_17rem)_*_8_/_9)]"
+
+      true ->
+        "w-full md:w-[calc(50%_-_0.5rem)] #{@third} md:max-w-[calc((100dvh_-_17rem)_*_8_/_9)]"
+    end
+  end
+
   @impl true
+  def handle_event("pin", %{"room_id" => room_id}, socket) do
+    pinned = socket.assigns.pinned
+
+    pinned =
+      cond do
+        room_id in pinned -> MapSet.delete(pinned, room_id)
+        watching?(socket, room_id) -> MapSet.put(pinned, room_id)
+        true -> pinned
+      end
+
+    {:noreply, assign(socket, pinned: pinned)}
+  end
+
   def handle_event("offer", %{"room_id" => room_id} = offer, socket) do
     with true <- watching?(socket, room_id),
          {:ok, answer} <- Room.watch(room_id, Map.delete(offer, "room_id")) do
@@ -140,7 +241,10 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   end
 
   def handle_info({:screen_room, :ended, room}, socket) do
-    {:noreply, update(socket, :rooms, &Enum.reject(&1, fn r -> r.id == room.id end))}
+    {:noreply,
+     socket
+     |> update(:rooms, &Enum.reject(&1, fn r -> r.id == room.id end))
+     |> update(:pinned, &MapSet.delete(&1, room.id))}
   end
 
   def handle_info({:screen_room, _event, room}, socket) do

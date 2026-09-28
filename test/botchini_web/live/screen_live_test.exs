@@ -176,6 +176,48 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       refute render(view) =~ "Elden Ring"
     end
 
+    test "pinned rooms get big and the others shrink below them", %{conn: conn, room: room} do
+      other = %{room | id: "other", title: "Hades", started_at: DateTime.utc_now()}
+      {:ok, view, _html} = live_guild(conn, "1")
+      Screens.broadcast(%{room | live?: true}, :live)
+      Screens.broadcast(%{other | live?: true}, :live)
+
+      refute has_element?(view, "#screen-#{room.id}.order-2")
+      refute has_element?(view, "#screen-other.order-2")
+
+      view |> element("#screen-#{room.id} button[phx-click=pin]") |> render_click()
+
+      refute has_element?(view, "#screen-#{room.id}.order-2")
+      assert has_element?(view, "#screen-#{room.id} button[aria-pressed=true]")
+      assert has_element?(view, "#screen-other.order-2")
+
+      # Unpinning brings back the grid of equal screens
+      view |> element("#screen-#{room.id} button[phx-click=pin]") |> render_click()
+      refute has_element?(view, "#screen-other.order-2")
+    end
+
+    test "forgets pins of rooms that ended", %{conn: conn, room: room} do
+      other = %{room | id: "other", title: "Hades", started_at: DateTime.utc_now()}
+      {:ok, view, _html} = live_guild(conn, "1")
+      Screens.broadcast(%{room | live?: true}, :live)
+      Screens.broadcast(%{other | live?: true}, :live)
+
+      view |> element("#screen-other button[phx-click=pin]") |> render_click()
+      Screens.broadcast(other, :ended)
+
+      refute has_element?(view, "#screen-#{room.id}.order-2")
+      assert has_element?(view, "#screen-#{room.id} button[aria-pressed=false]")
+    end
+
+    test "can't pin rooms that aren't on the page", %{conn: conn, room: room} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      Screens.broadcast(%{room | live?: true}, :live)
+
+      render_click(view, "pin", %{"room_id" => "missing"})
+
+      refute has_element?(view, "#screen-#{room.id}.order-2")
+    end
+
     test "doesn't show other guilds' rooms", %{conn: conn, room: room} do
       {:ok, view, _html} = live_guild(conn, "9")
 

@@ -33,6 +33,7 @@ defmodule BotchiniWeb.ScreenLive.Components do
   end
 
   attr :room, :map, required: true
+  slot :inner_block, doc: "Overlays shown on top of the video"
 
   def viewer(assigns) do
     ~H"""
@@ -64,8 +65,10 @@ defmodule BotchiniWeb.ScreenLive.Components do
         id={"screen-viewer-status-#{@room.id}"}
         phx-update="ignore"
         data-screen-status
-        class="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-sm text-red-400 empty:hidden"
+        class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded bg-black/70 px-2 py-1 text-center text-sm text-red-400 empty:hidden"
       ></span>
+
+      {render_slot(@inner_block)}
     </div>
     """
   end

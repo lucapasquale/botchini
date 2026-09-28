@@ -1,7 +1,7 @@
 defmodule BotchiniDiscord.Screens.Announcer do
   @moduledoc """
   Posts a message with the watch link in the channel a screen share was started
-  from once the broadcaster goes live, and marks it as ended when the room closes
+  from once the broadcaster goes live, and deletes it when the room closes
   """
 
   use GenServer
@@ -21,7 +21,7 @@ defmodule BotchiniDiscord.Screens.Announcer do
 
   @impl true
   def init(nil) do
-    # Stopping before Nostrum on shutdown lets terminate/2 still mark the messages as ended
+    # Stopping before Nostrum on shutdown lets terminate/2 still delete the messages
     Process.flag(:trap_exit, true)
     Screens.subscribe()
 
@@ -57,7 +57,7 @@ defmodule BotchiniDiscord.Screens.Announcer do
   def handle_info({:screen_room, :ended, %Room{} = room}, messages) do
     Screens.unsubscribe(room.id)
     {message, messages} = Map.pop(messages, room.id)
-    if message, do: mark_ended(message, room)
+    if message, do: delete(message)
 
     {:noreply, messages}
   end
@@ -67,7 +67,7 @@ defmodule BotchiniDiscord.Screens.Announcer do
   # Rooms only live in memory, so a restart ends every screen share
   @impl true
   def terminate(_reason, messages) do
-    Enum.each(messages, fn {_room_id, message} -> mark_ended(message, nil) end)
+    Enum.each(messages, fn {_room_id, message} -> delete(message) end)
   end
 
   defp live_message(room) do
@@ -99,17 +99,18 @@ defmodule BotchiniDiscord.Screens.Announcer do
       :error
   end
 
-  defp mark_ended({channel_id, message_id, _title}, room) do
-    content =
-      case room do
-        %Room{} ->
-          "⚫ <@#{room.owner_id}> stopped sharing their screen: **#{Helpers.escape_markdown(room.title)}**"
+  defp delete({channel_id, message_id, _title}) do
+    case Message.delete(channel_id, message_id) do
+      {:error, error} ->
+        Logger.warning("Failed to delete screen share message: #{describe_error(error)}",
+          error: inspect(error)
+        )
 
-        nil ->
-          "⚫ This screen share ended"
-      end
-
-    edit({channel_id, message_id}, %{content: content, components: [], allowed_mentions: :none})
+      _ok ->
+        :ok
+    end
+  rescue
+    error -> Logger.warning("Failed to delete screen share message: " <> Exception.message(error))
   end
 
   defp edit({channel_id, message_id}, message) do

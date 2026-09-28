@@ -142,7 +142,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
       %{room: room}
     end
 
-    test "posts the watch all link once live, and marks it as ended", %{room: room} do
+    test "posts the watch all link once live, and deletes it once ended", %{room: room} do
       Screens.broadcast(room, :live)
       Screens.broadcast(room, :ended)
       # Syncs with the announcer, so both events were handled
@@ -155,10 +155,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
       assert url =~ ~r"/screens#.+$"
       refute url =~ "/screens/room"
 
-      assert_called(Nostrum.Api.request(:patch, "/channels/2/messages/20", ended))
-      assert ended.content =~ "stopped sharing"
-      assert ended.components == []
-      assert ended.allowed_mentions == %{parse: []}
+      assert_called(Nostrum.Api.request(:delete, "/channels/2/messages/20"))
     end
 
     test "updates the live message when the title changes", %{room: room} do

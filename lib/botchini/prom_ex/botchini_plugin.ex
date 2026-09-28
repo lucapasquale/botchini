@@ -57,6 +57,10 @@ defmodule Botchini.PromEx.BotchiniPlugin do
           event_name: [:botchini, :screens, :room, :start],
           description: "Screen sharing rooms created"
         ),
+        counter([:botchini, :screens, :room, :live, :count],
+          event_name: [:botchini, :screens, :room, :live],
+          description: "Screen sharing rooms whose broadcaster went live"
+        ),
         counter([:botchini, :screens, :room, :stop, :count],
           event_name: [:botchini, :screens, :room, :stop],
           description: "Screen sharing rooms ended, by reason",

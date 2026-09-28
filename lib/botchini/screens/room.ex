@@ -92,7 +92,14 @@ defmodule Botchini.Screens.Room do
   @impl true
   def init(room) do
     Process.flag(:trap_exit, true)
-    Logger.metadata(screen_room_id: room.id, guild_id: room.guild_id)
+    # Every log of the room says which stream it's about, for the Grafana dashboard
+    Logger.metadata(
+      screen_room_id: room.id,
+      guild_id: room.guild_id,
+      screen_title: room.title,
+      screen_owner_id: room.owner_id,
+      screen_owner_name: room.owner_name
+    )
 
     config = Screens.config()
     Process.send_after(self(), :max_duration, config[:max_duration_ms])
@@ -253,8 +260,8 @@ defmodule Botchini.Screens.Room do
 
     case peer.role do
       :publisher ->
-        Logger.info("Screen broadcaster connected", event: "screen_broadcaster_connected")
         event = if state.went_live?, do: :updated, else: :live
+        log_broadcaster_connected(event)
 
         %{state | went_live?: true}
         |> cancel_idle_timeout()
@@ -262,10 +269,14 @@ defmodule Botchini.Screens.Room do
 
       :viewer ->
         :telemetry.execute([:botchini, :screens, :viewer, :join], %{count: 1}, %{})
+        state = state |> request_keyframe() |> update_viewer_count()
+
+        Logger.info("Screen viewer started watching",
+          event: "screen_viewer_joined",
+          viewer_count: state.room.viewer_count
+        )
 
         state
-        |> request_keyframe()
-        |> update_viewer_count()
     end
   end
 
@@ -275,6 +286,15 @@ defmodule Botchini.Screens.Room do
   end
 
   defp handle_peer_event(_event, _pc, _peer, state), do: state
+
+  defp log_broadcaster_connected(:live) do
+    :telemetry.execute([:botchini, :screens, :room, :live], %{count: 1}, %{})
+    Logger.info("Screen share went live", event: "screen_share_live")
+  end
+
+  defp log_broadcaster_connected(:updated) do
+    Logger.info("Screen broadcaster reconnected", event: "screen_broadcaster_reconnected")
+  end
 
   # Padding-only packets carry no media, and the VP8 munger can't parse them
   defp forward_rtp(state, _kind, %{payload: <<>>}), do: state

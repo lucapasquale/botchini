@@ -76,7 +76,11 @@ config :logger, :console,
     :track_title,
     :play_url,
     :play_type,
-    :screen_room_id
+    :screen_room_id,
+    :screen_title,
+    :screen_owner_id,
+    :screen_owner_name,
+    :viewer_count
   ]
 
 # Use Jason for JSON parsing in Phoenix

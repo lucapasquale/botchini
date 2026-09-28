@@ -202,6 +202,31 @@ defmodule BotchiniTest.ScreensTest do
       assert packet.payload == <<0xFC, 0xFF, 0xFE>>
     end
 
+    test "reports rooms going live once, and viewers joining" do
+      test_pid = self()
+      handler_id = "screens-test-#{inspect(test_pid)}"
+
+      :telemetry.attach_many(
+        handler_id,
+        [[:botchini, :screens, :room, :live], [:botchini, :screens, :viewer, :join]],
+        fn event, _measurements, _metadata, _config -> send(test_pid, {:telemetry, event}) end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+      room = start_room()
+
+      connect(room, :publisher)
+      assert_receive {:telemetry, [:botchini, :screens, :room, :live]}, @connect_timeout
+
+      connect(room, :viewer)
+      assert_receive {:telemetry, [:botchini, :screens, :viewer, :join]}, @connect_timeout
+
+      # A refreshed broadcaster tab is the same screen share, not a new one
+      connect(room, :publisher)
+      refute_receive {:telemetry, [:botchini, :screens, :room, :live]}, 500
+    end
+
     test "viewers can join before the broadcaster" do
       room = start_room()
 

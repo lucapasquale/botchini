@@ -1,0 +1,138 @@
+defmodule BotchiniDiscordTest.ScreensTest do
+  use ExUnit.Case, async: false
+
+  use Patch
+
+  @moduletag :capture_log
+
+  alias Nostrum.Api.Message
+  alias Nostrum.Struct.{Guild.Member, Interaction, User}
+
+  alias Botchini.Screens
+  alias Botchini.Screens.Room
+  alias BotchiniDiscord.Screens.Announcer
+  alias BotchiniDiscord.Screens.Interactions.Screen
+
+  setup do
+    on_exit(fn ->
+      for {_id, pid, _type, _modules} <- DynamicSupervisor.which_children(Screens.RoomSupervisor) do
+        DynamicSupervisor.terminate_child(Screens.RoomSupervisor, pid)
+      end
+    end)
+  end
+
+  defp interaction(user_id \\ 3) do
+    %Interaction{
+      guild_id: 1,
+      channel_id: 2,
+      user: %User{id: user_id, username: "luca", global_name: "Luca"},
+      member: %Member{user_id: user_id, nick: nil}
+    }
+  end
+
+  defp subcommand(name), do: [%{name: name, value: "", focused: false}]
+
+  defp buttons(response) do
+    Enum.flat_map(response.data.components, & &1.components)
+  end
+
+  describe "/screen start" do
+    test "privately sends the broadcast and watch links" do
+      response = Screen.handle_interaction(interaction(), subcommand("start"))
+
+      assert response.data.flags == 64
+      assert response.data.content =~ "**Luca's screen**"
+
+      room = Screens.find_owner_room("1", "3")
+      assert %Room{title: "Luca's screen", channel_id: "2", owner_name: "Luca"} = room
+
+      assert [broadcast, watch] = buttons(response)
+      assert broadcast.url =~ ~r"/screens/#{room.id}/broadcast##{room.broadcast_key}$"
+      assert watch.url =~ ~r"/screens/#{room.id}$"
+      refute watch.url =~ room.broadcast_key
+    end
+
+    test "sends the running room's links again" do
+      first = Screen.handle_interaction(interaction(), subcommand("start"))
+      response = Screen.handle_interaction(interaction(), subcommand("start"))
+
+      assert buttons(response) == buttons(first)
+      assert length(Screens.list_rooms("1")) == 1
+    end
+  end
+
+  describe "/screen stop" do
+    test "ends the user's room" do
+      Screen.handle_interaction(interaction(), subcommand("start"))
+      response = Screen.handle_interaction(interaction(), subcommand("stop"))
+
+      assert response.data.content =~ "Stopped sharing"
+      assert Screens.find_owner_room("1", "3") == nil
+    end
+
+    test "doesn't end other users' rooms" do
+      Screen.handle_interaction(interaction(4), subcommand("start"))
+      response = Screen.handle_interaction(interaction(), subcommand("stop"))
+
+      assert response.data.content == "You're not sharing your screen"
+      assert Screens.find_owner_room("1", "4")
+    end
+  end
+
+  test "/screen list only shows rooms that are live" do
+    Screen.handle_interaction(interaction(), subcommand("start"))
+    response = Screen.handle_interaction(interaction(), subcommand("list"))
+
+    assert response.data.content == "Nobody is sharing their screen right now"
+  end
+
+  test "can only be used inside a server" do
+    response = Screen.handle_interaction(%{interaction() | member: nil}, subcommand("list"))
+
+    assert response.data.content == "Can only be used inside a server!"
+  end
+
+  describe "Announcer" do
+    setup do
+      patch(Message, :create, {:ok, %{id: 20, channel_id: 2}})
+      patch(Message, :edit, {:ok, %{}})
+      start_supervised!(Announcer)
+
+      room = %Room{
+        id: "room",
+        broadcast_key: "key",
+        title: "Elden Ring",
+        guild_id: "1",
+        channel_id: "2",
+        owner_id: "3",
+        owner_name: "Luca"
+      }
+
+      %{room: room}
+    end
+
+    test "posts the watch link once live, and marks it as ended", %{room: room} do
+      Screens.broadcast(room, :live)
+      Screens.broadcast(room, :ended)
+      # Syncs with the announcer, so both events were handled
+      :sys.get_state(Announcer)
+
+      assert_called(Message.create(2, %{content: content, components: [row]}))
+      assert content =~ "<@3> is sharing their screen: **Elden Ring**"
+      assert [%{label: "Watch", url: url}] = row.components
+      assert url =~ "/screens/room"
+
+      assert_called(Message.edit(2, 20, %{content: ended, components: []}))
+      assert ended =~ "stopped sharing"
+    end
+
+    test "only announces rooms that went live", %{room: room} do
+      Screens.broadcast(room, :updated)
+      Screens.broadcast(room, :ended)
+      :sys.get_state(Announcer)
+
+      refute_called(Message.create(_channel_id, _message))
+      refute_called(Message.edit(_channel_id, _message_id, _message))
+    end
+  end
+end

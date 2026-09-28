@@ -1,6 +1,6 @@
 defmodule Botchini.PromEx.BotchiniPlugin do
   @moduledoc """
-  Metrics for Discord interactions, external API calls and music playback
+  Metrics for Discord interactions, external API calls, music playback and screen sharing
   """
 
   use PromEx.Plugin
@@ -50,6 +50,34 @@ defmodule Botchini.PromEx.BotchiniPlugin do
           event_name: [:botchini, :music, :track, :failure],
           description: "Tracks that couldn't be played, by failure reason",
           tags: [:play_type, :reason]
+        )
+      ]),
+      Event.build(:botchini_screens_metrics, [
+        counter([:botchini, :screens, :room, :start, :count],
+          event_name: [:botchini, :screens, :room, :start],
+          description: "Screen sharing rooms created"
+        ),
+        counter([:botchini, :screens, :room, :stop, :count],
+          event_name: [:botchini, :screens, :room, :stop],
+          description: "Screen sharing rooms ended, by reason",
+          tags: [:reason]
+        ),
+        distribution([:botchini, :screens, :room, :duration, :seconds],
+          event_name: [:botchini, :screens, :room, :stop],
+          measurement: :duration,
+          description: "How long screen sharing rooms lasted",
+          reporter_options: [buckets: [60, 300, 900, 1_800, 3_600, 7_200, 14_400, 28_800]],
+          unit: {:native, :second}
+        ),
+        distribution([:botchini, :screens, :room, :peak_viewers],
+          event_name: [:botchini, :screens, :room, :stop],
+          measurement: :peak_viewers,
+          description: "Most viewers watching a screen sharing room at once",
+          reporter_options: [buckets: [0, 1, 2, 3, 5, 8, 13, 20]]
+        ),
+        counter([:botchini, :screens, :viewer, :join, :count],
+          event_name: [:botchini, :screens, :viewer, :join],
+          description: "Viewers that connected to a screen sharing room"
         )
       ])
     ]

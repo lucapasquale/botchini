@@ -14,6 +14,7 @@ defmodule BotchiniDiscord.Interactions do
   alias BotchiniDiscord.Helpers
   alias BotchiniDiscord.Creators.Interactions.{ConfirmUnfollow, Follow, Info, List, Unfollow}
   alias BotchiniDiscord.Music.Interactions.Music
+  alias BotchiniDiscord.Screens.Interactions.Screen
   alias BotchiniDiscord.Squads.Interactions.Squad
 
   @deferred_commands ["follow", "info", "music"]
@@ -34,7 +35,8 @@ defmodule BotchiniDiscord.Interactions do
         {:public, List.get_command()},
         {:public, Unfollow.get_command()},
         {:private, Squad.get_command()},
-        {:private, Music.get_command()}
+        {:private, Music.get_command()},
+        {:private, Screen.get_command()}
       ]
       |> Enum.filter(&(!is_nil(elem(&1, 1))))
       |> Enum.reduce({[], []}, fn {access, command}, acc ->
@@ -207,6 +209,9 @@ defmodule BotchiniDiscord.Interactions do
 
   defp call_interaction(interaction, {"music", opt}),
     do: Music.handle_interaction(interaction, opt)
+
+  defp call_interaction(interaction, {"screen", opt}),
+    do: Screen.handle_interaction(interaction, opt)
 
   defp call_interaction(_interaction, _data),
     do: raise("Unknown interaction command")

@@ -25,6 +25,9 @@ defmodule Botchini.Application do
         {Finch, name: Botchini.Finch},
         # Twitch auth middleware
         Botchini.Services.Twitch.AuthMiddleware,
+        # Screen sharing rooms
+        {Registry, keys: :unique, name: Botchini.Screens.Registry},
+        {DynamicSupervisor, name: Botchini.Screens.RoomSupervisor, strategy: :one_for_one},
         # Start a worker by calling: Botchini.Worker.start_link(arg)
         # {Botchini.Worker, arg},
         # Start to serve requests, typically the last entry
@@ -54,6 +57,6 @@ defmodule Botchini.Application do
       wrapped_token: fn -> Application.fetch_env!(:botchini, :discord_token) end
     }
 
-    children ++ [{Nostrum.Bot, bot_options}]
+    children ++ [{Nostrum.Bot, bot_options}, BotchiniDiscord.Screens.Announcer]
   end
 end

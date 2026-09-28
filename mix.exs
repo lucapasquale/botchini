@@ -32,6 +32,7 @@ defmodule Botchini.MixProject do
       {:phoenix_live_reload, "~> 1.6", only: :dev},
       {:phoenix_live_view, "~> 1.1"},
       {:floki, ">= 0.37.1", only: :test},
+      {:lazy_html, ">= 0.1.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.9"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
@@ -69,6 +70,8 @@ defmodule Botchini.MixProject do
       {:logger_json, "~> 7.0"},
       # Others
       {:quantum, "~> 3.0"},
+      # WebRTC (screen sharing)
+      {:ex_webrtc, "~> 0.17.0"},
       # Development and testing
       {:credo, "~> 1.7.19", only: [:dev, :test], runtime: false},
       {:patch, "~> 0.16.0", only: [:test]},

@@ -89,6 +89,49 @@ if config_env() == :prod do
 
   config :botchini, :metrics_port, String.to_integer(System.get_env("METRICS_PORT", "9568"))
 
+  # Screen sharing media goes straight between the browsers and this server over
+  # UDP, so the ICE port range has to be published/forwarded to the host
+  turn_server =
+    if turn_url = System.get_env("SCREENS_TURN_URL") do
+      [
+        %{
+          urls: turn_url,
+          username: System.get_env("SCREENS_TURN_USERNAME"),
+          credential: System.get_env("SCREENS_TURN_CREDENTIAL")
+        }
+      ]
+    else
+      []
+    end
+
+  ice_port_range =
+    case System.get_env("SCREENS_ICE_PORT_RANGE") do
+      nil ->
+        nil
+
+      range ->
+        [first, last] = range |> String.split("-") |> Enum.map(&String.to_integer/1)
+        first..last
+    end
+
+  public_ip =
+    case System.get_env("SCREENS_PUBLIC_IP") do
+      nil ->
+        nil
+
+      ip ->
+        {:ok, address} = ip |> String.to_charlist() |> :inet.parse_address()
+        address
+    end
+
+  config :botchini, Botchini.Screens,
+    ice_servers:
+      [%{urls: System.get_env("SCREENS_STUN_URL", "stun:stun.l.google.com:19302")}] ++
+        turn_server,
+    ice_port_range: ice_port_range,
+    public_ip: public_ip,
+    max_viewers: String.to_integer(System.get_env("SCREENS_MAX_VIEWERS", "20"))
+
   # OpenTelemetry OTLP exporter configuration
   # Set OTEL_EXPORTER_OTLP_ENDPOINT to the internal IP of the Portainer/grafana-stack VM
   config :opentelemetry_exporter,

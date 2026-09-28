@@ -40,6 +40,20 @@ defmodule BotchiniDiscordTest.InteractionsTest do
                      %{command: "about", subcommand: "none", kind: "command", status: :ok}}
   end
 
+  test "routes /stream to the screen sharing command" do
+    patch(Nostrum.Api.Interaction, :create_response, :ok)
+
+    Interactions.handle_interaction(command_interaction("stream"))
+
+    assert_received {:interaction, %{command: "stream", status: :ok}}
+
+    assert_called(
+      Nostrum.Api.Interaction.create_response(_interaction, %{
+        data: %{content: "Can only be used inside a server!"}
+      })
+    )
+  end
+
   test "reports a command that raised and still answers the user" do
     patch(Nostrum.Api.Interaction, :create_response, :ok)
 

@@ -48,7 +48,7 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
   def render(%{status: :not_found} = assigns) do
     ~H"""
     <.notice title="Screen share not found">
-      The link is invalid or the screen share ended. Run <code>/screen start</code>
+      The link is invalid or the screen share ended. Run <code>/stream start</code>
       on Discord to get a new one!
     </.notice>
     """
@@ -57,7 +57,7 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
   def render(%{status: :ended} = assigns) do
     ~H"""
     <.notice title="Screen share ended">
-      Thanks for sharing! Run <code>/screen start</code> on Discord to share again.
+      Thanks for sharing! Run <code>/stream start</code> on Discord to share again.
     </.notice>
     """
   end

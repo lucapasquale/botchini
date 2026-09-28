@@ -1,6 +1,6 @@
 defmodule BotchiniDiscord.Screens.Interactions.Screen do
   @moduledoc """
-  Handles /screen slash command
+  Handles /stream slash command
   """
 
   alias Nostrum.Constants.{ApplicationCommandOptionType, InteractionCallbackType}
@@ -19,7 +19,7 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
   @spec get_command() :: ApplicationCommand.application_command_map()
   def get_command,
     do: %{
-      name: "screen",
+      name: "stream",
       description: "Share your screen with the server",
       options: [
         %{

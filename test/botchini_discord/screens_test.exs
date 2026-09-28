@@ -36,7 +36,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
     Enum.flat_map(response.data.components, & &1.components)
   end
 
-  describe "/screen start" do
+  describe "/stream start" do
     test "privately sends the broadcast and watch links" do
       response = Screen.handle_interaction(interaction(), subcommand("start"))
 
@@ -61,7 +61,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
     end
   end
 
-  describe "/screen stop" do
+  describe "/stream stop" do
     test "ends the user's room" do
       Screen.handle_interaction(interaction(), subcommand("start"))
       response = Screen.handle_interaction(interaction(), subcommand("stop"))
@@ -79,7 +79,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
     end
   end
 
-  test "/screen list only shows rooms that are live" do
+  test "/stream list only shows rooms that are live" do
     Screen.handle_interaction(interaction(), subcommand("start"))
     response = Screen.handle_interaction(interaction(), subcommand("list"))
 

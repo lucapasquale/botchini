@@ -210,7 +210,7 @@ defmodule BotchiniDiscord.Interactions do
   defp call_interaction(interaction, {"music", opt}),
     do: Music.handle_interaction(interaction, opt)
 
-  defp call_interaction(interaction, {"screen", opt}),
+  defp call_interaction(interaction, {"stream", opt}),
     do: Screen.handle_interaction(interaction, opt)
 
   defp call_interaction(_interaction, _data),

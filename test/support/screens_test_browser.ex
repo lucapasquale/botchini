@@ -12,7 +12,13 @@ defmodule Botchini.Screens.TestBrowser do
 
   alias Botchini.Screens.Room
 
-  @spec start_link(String.t(), :publisher | :whip_publisher | :viewer) :: GenServer.on_start()
+  @typedoc """
+  `:publisher` is a browser that can only send VP8, and `:h264_publisher` one
+  that can send both, listing VP8 first like Chrome does
+  """
+  @type role :: :publisher | :h264_publisher | :whip_publisher | :viewer
+
+  @spec start_link(String.t(), role()) :: GenServer.on_start()
   def start_link(room_id, role), do: GenServer.start_link(__MODULE__, {room_id, role, self()})
 
   @spec send_rtp(pid(), :video | :audio, ExRTP.Packet.t()) :: :ok
@@ -39,6 +45,7 @@ defmodule Botchini.Screens.TestBrowser do
   end
 
   defp video_codecs(:publisher), do: [:vp8]
+  defp video_codecs(:h264_publisher), do: [:vp8, :h264]
   defp video_codecs(:whip_publisher), do: [:h264]
   defp video_codecs(:viewer), do: [:vp8, :h264]
 
@@ -54,13 +61,13 @@ defmodule Botchini.Screens.TestBrowser do
   end
 
   defp connect(role, room_id, pc, offer) do
-    connect = if role == :publisher, do: &Room.publish/2, else: &Room.watch/2
+    connect = if role == :viewer, do: &Room.watch/2, else: &Room.publish/2
     {:ok, answer} = connect.(room_id, SessionDescription.to_json(offer))
     PeerConnection.set_remote_description(pc, SessionDescription.from_json(answer))
   end
 
   # Publishers map kind => outbound track id, viewers map inbound track id => kind
-  defp add_transceivers(pc, role) when role in [:publisher, :whip_publisher] do
+  defp add_transceivers(pc, role) when role in [:publisher, :h264_publisher, :whip_publisher] do
     Map.new([:video, :audio], fn kind ->
       track = MediaStreamTrack.new(kind)
       {:ok, _transceiver} = PeerConnection.add_transceiver(pc, track, direction: :sendonly)

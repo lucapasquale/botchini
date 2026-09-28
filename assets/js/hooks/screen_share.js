@@ -1,10 +1,13 @@
 // WebRTC hooks for screen sharing. The browser always makes the offer and the
 // server answers, with ICE candidates trickled both ways through the LiveView.
 
-// Screens are mostly static, so a high bitrate keeps text sharp without
-// costing much, while motion content gets smoother frames instead
-const MAX_BITRATE = 8_000_000
+// Tuned for games: the source's full resolution at up to 60 fps, only for
+// friends, so the bitrate can be high
+const MAX_BITRATE = 20_000_000
 const MAX_FRAMERATE = 60
+// Browsers start sending low and take a while to trust the connection, which
+// makes the first seconds blurry, so Chrome and Edge are told to start higher
+const START_BITRATE_KBPS = 10_000
 const RETRY_DELAY_MS = 2_000
 
 class Connection {
@@ -21,7 +24,7 @@ class Connection {
   }
 
   // Resolves once the server answer is applied, rejects with a message to show
-  async negotiate() {
+  async negotiate({startBitrateKbps} = {}) {
     await this.pc.setLocalDescription(await this.pc.createOffer())
 
     const reply = await new Promise(resolve => {
@@ -29,7 +32,8 @@ class Connection {
     })
     if (reply.error) throw new Error(reply.error)
 
-    await this.pc.setRemoteDescription(reply.answer)
+    const answer = startBitrateKbps ? withStartBitrate(reply.answer, startBitrateKbps) : reply.answer
+    await this.pc.setRemoteDescription(answer)
     this.pendingCandidates.forEach(candidate => this.pc.addIceCandidate(candidate))
     this.pendingCandidates = []
   }
@@ -49,13 +53,29 @@ class Connection {
   }
 }
 
+// Chrome and Edge read the bitrate to start sending at from the answer's video
+// formats, and other browsers ignore it
+function withStartBitrate({type, sdp}, kbps) {
+  const param = `x-google-start-bitrate=${kbps}`
+  const payloads = [...sdp.matchAll(/^a=rtpmap:(\d+) (?:H264|VP8)\//gm)].map(([, payload]) => payload)
+
+  for (const payload of payloads) {
+    // SDP lines end in \r\n, and . would match the \r
+    const fmtp = new RegExp(`^a=fmtp:${payload} [^\\r\\n]*`, "m")
+    sdp = fmtp.test(sdp)
+      ? sdp.replace(fmtp, line => `${line};${param}`)
+      : sdp.replace(new RegExp(`^a=rtpmap:${payload} [^\\r\\n]*`, "m"), line => `${line}\r\na=fmtp:${payload} ${param}`)
+  }
+
+  return {type, sdp}
+}
+
 export const ScreenBroadcast = {
   mounted() {
     this.stream = null
     this.connection = null
     this.preview = this.el.querySelector("#screen-broadcast-preview")
     this.status = this.el.querySelector("[data-screen-status]")
-    this.hint = this.el.querySelector("[data-screen-hint]")
 
     // Screen capture needs a user gesture, so buttons are handled here instead of
     // through phx-click, which would lose it on the round trip to the server
@@ -64,7 +84,6 @@ export const ScreenBroadcast = {
       if (event.target.closest("[data-screen-switch]")) this.switchSource()
       if (event.target.closest("[data-screen-stop]")) this.stop()
     })
-    this.hint.addEventListener("change", () => this.applyHint())
 
     this.handleEvent("screen:ice_candidate", candidate => this.connection?.addRemoteCandidate(candidate))
     this.handleEvent("screen:ended", () => this.teardown())
@@ -115,12 +134,12 @@ export const ScreenBroadcast = {
       direction: "sendonly",
       streams: [this.stream]
     }).sender
-    this.applyHint()
+    this.tune()
 
     try {
-      await connection.negotiate()
+      await connection.negotiate({startBitrateKbps: START_BITRATE_KBPS})
       // Some browsers ignore encoding parameters set before negotiating
-      this.applyHint()
+      this.tune()
     } catch (error) {
       this.teardown()
       this.setStatus(error.message)
@@ -139,7 +158,7 @@ export const ScreenBroadcast = {
     this.stream = stream
     await this.videoSender.replaceTrack(stream.getVideoTracks()[0])
     await this.audioSender.replaceTrack(stream.getAudioTracks()[0] ?? null)
-    this.applyHint()
+    this.tune()
   },
 
   stop() {
@@ -149,7 +168,7 @@ export const ScreenBroadcast = {
 
   async capture() {
     const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: {frameRate: {ideal: 30, max: MAX_FRAMERATE}},
+      video: {frameRate: {ideal: MAX_FRAMERATE, max: MAX_FRAMERATE}},
       audio: true,
       systemAudio: "include",
       selfBrowserSurface: "exclude"
@@ -178,16 +197,18 @@ export const ScreenBroadcast = {
       : "No sound is being shared: pick a tab or your entire screen and turn on audio sharing in the picker."
   },
 
-  applyHint() {
+  // When the connection or the CPU can't keep up, lowers both resolution and
+  // frame rate a little. Keeping the frame rate instead drops to 720p or lower,
+  // and keeping the resolution makes games stutter
+  tune() {
     const track = this.stream?.getVideoTracks()[0]
     if (!track) return
 
-    const motion = this.hint.value === "motion"
-    track.contentHint = motion ? "motion" : "detail"
+    track.contentHint = "motion"
 
     if (this.videoSender) {
       const params = this.videoSender.getParameters()
-      params.degradationPreference = motion ? "maintain-framerate" : "maintain-resolution"
+      params.degradationPreference = "balanced"
       this.videoSender.setParameters(params).catch(() => {})
     }
   },

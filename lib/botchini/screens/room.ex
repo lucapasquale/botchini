@@ -145,8 +145,10 @@ defmodule Botchini.Screens.Room do
         went_live?: false,
         # One munger per track kind keeps sequence numbers and timestamps
         # continuous for viewers when the broadcaster reconnects
-        mungers: %{video: Munger.new(:vp8, 90_000), audio: Munger.new(:opus, 48_000)},
-        video_codec: :vp8,
+        mungers: %{video: Munger.new(:h264, 90_000), audio: Munger.new(:opus, 48_000)},
+        # Viewers connecting before the broadcaster get the codec most broadcasters
+        # send, and reconnect if theirs turns out to be another
+        video_codec: :h264,
         whip_answers: %{},
         last_keyframe_request: nil,
         idle_timer: nil,
@@ -191,13 +193,13 @@ defmodule Botchini.Screens.Room do
       |> drop_lv_peer(lv)
       |> drop_publisher()
 
-    case negotiate(state, offer, :vp8, fn _pc -> :ok end) do
-      {:ok, pc, answer} ->
+    case negotiate_publisher(state, offer) do
+      {:ok, pc, answer, video_codec} ->
         state =
           state
           |> put_peer(pc, new_peer(:publisher, lv, %{}))
           |> Map.put(:publisher, pc)
-          |> use_codec(:vp8)
+          |> use_codec(video_codec)
 
         {:reply, {:ok, answer}, state}
 
@@ -446,6 +448,34 @@ defmodule Botchini.Screens.Room do
         Logger.warning("Failed to connect screen viewer", reason: inspect(reason))
         {:reply, {:error, reason}, state}
     end
+  end
+
+  # Browsers mostly encode H.264 on the GPU, which keeps high resolutions at 60 fps
+  # smooth, and the ones that can't send it get VP8 instead
+  defp negotiate_publisher(state, offer) do
+    case negotiate_publisher(state, offer, :h264) do
+      {:error, :video_rejected} -> negotiate_publisher(state, offer, :vp8)
+      result -> result
+    end
+  end
+
+  defp negotiate_publisher(state, offer, video_codec) do
+    with {:ok, pc, answer} <- negotiate(state, offer, video_codec, fn _pc -> :ok end) do
+      if video_rejected?(pc) do
+        stop_peer_connection(pc)
+        {:error, :video_rejected}
+      else
+        {:ok, pc, answer, video_codec}
+      end
+    end
+  end
+
+  # An offer without the codec gets its video rejected, instead of an error
+  defp video_rejected?(pc) do
+    PeerConnection.get_local_description(pc).sdp
+    |> ExSDP.parse!()
+    |> Map.fetch!(:media)
+    |> Enum.any?(&(&1.type == :video and &1.port == 0))
   end
 
   defp negotiate(state, offer, video_codec, before_answer) do

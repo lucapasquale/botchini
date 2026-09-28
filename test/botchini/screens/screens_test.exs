@@ -222,13 +222,35 @@ defmodule BotchiniTest.ScreensTest do
       assert <<0x10, 0x9D, 0x01, 0x2A, _sequence_number::32>> = packet.payload
     end
 
-    test "forwards H.264 from OBS, reconnecting viewers of the previous codec" do
+    test "forwards H.264 from browsers that can send it" do
       room = start_room()
       Screens.subscribe(room.id)
       early_viewer = connect(room, :viewer)
 
+      publisher = connect(room, :h264_publisher)
+      assert_receive {:screen_room, :live, %Room{live?: true}}
+      # Viewers already got H.264, so they don't reconnect
+      refute_received {:browser, ^early_viewer, :reconnect}
+
+      viewer = connect(room, :viewer)
+      packet = send_until_received(publisher, viewer, 100, &h264_packet/1)
+      assert <<0x65, _sequence_number::32>> = packet.payload
+    end
+
+    test "reconnects viewers when the broadcaster can only send VP8" do
+      room = start_room()
+      early_viewer = connect(room, :viewer)
+
+      _publisher = connect(room, :publisher)
+
+      assert_receive {:browser, ^early_viewer, :reconnect}, @connect_timeout
+    end
+
+    test "forwards H.264 from OBS" do
+      room = start_room()
+      Screens.subscribe(room.id)
+
       {:ok, publisher} = TestBrowser.start_link(room.id, :whip_publisher)
-      assert_receive {:browser, ^early_viewer, :reconnect}
 
       assert_receive {:screen_room, :live, %Room{source: :obs, title: "Luca's stream"}},
                      @connect_timeout

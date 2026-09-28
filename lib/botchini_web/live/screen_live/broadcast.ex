@@ -121,14 +121,6 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
           Stop sharing
         </button>
 
-        <label class="flex items-center gap-2 text-sm text-gray-400">
-          Optimize for
-          <select data-screen-hint class="rounded bg-gray-800 px-2 py-1 text-gray-200">
-            <option value="motion" selected>Motion (games, videos)</option>
-            <option value="detail">Text and detail</option>
-          </select>
-        </label>
-
         <span data-screen-status class="text-sm text-gray-400"></span>
         <span data-screen-audio hidden class="basis-full text-sm text-amber-400"></span>
       </div>

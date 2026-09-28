@@ -7,7 +7,7 @@ defmodule Botchini.Screens do
 
   alias Botchini.Repo
   alias Botchini.Screens.{Room, RoomSupervisor}
-  alias Botchini.Screens.Schema.StreamKey
+  alias Botchini.Screens.Schema.{StreamChannel, StreamKey}
 
   @topic "screens"
 
@@ -144,6 +144,31 @@ defmodule Botchini.Screens do
   end
 
   defp hash_key(key), do: :crypto.hash(:sha256, key)
+
+  @spec list_stream_channels() :: [StreamChannel.t()]
+  def list_stream_channels, do: Repo.all(StreamChannel)
+
+  @spec get_stream_channel(String.t()) :: StreamChannel.t() | nil
+  def get_stream_channel(guild_id), do: Repo.get_by(StreamChannel, discord_guild_id: guild_id)
+
+  @doc """
+  Sets the guild's streams channel and the message listing its screen shares there
+  """
+  @spec put_stream_channel(String.t(), String.t(), String.t()) ::
+          {:ok, StreamChannel.t()} | {:error, Ecto.Changeset.t()}
+  def put_stream_channel(guild_id, channel_id, message_id) do
+    %StreamChannel{}
+    |> StreamChannel.changeset(%{
+      discord_guild_id: guild_id,
+      discord_channel_id: channel_id,
+      discord_message_id: message_id
+    })
+    |> Repo.insert(
+      on_conflict: {:replace, [:discord_channel_id, :discord_message_id, :updated_at]},
+      conflict_target: :discord_guild_id,
+      returning: true
+    )
+  end
 
   @spec stop_room(Room.t(), atom()) :: :ok | {:error, :not_found}
   def stop_room(%Room{} = room, reason \\ :stopped), do: Room.stop(room.id, reason)

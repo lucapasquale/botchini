@@ -11,10 +11,15 @@ defmodule BotchiniDiscordTest.ScreensTest do
 
   alias Botchini.Screens
   alias Botchini.Screens.Room
+  alias BotchiniDiscord.Helpers
   alias BotchiniDiscord.Screens.Announcer
   alias BotchiniDiscord.Screens.Interactions.Screen
 
   setup do
+    # The announcer reads the streams channels from its own process
+    :ok = Sandbox.checkout(Botchini.Repo)
+    Sandbox.mode(Botchini.Repo, {:shared, self()})
+
     on_exit(fn ->
       for {_id, pid, _type, _modules} <- DynamicSupervisor.which_children(Screens.RoomSupervisor) do
         DynamicSupervisor.terminate_child(Screens.RoomSupervisor, pid)
@@ -54,6 +59,14 @@ defmodule BotchiniDiscordTest.ScreensTest do
       refute watch_all.url =~ room.broadcast_key
     end
 
+    test "points to the streams channel when the server has one" do
+      {:ok, _stream_channel} = Screens.put_stream_channel("1", "5", "30")
+
+      response = Screen.handle_interaction(interaction(), subcommand("start"))
+
+      assert response.data.content =~ "I'll list you in <#5> once you're live"
+    end
+
     test "sends the running room's links again" do
       first = Screen.handle_interaction(interaction(), subcommand("start"))
       response = Screen.handle_interaction(interaction(), subcommand("start"))
@@ -84,8 +97,6 @@ defmodule BotchiniDiscordTest.ScreensTest do
   end
 
   test "/stream obs privately sends a stream key for OBS" do
-    :ok = Sandbox.checkout(Botchini.Repo)
-
     response = Screen.handle_interaction(interaction(), subcommand("obs"))
 
     assert response.data.flags == 64
@@ -116,6 +127,16 @@ defmodule BotchiniDiscordTest.ScreensTest do
     refute url =~ room.id
   end
 
+  test "/stream channel needs the Manage Server permission" do
+    patch(Helpers, :manage_guild?, false)
+
+    response = Screen.handle_interaction(interaction(), subcommand("channel"))
+
+    assert response.data.flags == 64
+    assert response.data.content =~ "Manage Server"
+    assert Screens.get_stream_channel("1") == nil
+  end
+
   test "can only be used inside a server" do
     response = Screen.handle_interaction(%{interaction() | member: nil}, subcommand("watch"))
 
@@ -126,7 +147,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
     setup do
       # Stubs the HTTP request instead of Message.create/2, so Nostrum still
       # prepares the payloads like it would for Discord
-      patch(Nostrum.Api, :request, {:ok, ~s({"id": "20", "channel_id": "2"})})
+      patch(Nostrum.Api, :request, callable(&discord/1, dispatch: :list))
       start_supervised!(Announcer)
 
       room = %Room{
@@ -136,7 +157,8 @@ defmodule BotchiniDiscordTest.ScreensTest do
         guild_id: "1",
         channel_id: "2",
         owner_id: "3",
-        owner_name: "Luca"
+        owner_name: "Luca",
+        started_at: DateTime.utc_now()
       }
 
       %{room: room}
@@ -191,6 +213,201 @@ defmodule BotchiniDiscordTest.ScreensTest do
       :sys.get_state(Announcer)
 
       refute_called(Nostrum.Api.request(_method, _route, _body))
+    end
+
+    test "/stream channel posts the list of screen shares in the channel", %{room: room} do
+      patch(Helpers, :manage_guild?, true)
+      Screens.broadcast(room, :live)
+      :sys.get_state(Announcer)
+      patch(Screens, :list_rooms, [%{room | live?: true}])
+
+      response =
+        Screen.handle_interaction(%{interaction() | channel_id: 5}, subcommand("channel"))
+
+      assert response.data.content =~ "I'll keep the list of screen shares in this channel"
+
+      assert %{discord_channel_id: "5", discord_message_id: "20"} =
+               Screens.get_stream_channel("1")
+
+      # The room's message where it was started moves to the list
+      assert_called(Nostrum.Api.request(:delete, "/channels/2/messages/20"))
+      assert_called(Nostrum.Api.request(:post, "/channels/5/messages", status))
+      assert status.content =~ "🔴 **Elden Ring** by <@3>"
+      assert [%{components: [%{label: "Watch all"}]}] = status.components
+    end
+
+    test "/stream channel says when it can't post in the channel" do
+      patch(Helpers, :manage_guild?, true)
+
+      patch(
+        Nostrum.Api,
+        :request,
+        {:error,
+         %ApiError{status_code: 403, response: %{code: 50_001, message: "Missing Access"}}}
+      )
+
+      response =
+        Screen.handle_interaction(%{interaction() | channel_id: 5}, subcommand("channel"))
+
+      assert response.data.content =~ "I couldn't post in this channel"
+      assert Screens.get_stream_channel("1") == nil
+    end
+
+    test "edits the streams channel's message as rooms go live and end", %{room: room} do
+      {:ok, _stream_channel} = Screens.put_stream_channel("1", "5", "30")
+      restart_announcer()
+
+      assert_called(Nostrum.Api.request(:patch, "/channels/5/messages/30", idle))
+      assert idle.content =~ "Nobody is sharing their screen right now"
+
+      Screens.broadcast(room, :live)
+      :sys.get_state(Announcer)
+
+      assert_called(Nostrum.Api.request(:patch, "/channels/5/messages/30", live))
+      assert live.content =~ "🔴 **Elden Ring** by <@3>"
+      assert live.allowed_mentions == %{parse: []}
+      refute_called(Nostrum.Api.request(:post, "/channels/2/messages", _body))
+
+      Screens.broadcast(%{room | title: "Boss fight"}, :updated)
+      :sys.get_state(Announcer)
+      assert_called(Nostrum.Api.request(:patch, "/channels/5/messages/30", renamed))
+      assert renamed.content =~ "**Boss fight**"
+
+      Screens.broadcast(room, :ended)
+      :sys.get_state(Announcer)
+      assert ended = List.last(status_edits())
+      assert ended.content =~ "Nobody is sharing their screen right now"
+    end
+
+    test "posts the streams channel's message again when it was deleted", %{room: room} do
+      {:ok, _stream_channel} = Screens.put_stream_channel("1", "5", "30")
+
+      patch(
+        Nostrum.Api,
+        :request,
+        callable(
+          fn
+            [:patch, "/channels/5/messages/30", _body] ->
+              {:error,
+               %ApiError{status_code: 404, response: %{code: 10_008, message: "Unknown Message"}}}
+
+            [:post, "/channels/5/messages", _body] ->
+              {:ok, ~s({"id": "40", "channel_id": "5"})}
+
+            request ->
+              discord(request)
+          end,
+          dispatch: :list
+        )
+      )
+
+      restart_announcer()
+      Screens.broadcast(room, :live)
+      :sys.get_state(Announcer)
+
+      assert_called(Nostrum.Api.request(:post, "/channels/5/messages", _body))
+      assert %{discord_message_id: "40"} = Screens.get_stream_channel("1")
+
+      # Stopping reposts the message too, so it needs the test's database connection
+      stop_supervised!(Announcer)
+    end
+
+    test "marks the streams channel's name while anyone is sharing", %{room: room} do
+      {:ok, _stream_channel} = Screens.put_stream_channel("1", "5", "30")
+      name = stub_channel_name()
+      restart_announcer()
+      other = %{room | id: "other", owner_id: "4"}
+
+      Screens.broadcast(room, :live)
+      wait_for_renames()
+      assert Agent.get(name, & &1) == "🔴-streams"
+
+      # Only the first screen share going live and the last one ending rename it
+      Screens.broadcast(other, :live)
+      Screens.broadcast(room, :ended)
+      wait_for_renames()
+      assert length(renames()) == 1
+
+      Screens.broadcast(other, :ended)
+      wait_for_renames()
+      assert Agent.get(name, & &1) == "streams"
+      assert length(renames()) == 2
+    end
+
+    test "waits for Discord's rate limit to rename the channel again", %{room: room} do
+      {:ok, _stream_channel} = Screens.put_stream_channel("1", "5", "30")
+      name = stub_channel_name()
+      restart_announcer()
+
+      for event <- [:live, :ended, :live] do
+        Screens.broadcast(room, event)
+        wait_for_renames()
+      end
+
+      assert length(renames()) == 2
+      assert Agent.get(name, & &1) == "streams"
+      assert :sys.get_state(Announcer).guilds["1"].rename_timer
+
+      # Nothing to rename once the timer fires, as the screen share ended meanwhile
+      Screens.broadcast(room, :ended)
+      send(Announcer, {:sync_name, "1"})
+      wait_for_renames()
+      assert length(renames()) == 2
+    end
+
+    # Answers like Discord, with the streams channel named "streams"
+    defp discord([:get, "/channels/5"]), do: {:ok, ~s({"id": "5", "name": "streams", "type": 0})}
+    defp discord(_request), do: {:ok, ~s({"id": "20", "channel_id": "2"})}
+
+    # The streams channel keeps the name it's renamed to
+    defp stub_channel_name do
+      {:ok, name} = Agent.start_link(fn -> "streams" end)
+
+      channel = fn -> {:ok, Jason.encode!(%{id: "5", name: Agent.get(name, & &1), type: 0})} end
+
+      patch(
+        Nostrum.Api,
+        :request,
+        callable(
+          fn
+            [:get, "/channels/5"] ->
+              channel.()
+
+            [%{method: :patch, route: "/channels/5", body: %{name: new_name}}] ->
+              Agent.update(name, fn _name -> new_name end)
+              channel.()
+
+            request ->
+              discord(request)
+          end,
+          dispatch: :list
+        )
+      )
+
+      name
+    end
+
+    defp renames do
+      for {:request, [%{method: :patch, route: "/channels/5"}]} <- history(Nostrum.Api),
+          do: :renamed
+    end
+
+    # Renames run in tasks, which finish after the announcer handled the events
+    defp wait_for_renames do
+      if Enum.any?(:sys.get_state(Announcer).guilds, fn {_id, guild} -> guild.renaming end) do
+        Process.sleep(10)
+        wait_for_renames()
+      end
+    end
+
+    defp status_edits do
+      for {:request, [:patch, "/channels/5/messages/30", body]} <- history(Nostrum.Api), do: body
+    end
+
+    defp restart_announcer do
+      stop_supervised!(Announcer)
+      start_supervised!(Announcer)
+      :sys.get_state(Announcer)
     end
   end
 end

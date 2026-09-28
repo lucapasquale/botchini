@@ -8,6 +8,7 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
 
   alias Botchini.Screens
   alias BotchiniDiscord.{Helpers, InteractionBehaviour}
+  alias BotchiniDiscord.Screens.Announcer
   alias BotchiniDiscord.Screens.Responses.Components
 
   @behaviour InteractionBehaviour
@@ -41,6 +42,11 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
           name: "watch",
           description: "Watch the screens being shared in this server",
           type: ApplicationCommandOptionType.sub_command()
+        },
+        %{
+          name: "channel",
+          description: "Keep the list of screen shares in this channel (needs Manage Server)",
+          type: ApplicationCommandOptionType.sub_command()
         }
       ]
     }
@@ -57,6 +63,7 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
       Helpers.get_option(options, "stop") -> handle_stop(interaction)
       Helpers.get_option(options, "obs") -> handle_obs(interaction)
       Helpers.get_option(options, "watch") -> handle_watch(interaction)
+      Helpers.get_option(options, "channel") -> handle_channel(interaction)
       true -> reply("Invalid command")
     end
   end
@@ -77,7 +84,7 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
       """
       Your screen share **#{Helpers.escape_markdown(room.title)}** is ready! Open **Start sharing** and pick a screen or window.
       Keep that link to yourself, anyone with it can share as you. \
-      I'll post the watch link here once you're live.
+      #{announcement(room.guild_id)} once you're live.
       """,
       components: [Components.broadcast_screen(room)]
     )
@@ -112,7 +119,7 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
     - **Bearer Token:** ||`#{key}`||
 
     In **Settings → Output**, pick an **H.264** encoder.
-    Then **Start Streaming**, and I'll post the watch link here.
+    Then **Start Streaming**, and #{announcement(Integer.to_string(interaction.guild_id))}.
 
     For game audio without Discord, turn on **Capture audio** in Game Capture or add an \
     **Application Audio Capture** source. Keep the token to yourself, running this again replaces it.
@@ -137,6 +144,33 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
           end)
 
         reply(content, components: [watch_all])
+    end
+  end
+
+  defp handle_channel(interaction) do
+    if Helpers.manage_guild?(interaction) do
+      guild_id = Integer.to_string(interaction.guild_id)
+
+      case Announcer.set_channel(guild_id, Integer.to_string(interaction.channel_id)) do
+        :ok ->
+          reply("""
+          I'll keep the list of screen shares in this channel, instead of posting where they're started.
+          It works best in a channel only I can post in. Give me **Manage Channels** here, \
+          and I'll add 🔴 to its name while anyone is sharing.
+          """)
+
+        {:error, reason} ->
+          reply("I couldn't post in this channel: #{reason}")
+      end
+    else
+      reply("You need the **Manage Server** permission to pick the streams channel")
+    end
+  end
+
+  defp announcement(guild_id) do
+    case Screens.get_stream_channel(guild_id) do
+      nil -> "I'll post the watch link here"
+      stream_channel -> "I'll list you in <##{stream_channel.discord_channel_id}>"
     end
   end
 

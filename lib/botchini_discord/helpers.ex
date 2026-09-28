@@ -3,7 +3,9 @@ defmodule BotchiniDiscord.Helpers do
   Helpers for handling the interaction and options
   """
 
-  alias Nostrum.Struct.ApplicationCommandInteractionData
+  alias Nostrum.Cache.GuildCache
+  alias Nostrum.Struct.{ApplicationCommandInteractionData, Interaction}
+  alias Nostrum.Struct.Guild.Member
 
   alias Botchini.Creators.Schema.Creator
   alias BotchiniDiscord.InteractionBehaviour
@@ -102,6 +104,20 @@ defmodule BotchiniDiscord.Helpers do
     |> String.trim()
     |> String.downcase()
   end
+
+  @doc """
+  Whether the member who sent the interaction can manage the guild. Interactions
+  don't bring the member's permissions, so they're worked out from the cached guild
+  """
+  @spec manage_guild?(Interaction.t()) :: boolean()
+  def manage_guild?(%Interaction{guild_id: guild_id, member: %Member{} = member}) do
+    case GuildCache.get(guild_id) do
+      {:ok, guild} -> :manage_guild in Member.guild_permissions(member, guild)
+      {:error, _reason} -> false
+    end
+  end
+
+  def manage_guild?(_interaction), do: false
 
   @spec escape_markdown(String.t()) :: String.t()
   def escape_markdown(text), do: String.replace(text, ~r/[\\*_~`|>\[\]()#-]/, "\\\\\\0")

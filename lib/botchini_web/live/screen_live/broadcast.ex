@@ -24,7 +24,14 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
 
         room ->
           Screens.subscribe(room.id)
-          {:ok, assign(socket, room: room, status: :open, page_title: room.title)}
+
+          {:ok,
+           assign(socket,
+             room: room,
+             status: :open,
+             page_title: room.title,
+             announcement_failed?: false
+           )}
       end
     else
       {:ok, assign(socket, status: :connecting)}
@@ -58,6 +65,17 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
   def render(assigns) do
     ~H"""
     <.room_header room={@room} />
+
+    <div
+      :if={@announcement_failed?}
+      class="mb-4 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+    >
+      I couldn't post the watch link on Discord, probably because I'm not allowed to send
+      messages in that channel. Share this link with your friends instead:
+      <a href={~p"/screens/#{@room.id}"} class="break-all font-semibold underline">
+        {url(~p"/screens/#{@room.id}")}
+      </a>
+    </div>
 
     <div
       id="screen-broadcast"
@@ -99,6 +117,7 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
         </label>
 
         <span data-screen-status class="text-sm text-gray-400"></span>
+        <span data-screen-audio hidden class="basis-full text-sm text-amber-400"></span>
       </div>
 
       <video
@@ -112,8 +131,9 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
     </div>
 
     <p class="mt-2 text-sm text-gray-500">
-      Only people with the watch link can see your screen. To share sound, pick a browser
-      tab or your entire screen (on Windows) and enable audio sharing.
+      Only people with the watch link can see your screen. To share sound, use Chrome or Edge,
+      pick a browser tab or your entire screen (on Windows) and turn on audio sharing in the
+      picker. Firefox can't share sound.
     </p>
     """
   end
@@ -139,6 +159,10 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
   @impl true
   def handle_info({:screens, _room_id, {:ice_candidate, candidate}}, socket) do
     {:noreply, push_event(socket, "screen:ice_candidate", candidate)}
+  end
+
+  def handle_info({:screen_announcement_failed, _room_id}, socket) do
+    {:noreply, assign(socket, announcement_failed?: true)}
   end
 
   def handle_info({:screen_room, :ended, room}, socket) do

@@ -79,6 +79,20 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       assert Screens.get_room(room.id) == nil
     end
 
+    test "shows the watch link when it couldn't be posted on Discord", %{conn: conn, room: room} do
+      {:ok, view, html} =
+        conn
+        |> put_connect_params(%{"broadcast_key" => room.broadcast_key})
+        |> live(~p"/screens/#{room.id}/broadcast")
+
+      refute html =~ "post the watch link on Discord"
+
+      Screens.broadcast_announcement_failed(room)
+
+      assert render(view) =~ "post the watch link on Discord"
+      assert render(view) =~ "/screens/#{room.id}"
+    end
+
     test "doesn't check the key before connecting", %{conn: conn, room: room} do
       html = conn |> get(~p"/screens/#{room.id}/broadcast") |> html_response(200)
 

@@ -81,7 +81,7 @@ defmodule BotchiniDiscord.Music do
 
     Message.create(String.to_integer(channel_id), %{
       content: "Couldn't play **#{track.title}**#{because}, skipping it",
-      allowed_mentions: %{parse: []}
+      allowed_mentions: :none
     })
   end
 

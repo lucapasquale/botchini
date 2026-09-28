@@ -114,8 +114,10 @@ if config_env() == :prod do
         first..last
     end
 
-  public_ip =
-    case System.get_env("SCREENS_PUBLIC_IP") do
+  # An extra address to announce to browsers, e.g. the server's LAN IP when it
+  # runs in a container, while STUN still finds the public one
+  announced_ip =
+    case System.get_env("SCREENS_ANNOUNCED_IP") do
       nil ->
         nil
 
@@ -129,7 +131,7 @@ if config_env() == :prod do
       [%{urls: System.get_env("SCREENS_STUN_URL", "stun:stun.l.google.com:19302")}] ++
         turn_server,
     ice_port_range: ice_port_range,
-    public_ip: public_ip,
+    announced_ip: announced_ip,
     max_viewers: String.to_integer(System.get_env("SCREENS_MAX_VIEWERS", "20"))
 
   # OpenTelemetry OTLP exporter configuration

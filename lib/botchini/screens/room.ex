@@ -384,7 +384,7 @@ defmodule Botchini.Screens.Room do
     [
       ice_servers: config[:ice_servers],
       ice_port_range: config[:ice_port_range] || [0],
-      host_to_srflx_ip_mapper: srflx_mapper(config[:public_ip]),
+      host_to_srflx_ip_mapper: srflx_mapper(config[:announced_ip]),
       # Forwarded packets are sent as they arrive, so broadcaster and viewers
       # must agree on one codec per kind, and every browser supports these
       audio_codecs: [:opus],
@@ -392,10 +392,11 @@ defmodule Botchini.Screens.Room do
     ]
   end
 
-  # Behind NAT, the host candidates are private addresses the browsers can't
-  # reach, so the public one (with the ICE ports forwarded) is announced too
+  # In a container the host candidates are internal addresses the browsers can't
+  # reach, so another one (like the server's LAN IP) is announced alongside the
+  # public address STUN finds, with the ICE ports published on it
   defp srflx_mapper(nil), do: nil
-  defp srflx_mapper(public_ip), do: fn _host_ip -> public_ip end
+  defp srflx_mapper(announced_ip), do: fn _host_ip -> announced_ip end
 
   defp new_peer(role, lv, tracks) do
     # Publisher tracks map inbound track id => kind, viewer tracks map kind => outbound track id

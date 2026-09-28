@@ -12,7 +12,7 @@ defmodule Botchini.Screens do
   @defaults [
     ice_servers: [],
     ice_port_range: nil,
-    public_ip: nil,
+    announced_ip: nil,
     max_viewers: 20,
     # How long the broadcaster has to open their link after creating the room
     start_timeout_ms: :timer.minutes(10),
@@ -119,6 +119,18 @@ defmodule Botchini.Screens do
 
     if event in [:live, :ended], do: Phoenix.PubSub.broadcast(Botchini.PubSub, @topic, message)
     Phoenix.PubSub.broadcast(Botchini.PubSub, room_topic(room.id), message)
+  end
+
+  @doc """
+  Tells the room's pages that its watch link couldn't be posted on Discord
+  """
+  @spec broadcast_announcement_failed(Room.t()) :: :ok
+  def broadcast_announcement_failed(%Room{} = room) do
+    Phoenix.PubSub.broadcast(
+      Botchini.PubSub,
+      room_topic(room.id),
+      {:screen_announcement_failed, room.id}
+    )
   end
 
   defp room_topic(room_id), do: "#{@topic}:#{room_id}"

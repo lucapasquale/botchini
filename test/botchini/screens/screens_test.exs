@@ -186,6 +186,22 @@ defmodule BotchiniTest.ScreensTest do
       assert <<0x10, 0x9D, 0x01, 0x2A, _sequence_number::32>> = packet.payload
     end
 
+    test "forwards the broadcaster's audio too" do
+      room = start_room()
+      viewer = connect(room, :viewer)
+      publisher = connect(room, :publisher)
+      send_until_received(publisher, viewer, 100)
+
+      TestBrowser.send_rtp(
+        publisher,
+        :audio,
+        ExRTP.Packet.new(<<0xFC, 0xFF, 0xFE>>, sequence_number: 1)
+      )
+
+      assert_receive {:browser, ^viewer, {:rtp, :audio, packet}}, 1_000
+      assert packet.payload == <<0xFC, 0xFF, 0xFE>>
+    end
+
     test "viewers can join before the broadcaster" do
       room = start_room()
 

@@ -155,12 +155,25 @@ export const ScreenBroadcast = {
     })
 
     this.preview.srcObject = stream
+    this.showAudioNotice(stream)
     // Clicking the browser's own "Stop sharing" bar ends the share too
     stream.getVideoTracks()[0].addEventListener("ended", () => {
       if (this.stream === stream) this.stop()
     })
 
     return stream
+  },
+
+  // Browsers silently leave audio out when they can't or weren't allowed to
+  // capture it, so the broadcaster knows why viewers hear nothing
+  showAudioNotice(stream) {
+    const notice = this.el.querySelector("[data-screen-audio]")
+    const hasAudio = stream && stream.getAudioTracks().length > 0
+
+    notice.hidden = !stream || hasAudio
+    notice.textContent = navigator.userAgent.includes("Firefox")
+      ? "No sound is being shared: Firefox can't share audio, use Chrome or Edge for that."
+      : "No sound is being shared: pick a tab or your entire screen and turn on audio sharing in the picker."
   },
 
   applyHint() {
@@ -196,6 +209,7 @@ export const ScreenBroadcast = {
     this.stopTracks()
     this.stream = null
     this.preview.srcObject = null
+    this.showAudioNotice(null)
     this.showSharingControls(false)
   },
 

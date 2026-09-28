@@ -94,6 +94,8 @@ defmodule BotchiniWeb.ScreenLive.Watch do
     {:noreply, push_event(socket, "screen:ice_candidate", candidate)}
   end
 
+  def handle_info({:screen_announcement_failed, _room_id}, socket), do: {:noreply, socket}
+
   def handle_info({:screen_room, :ended, room}, socket) do
     {:noreply, socket |> assign(room: room, status: :ended) |> push_event("screen:ended", %{})}
   end

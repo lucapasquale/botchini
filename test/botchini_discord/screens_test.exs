@@ -5,7 +5,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
 
   @moduletag :capture_log
 
-  alias Nostrum.Api.Message
+  alias Nostrum.Error.ApiError
   alias Nostrum.Struct.{Guild.Member, Interaction, User}
 
   alias Botchini.Screens
@@ -94,8 +94,9 @@ defmodule BotchiniDiscordTest.ScreensTest do
 
   describe "Announcer" do
     setup do
-      patch(Message, :create, {:ok, %{id: 20, channel_id: 2}})
-      patch(Message, :edit, {:ok, %{}})
+      # Stubs the HTTP request instead of Message.create/2, so Nostrum still
+      # prepares the payloads like it would for Discord
+      patch(Nostrum.Api, :request, {:ok, ~s({"id": "20", "channel_id": "2"})})
       start_supervised!(Announcer)
 
       room = %Room{
@@ -117,13 +118,31 @@ defmodule BotchiniDiscordTest.ScreensTest do
       # Syncs with the announcer, so both events were handled
       :sys.get_state(Announcer)
 
-      assert_called(Message.create(2, %{content: content, components: [row]}))
-      assert content =~ "<@3> is sharing their screen: **Elden Ring**"
-      assert [%{label: "Watch", url: url}] = row.components
+      assert_called(Nostrum.Api.request(:post, "/channels/2/messages", live))
+      assert live.content =~ "<@3> is sharing their screen: **Elden Ring**"
+      assert live.allowed_mentions == %{parse: []}
+      assert [%{components: [%{label: "Watch", url: url}]}] = live.components
       assert url =~ "/screens/room"
 
-      assert_called(Message.edit(2, 20, %{content: ended, components: []}))
-      assert ended =~ "stopped sharing"
+      assert_called(Nostrum.Api.request(:patch, "/channels/2/messages/20", ended))
+      assert ended.content =~ "stopped sharing"
+      assert ended.components == []
+      assert ended.allowed_mentions == %{parse: []}
+    end
+
+    test "tells the broadcaster when it can't post the watch link", %{room: room} do
+      error = %ApiError{
+        status_code: 403,
+        response: %{code: 50_013, message: "Missing Permissions"}
+      }
+
+      patch(Nostrum.Api, :request, {:error, error})
+      Screens.subscribe(room.id)
+
+      Screens.broadcast(room, :live)
+
+      assert_receive {:screen_announcement_failed, "room"}
+      assert Process.alive?(Process.whereis(Announcer))
     end
 
     test "only announces rooms that went live", %{room: room} do
@@ -131,8 +150,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
       Screens.broadcast(room, :ended)
       :sys.get_state(Announcer)
 
-      refute_called(Message.create(_channel_id, _message))
-      refute_called(Message.edit(_channel_id, _message_id, _message))
+      refute_called(Nostrum.Api.request(_method, _route, _body))
     end
   end
 end

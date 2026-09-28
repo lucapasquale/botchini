@@ -83,7 +83,22 @@ defmodule BotchiniDiscordTest.ScreensTest do
     Screen.handle_interaction(interaction(), subcommand("start"))
     response = Screen.handle_interaction(interaction(), subcommand("list"))
 
-    assert response.data.content == "Nobody is sharing their screen right now"
+    assert response.data.content =~ "Nobody is sharing their screen right now"
+    assert [%{label: "Watch all", url: url}] = buttons(response)
+    assert url =~ ~r"/screens#.+$"
+  end
+
+  test "/stream list links to every live room and to all of them" do
+    Screen.handle_interaction(interaction(), subcommand("start"))
+    room = Screens.find_owner_room("1", "3")
+    patch(Screens, :list_rooms, [%{room | live?: true}])
+
+    response = Screen.handle_interaction(interaction(), subcommand("list"))
+
+    assert response.data.content =~ "**Luca's screen** by <@3>"
+    assert [watch, watch_all] = buttons(response)
+    assert watch.url =~ ~r"/screens/#{room.id}$"
+    assert watch_all.label == "Watch all"
   end
 
   test "can only be used inside a server" do
@@ -128,6 +143,18 @@ defmodule BotchiniDiscordTest.ScreensTest do
       assert ended.content =~ "stopped sharing"
       assert ended.components == []
       assert ended.allowed_mentions == %{parse: []}
+    end
+
+    test "updates the live message when the title changes", %{room: room} do
+      Screens.broadcast(room, :live)
+      :sys.get_state(Announcer)
+      Screens.broadcast(%{room | viewer_count: 2}, :updated)
+      Screens.broadcast(%{room | title: "Boss *fight*"}, :updated)
+      :sys.get_state(Announcer)
+
+      assert_called_once(Nostrum.Api.request(:patch, "/channels/2/messages/20", edited))
+      assert edited.content =~ "**Boss \\*fight\\***"
+      assert [%{components: [%{label: "Watch"}]}] = edited.components
     end
 
     test "tells the broadcaster when it can't post the watch link", %{room: room} do

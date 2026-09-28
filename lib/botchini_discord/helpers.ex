@@ -102,4 +102,7 @@ defmodule BotchiniDiscord.Helpers do
     |> String.trim()
     |> String.downcase()
   end
+
+  @spec escape_markdown(String.t()) :: String.t()
+  def escape_markdown(text), do: String.replace(text, ~r/[\\*_~`|>\[\]()#-]/, "\\\\\\0")
 end

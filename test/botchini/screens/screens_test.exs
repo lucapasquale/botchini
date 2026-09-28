@@ -101,6 +101,35 @@ defmodule BotchiniTest.ScreensTest do
     end
   end
 
+  describe "titles" do
+    test "follow the shared source until the owner picks one" do
+      room = start_room()
+      Screens.subscribe(room.id)
+
+      assert Room.set_source(room.id, :tab) == :ok
+      assert_receive {:screen_room, :updated, %Room{title: "Luca's tab", source: :tab}}
+
+      Room.set_title(room.id, "  Elden Ring boss fight  ")
+      assert_receive {:screen_room, :updated, %Room{title: "Elden Ring boss fight"}}
+
+      Room.set_source(room.id, :window)
+
+      assert_receive {:screen_room, :updated,
+                      %Room{title: "Elden Ring boss fight", source: :window}}
+
+      Room.set_title(room.id, " ")
+      assert_receive {:screen_room, :updated, %Room{title: "Luca's window", custom_title?: false}}
+    end
+
+    test "are capped in length" do
+      room = start_room()
+
+      Room.set_title(room.id, String.duplicate("a", 200))
+
+      assert String.length(Screens.get_room(room.id).title) == 100
+    end
+  end
+
   test "list_rooms/1 only lists the guild's rooms" do
     room = start_room()
     other_room = start_room(%{owner_id: "4"})

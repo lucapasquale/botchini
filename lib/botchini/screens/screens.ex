@@ -112,12 +112,20 @@ defmodule Botchini.Screens do
   @spec subscribe(String.t()) :: :ok | {:error, term()}
   def subscribe(room_id), do: Phoenix.PubSub.subscribe(Botchini.PubSub, room_topic(room_id))
 
+  @spec unsubscribe(String.t()) :: :ok
+  def unsubscribe(room_id), do: Phoenix.PubSub.unsubscribe(Botchini.PubSub, room_topic(room_id))
+
+  @spec subscribe_guild(String.t()) :: :ok | {:error, term()}
+  def subscribe_guild(guild_id),
+    do: Phoenix.PubSub.subscribe(Botchini.PubSub, guild_topic(guild_id))
+
   @doc false
   @spec broadcast(Room.t(), :live | :updated | :ended) :: :ok
   def broadcast(%Room{} = room, event) do
     message = {:screen_room, event, room}
 
     if event in [:live, :ended], do: Phoenix.PubSub.broadcast(Botchini.PubSub, @topic, message)
+    Phoenix.PubSub.broadcast(Botchini.PubSub, guild_topic(room.guild_id), message)
     Phoenix.PubSub.broadcast(Botchini.PubSub, room_topic(room.id), message)
   end
 
@@ -134,6 +142,7 @@ defmodule Botchini.Screens do
   end
 
   defp room_topic(room_id), do: "#{@topic}:#{room_id}"
+  defp guild_topic(guild_id), do: "#{@topic}:guild:#{guild_id}"
 
   # 128 bits of randomness, so links can't be guessed or enumerated
   defp random_id, do: 16 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)

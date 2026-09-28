@@ -69,7 +69,7 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
 
     reply(
       """
-      Your screen share **#{room.title}** is ready! Open **Start sharing** and pick a screen or window.
+      Your screen share **#{Helpers.escape_markdown(room.title)}** is ready! Open **Start sharing** and pick a screen or window.
       Keep that link to yourself, anyone with it can share as you. \
       I'll post the watch link here once you're live.
       """,
@@ -86,30 +86,32 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
 
       room ->
         Screens.stop_room(room)
-        reply("Stopped sharing **#{room.title}**")
+        reply("Stopped sharing **#{Helpers.escape_markdown(room.title)}**")
     end
   end
 
   defp handle_list(interaction) do
-    case interaction.guild_id
-         |> Integer.to_string()
-         |> Screens.list_rooms()
-         |> Enum.filter(& &1.live?) do
+    guild_id = Integer.to_string(interaction.guild_id)
+    watch_all = Components.watch_all_screens(guild_id)
+
+    case guild_id |> Screens.list_rooms() |> Enum.filter(& &1.live?) do
       [] ->
-        reply("Nobody is sharing their screen right now")
+        reply(
+          "Nobody is sharing their screen right now, open **Watch all** to see screens as they go live",
+          components: [watch_all]
+        )
 
       rooms ->
-        # Discord allows at most 5 action rows per message
-        rooms = Enum.take(rooms, 5)
-
         content =
           Enum.map_join(rooms, "\n", fn room ->
-            "🔴 **#{room.title}** by <@#{room.owner_id}> (#{viewers(room.viewer_count)})"
+            "🔴 **#{Helpers.escape_markdown(room.title)}** by <@#{room.owner_id}> (#{viewers(room.viewer_count)})"
           end)
 
-        reply(content,
-          components: Enum.map(rooms, &Components.watch_screen(&1, "Watch #{&1.title}"))
-        )
+        # Discord allows at most 5 action rows per message
+        watch_rooms =
+          rooms |> Enum.take(4) |> Enum.map(&Components.watch_screen(&1, "Watch #{&1.title}"))
+
+        reply(content, components: watch_rooms ++ [watch_all])
     end
   end
 

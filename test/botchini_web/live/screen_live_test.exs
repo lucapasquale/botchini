@@ -4,6 +4,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
   @moduletag :capture_log
 
   alias Botchini.Screens
+  alias BotchiniWeb.ScreenLive.Guild
 
   setup do
     {:ok, room} =
@@ -56,7 +57,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     test "requires the broadcast key", %{conn: conn, room: room} do
       {:ok, _view, html} =
         conn
-        |> put_connect_params(%{"broadcast_key" => room.id})
+        |> put_connect_params(%{"key" => room.id})
         |> live(~p"/screens/#{room.id}/broadcast")
 
       assert html =~ "Screen share not found"
@@ -68,7 +69,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     test "lets the owner share and stop their screen", %{conn: conn, room: room} do
       {:ok, view, html} =
         conn
-        |> put_connect_params(%{"broadcast_key" => room.broadcast_key})
+        |> put_connect_params(%{"key" => room.broadcast_key})
         |> live(~p"/screens/#{room.id}/broadcast")
 
       assert html =~ "Share screen"
@@ -82,7 +83,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     test "shows the watch link when it couldn't be posted on Discord", %{conn: conn, room: room} do
       {:ok, view, html} =
         conn
-        |> put_connect_params(%{"broadcast_key" => room.broadcast_key})
+        |> put_connect_params(%{"key" => room.broadcast_key})
         |> live(~p"/screens/#{room.id}/broadcast")
 
       refute html =~ "post the watch link on Discord"
@@ -93,11 +94,76 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       assert render(view) =~ "/screens/#{room.id}"
     end
 
+    test "names the room after the shared source or the owner's title", %{conn: conn, room: room} do
+      {:ok, view, _html} =
+        conn
+        |> put_connect_params(%{"key" => room.broadcast_key})
+        |> live(~p"/screens/#{room.id}/broadcast")
+
+      render_hook(view, "source", %{"surface" => "window"})
+      assert render(view) =~ "Luca&#39;s window"
+
+      view |> form("#screen-title", title: "Speedrun") |> render_submit()
+      assert render(view) =~ "Speedrun"
+      assert Screens.get_room(room.id).title == "Speedrun"
+    end
+
     test "doesn't check the key before connecting", %{conn: conn, room: room} do
       html = conn |> get(~p"/screens/#{room.id}/broadcast") |> html_response(200)
 
       assert html =~ "Connecting..."
       refute html =~ "Elden Ring"
+    end
+  end
+
+  describe "guild page" do
+    defp live_guild(conn, guild_id) do
+      conn
+      |> put_connect_params(%{"key" => Guild.sign_token(guild_id)})
+      |> live(~p"/screens")
+    end
+
+    test "requires a valid key", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/screens")
+      assert html =~ "Link expired"
+
+      {:ok, _view, html} =
+        conn
+        |> put_connect_params(%{"key" => "invalid"})
+        |> live(~p"/screens")
+
+      assert html =~ "Link expired"
+    end
+
+    test "shows the guild's rooms while they're live", %{conn: conn, room: room} do
+      {:ok, view, html} = live_guild(conn, "1")
+      assert html =~ "Nobody is sharing their screen right now"
+
+      Screens.broadcast(%{room | live?: true}, :live)
+      assert render(view) =~ "Elden Ring"
+      assert has_element?(view, "#screen-viewer-#{room.id}")
+
+      Screens.broadcast(%{room | live?: false}, :updated)
+      assert render(view) =~ "Waiting for Luca to start sharing"
+
+      Screens.broadcast(room, :ended)
+      refute render(view) =~ "Elden Ring"
+    end
+
+    test "doesn't show other guilds' rooms", %{conn: conn, room: room} do
+      {:ok, view, _html} = live_guild(conn, "9")
+
+      Screens.broadcast(%{room | live?: true}, :live)
+
+      refute render(view) =~ "Elden Ring"
+    end
+
+    test "only connects to rooms on the page", %{conn: conn, room: room} do
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      render_hook(view, "offer", %{"room_id" => room.id, "type" => "offer", "sdp" => ""})
+
+      assert_reply(view, %{error: "Couldn't connect to the screen share"})
     end
   end
 end

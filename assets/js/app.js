@@ -26,11 +26,11 @@ import {ScreenBroadcast, ScreenViewer} from "./hooks/screen_share"
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  // Read on every connect, so screen broadcast keys (kept in the URL fragment to
-  // never reach the server logs) reach the LiveView on reconnects too
+  // Read on every connect, so screen keys (kept in the URL fragment to never
+  // reach the server logs) reach the LiveView on reconnects too
   params: () => {
     const params = {_csrf_token: csrfToken}
-    if (location.hash.length > 1) params.broadcast_key = location.hash.slice(1)
+    if (location.hash.length > 1) params.key = location.hash.slice(1)
     return params
   },
   hooks: {ScreenBroadcast, ScreenViewer}

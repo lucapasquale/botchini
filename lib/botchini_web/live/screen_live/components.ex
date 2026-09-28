@@ -32,6 +32,44 @@ defmodule BotchiniWeb.ScreenLive.Components do
     """
   end
 
+  attr :room, :map, required: true
+
+  def viewer(assigns) do
+    ~H"""
+    <div
+      id={"screen-viewer-#{@room.id}"}
+      phx-hook="ScreenViewer"
+      data-room-id={@room.id}
+      data-ice-servers={ice_servers_json()}
+      class="relative aspect-video w-full overflow-hidden rounded-lg bg-black"
+    >
+      <video
+        id={"screen-viewer-video-#{@room.id}"}
+        phx-update="ignore"
+        class="h-full w-full"
+        autoplay
+        muted
+        playsinline
+        controls
+      ></video>
+
+      <div
+        :if={!@room.live?}
+        class="absolute inset-0 flex items-center justify-center bg-black/80 text-gray-300"
+      >
+        Waiting for {@room.owner_name} to start sharing...
+      </div>
+
+      <span
+        id={"screen-viewer-status-#{@room.id}"}
+        phx-update="ignore"
+        data-screen-status
+        class="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-sm text-red-400 empty:hidden"
+      ></span>
+    </div>
+    """
+  end
+
   attr :title, :string, required: true
   slot :inner_block
 

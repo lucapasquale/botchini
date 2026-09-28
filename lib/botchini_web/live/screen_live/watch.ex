@@ -44,33 +44,10 @@ defmodule BotchiniWeb.ScreenLive.Watch do
     ~H"""
     <.room_header room={@room} />
 
-    <div
-      id="screen-viewer"
-      phx-hook="ScreenViewer"
-      data-ice-servers={ice_servers_json()}
-      class="relative aspect-video w-full overflow-hidden rounded-lg bg-black"
-    >
-      <video
-        id="screen-viewer-video"
-        phx-update="ignore"
-        class="h-full w-full"
-        autoplay
-        muted
-        playsinline
-        controls
-      ></video>
-
-      <div
-        :if={!@room.live?}
-        class="absolute inset-0 flex items-center justify-center bg-black/80 text-gray-300"
-      >
-        Waiting for {@room.owner_name} to start sharing...
-      </div>
-    </div>
+    <.viewer room={@room} />
 
     <p class="mt-2 text-sm text-gray-500">
       The stream starts muted, use the video controls to turn the sound on.
-      <span id="screen-viewer-status" phx-update="ignore" class="text-red-400"></span>
     </p>
     """
   end
@@ -90,17 +67,18 @@ defmodule BotchiniWeb.ScreenLive.Watch do
   end
 
   @impl true
-  def handle_info({:screens, _room_id, {:ice_candidate, candidate}}, socket) do
-    {:noreply, push_event(socket, "screen:ice_candidate", candidate)}
+  def handle_info({:screens, room_id, {:ice_candidate, candidate}}, socket) do
+    {:noreply, push_event(socket, "screen:#{room_id}:ice_candidate", candidate)}
   end
 
   def handle_info({:screen_announcement_failed, _room_id}, socket), do: {:noreply, socket}
 
   def handle_info({:screen_room, :ended, room}, socket) do
-    {:noreply, socket |> assign(room: room, status: :ended) |> push_event("screen:ended", %{})}
+    {:noreply,
+     socket |> assign(room: room, status: :ended) |> push_event("screen:#{room.id}:ended", %{})}
   end
 
   def handle_info({:screen_room, _event, room}, socket) do
-    {:noreply, assign(socket, room: room)}
+    {:noreply, assign(socket, room: room, page_title: room.title)}
   end
 end

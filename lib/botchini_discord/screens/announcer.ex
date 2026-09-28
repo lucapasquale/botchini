@@ -13,6 +13,7 @@ defmodule BotchiniDiscord.Screens.Announcer do
 
   alias Botchini.Screens
   alias Botchini.Screens.Room
+  alias BotchiniDiscord.Helpers
   alias BotchiniDiscord.Screens.Responses.Components
 
   @spec start_link(any()) :: GenServer.on_start()
@@ -24,7 +25,7 @@ defmodule BotchiniDiscord.Screens.Announcer do
     Process.flag(:trap_exit, true)
     Screens.subscribe()
 
-    # room id => {channel_id, message_id}
+    # room id => {channel_id, message_id, title}
     {:ok, %{}}
   end
 
@@ -32,7 +33,8 @@ defmodule BotchiniDiscord.Screens.Announcer do
   def handle_info({:screen_room, :live, %Room{} = room}, messages) do
     case announce(room) do
       {:ok, message} ->
-        {:noreply, Map.put(messages, room.id, {message.channel_id, message.id})}
+        Screens.subscribe(room.id)
+        {:noreply, Map.put(messages, room.id, {message.channel_id, message.id, room.title})}
 
       # The broadcaster still has the watch link from the /screen start reply
       :error ->
@@ -41,7 +43,19 @@ defmodule BotchiniDiscord.Screens.Announcer do
     end
   end
 
+  def handle_info({:screen_room, :updated, %Room{} = room}, messages) do
+    case Map.fetch(messages, room.id) do
+      {:ok, {channel_id, message_id, title}} when title != room.title ->
+        edit({channel_id, message_id}, live_message(room))
+        {:noreply, Map.put(messages, room.id, {channel_id, message_id, room.title})}
+
+      _ ->
+        {:noreply, messages}
+    end
+  end
+
   def handle_info({:screen_room, :ended, %Room{} = room}, messages) do
+    Screens.unsubscribe(room.id)
     {message, messages} = Map.pop(messages, room.id)
     if message, do: mark_ended(message, room)
 
@@ -56,14 +70,17 @@ defmodule BotchiniDiscord.Screens.Announcer do
     Enum.each(messages, fn {_room_id, message} -> mark_ended(message, nil) end)
   end
 
-  defp announce(room) do
-    message = %{
-      content: "🔴 <@#{room.owner_id}> is sharing their screen: **#{room.title}**",
+  defp live_message(room) do
+    %{
+      content:
+        "🔴 <@#{room.owner_id}> is sharing their screen: **#{Helpers.escape_markdown(room.title)}**",
       components: [Components.watch_screen(room)],
       allowed_mentions: :none
     }
+  end
 
-    case Message.create(String.to_integer(room.channel_id), message) do
+  defp announce(room) do
+    case Message.create(String.to_integer(room.channel_id), live_message(room)) do
       {:ok, message} ->
         {:ok, message}
 
@@ -82,26 +99,31 @@ defmodule BotchiniDiscord.Screens.Announcer do
       :error
   end
 
-  defp mark_ended({channel_id, message_id}, room) do
+  defp mark_ended({channel_id, message_id, _title}, room) do
     content =
       case room do
-        %Room{} -> "⚫ <@#{room.owner_id}> stopped sharing their screen: **#{room.title}**"
-        nil -> "⚫ This screen share ended"
+        %Room{} ->
+          "⚫ <@#{room.owner_id}> stopped sharing their screen: **#{Helpers.escape_markdown(room.title)}**"
+
+        nil ->
+          "⚫ This screen share ended"
       end
 
-    message = %{content: content, components: [], allowed_mentions: :none}
+    edit({channel_id, message_id}, %{content: content, components: [], allowed_mentions: :none})
+  end
 
+  defp edit({channel_id, message_id}, message) do
     case Message.edit(channel_id, message_id, message) do
       {:ok, _message} ->
         :ok
 
       {:error, error} ->
-        Logger.warning("Failed to end screen share message: #{describe_error(error)}",
+        Logger.warning("Failed to edit screen share message: #{describe_error(error)}",
           error: inspect(error)
         )
     end
   rescue
-    error -> Logger.warning("Failed to end screen share message: " <> Exception.message(error))
+    error -> Logger.warning("Failed to edit screen share message: " <> Exception.message(error))
   end
 
   # Interactions reply without any channel permissions, so the bot can answer

@@ -28,11 +28,18 @@ defmodule Botchini.Screens.Room do
           owner_name: String.t(),
           started_at: DateTime.t(),
           live?: boolean(),
-          viewer_count: non_neg_integer()
+          viewer_count: non_neg_integer(),
+          source: source() | nil,
+          custom_title?: boolean()
         }
 
+  @type source :: :screen | :window | :tab
+
   @enforce_keys [:id, :broadcast_key, :title, :guild_id, :channel_id, :owner_id, :owner_name]
-  defstruct @enforce_keys ++ [:started_at, live?: false, viewer_count: 0]
+  defstruct @enforce_keys ++
+              [:started_at, :source, live?: false, viewer_count: 0, custom_title?: false]
+
+  @max_title_length 100
 
   # Keyframes are expensive for the broadcaster, so viewers joining or
   # recovering from packet loss at the same time share a single request
@@ -63,6 +70,18 @@ defmodule Botchini.Screens.Room do
   def add_ice_candidate(room_id, candidate) do
     GenServer.cast(via(room_id), {:ice_candidate, self(), candidate})
   end
+
+  @spec set_title(String.t(), String.t()) :: :ok | {:error, :not_found}
+  def set_title(room_id, title) when is_binary(title), do: call(room_id, {:set_title, title})
+
+  @spec set_source(String.t(), source()) :: :ok | {:error, :not_found}
+  def set_source(room_id, source) when source in [:screen, :window, :tab],
+    do: call(room_id, {:set_source, source})
+
+  @spec default_title(String.t(), source() | nil) :: String.t()
+  def default_title(owner_name, :tab), do: "#{owner_name}'s tab"
+  def default_title(owner_name, :window), do: "#{owner_name}'s window"
+  def default_title(owner_name, _source), do: "#{owner_name}'s screen"
 
   @spec info(String.t()) :: {:ok, t()} | {:error, :not_found}
   def info(room_id), do: call(room_id, :info)
@@ -134,6 +153,28 @@ defmodule Botchini.Screens.Room do
 
   @impl true
   def handle_call(:info, _from, state), do: {:reply, {:ok, state.room}, state}
+
+  def handle_call({:set_title, title}, _from, state) do
+    changes =
+      case title |> String.trim() |> String.slice(0, @max_title_length) do
+        "" ->
+          %{title: default_title(state.room.owner_name, state.room.source), custom_title?: false}
+
+        title ->
+          %{title: title, custom_title?: true}
+      end
+
+    {:reply, :ok, rename(state, changes)}
+  end
+
+  def handle_call({:set_source, source}, _from, %{room: room} = state) do
+    changes =
+      if room.custom_title?,
+        do: %{source: source},
+        else: %{source: source, title: default_title(room.owner_name, source)}
+
+    {:reply, :ok, rename(state, changes)}
+  end
 
   def handle_call({:stop, reason}, _from, state) do
     {:stop, :normal, :ok, %{state | end_reason: reason}}
@@ -497,6 +538,15 @@ defmodule Botchini.Screens.Room do
     else
       %{state | peak_viewers: max(state.peak_viewers, count)}
       |> update_room(%{viewer_count: count}, :updated)
+    end
+  end
+
+  defp rename(state, changes) do
+    if Map.take(state.room, Map.keys(changes)) == changes do
+      state
+    else
+      Logger.metadata(screen_title: changes[:title] || state.room.title)
+      update_room(state, changes, :updated)
     end
   end
 

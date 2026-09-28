@@ -8,6 +8,7 @@ defmodule BotchiniDiscord.Screens.Responses.Components do
   alias Nostrum.Constants.{ButtonStyle, ComponentType}
 
   alias Botchini.Screens.Room
+  alias BotchiniWeb.ScreenLive.Guild
 
   @spec watch_screen(Room.t(), String.t()) :: map()
   def watch_screen(room, label \\ "Watch") do
@@ -28,6 +29,17 @@ defmodule BotchiniDiscord.Screens.Responses.Components do
       ]
     }
   end
+
+  @spec watch_all_screens(String.t()) :: map()
+  def watch_all_screens(guild_id) do
+    %{
+      type: ComponentType.action_row(),
+      components: [link_button("Watch all", watch_all_url(guild_id))]
+    }
+  end
+
+  @spec watch_all_url(String.t()) :: String.t()
+  def watch_all_url(guild_id), do: url(~p"/screens") <> "#" <> Guild.sign_token(guild_id)
 
   @spec watch_url(Room.t()) :: String.t()
   def watch_url(room), do: url(~p"/screens/#{room.id}")

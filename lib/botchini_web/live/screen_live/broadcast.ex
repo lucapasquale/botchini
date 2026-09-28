@@ -16,7 +16,7 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
     socket = assign(socket, page_title: "Share your screen", room: nil)
 
     if connected?(socket) do
-      broadcast_key = get_connect_params(socket)["broadcast_key"]
+      broadcast_key = get_connect_params(socket)["key"]
 
       case Screens.get_room_for_broadcast(room_id, broadcast_key) do
         nil ->
@@ -65,6 +65,20 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
   def render(assigns) do
     ~H"""
     <.room_header room={@room} />
+
+    <form id="screen-title" phx-change="title" phx-submit="title" class="mb-4 flex items-center gap-2">
+      <label for="screen-title-input" class="text-sm text-gray-400">Title</label>
+      <input
+        id="screen-title-input"
+        name="title"
+        value={if @room.custom_title?, do: @room.title}
+        placeholder={Room.default_title(@room.owner_name, @room.source)}
+        maxlength="100"
+        autocomplete="off"
+        phx-debounce="blur"
+        class="w-full max-w-md rounded bg-gray-800 px-3 py-1.5 text-gray-200"
+      />
+    </form>
 
     <div
       :if={@announcement_failed?}
@@ -151,6 +165,16 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
     {:noreply, socket}
   end
 
+  def handle_event("title", %{"title" => title}, socket) when is_binary(title) do
+    Room.set_title(socket.assigns.room.id, title)
+    {:noreply, socket}
+  end
+
+  def handle_event("source", %{"surface" => surface}, socket) do
+    Room.set_source(socket.assigns.room.id, source(surface))
+    {:noreply, socket}
+  end
+
   def handle_event("stop", _params, socket) do
     Screens.stop_room(socket.assigns.room)
     {:noreply, socket}
@@ -170,6 +194,10 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
   end
 
   def handle_info({:screen_room, _event, room}, socket) do
-    {:noreply, assign(socket, room: room)}
+    {:noreply, assign(socket, room: room, page_title: room.title)}
   end
+
+  defp source("browser"), do: :tab
+  defp source("window"), do: :window
+  defp source(_surface), do: :screen
 end

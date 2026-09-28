@@ -8,13 +8,14 @@ const MAX_FRAMERATE = 60
 const RETRY_DELAY_MS = 2_000
 
 class Connection {
-  constructor(hook, onConnectionState) {
+  constructor(hook, onConnectionState, params = {}) {
     this.hook = hook
+    this.params = params
     this.pendingCandidates = []
     this.pc = new RTCPeerConnection({iceServers: JSON.parse(hook.el.dataset.iceServers)})
 
     this.pc.onicecandidate = ({candidate}) => {
-      if (candidate) hook.pushEvent("ice_candidate", candidate.toJSON())
+      if (candidate) hook.pushEvent("ice_candidate", {...params, ...candidate.toJSON()})
     }
     this.pc.onconnectionstatechange = () => onConnectionState(this.pc.connectionState)
   }
@@ -24,7 +25,7 @@ class Connection {
     await this.pc.setLocalDescription(await this.pc.createOffer())
 
     const reply = await new Promise(resolve => {
-      this.hook.pushEvent("offer", this.pc.localDescription.toJSON(), resolve)
+      this.hook.pushEvent("offer", {...this.params, ...this.pc.localDescription.toJSON()}, resolve)
     })
     if (reply.error) throw new Error(reply.error)
 
@@ -156,6 +157,7 @@ export const ScreenBroadcast = {
 
     this.preview.srcObject = stream
     this.showAudioNotice(stream)
+    this.pushEvent("source", {surface: stream.getVideoTracks()[0].getSettings().displaySurface ?? null})
     // Clicking the browser's own "Stop sharing" bar ends the share too
     stream.getVideoTracks()[0].addEventListener("ended", () => {
       if (this.stream === stream) this.stop()
@@ -231,10 +233,11 @@ export const ScreenBroadcast = {
 
 export const ScreenViewer = {
   mounted() {
-    this.video = this.el.querySelector("#screen-viewer-video")
-    this.status = document.getElementById("screen-viewer-status")
-    this.handleEvent("screen:ice_candidate", candidate => this.connection?.addRemoteCandidate(candidate))
-    this.handleEvent("screen:ended", () => this.teardown())
+    this.roomId = this.el.dataset.roomId
+    this.video = this.el.querySelector("video")
+    this.status = this.el.querySelector("[data-screen-status]")
+    this.handleEvent(`screen:${this.roomId}:ice_candidate`, candidate => this.connection?.addRemoteCandidate(candidate))
+    this.handleEvent(`screen:${this.roomId}:ended`, () => this.teardown())
     this.connect()
   },
 
@@ -249,7 +252,9 @@ export const ScreenViewer = {
   async connect() {
     this.connection?.close()
 
-    const connection = new Connection(this, state => this.onConnectionState(connection, state))
+    const connection = new Connection(this, state => this.onConnectionState(connection, state), {
+      room_id: this.roomId
+    })
     this.connection = connection
 
     connection.pc.addTransceiver("video", {direction: "recvonly"})

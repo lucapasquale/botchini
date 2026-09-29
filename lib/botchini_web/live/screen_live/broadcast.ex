@@ -10,7 +10,7 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
 
   alias Botchini.Screens
   alias Botchini.Screens.Room
-  alias BotchiniWeb.ScreenLive.Guild
+  alias BotchiniWeb.ScreenLive.{Guild, Soundboard}
 
   @impl true
   def mount(%{"id" => room_id}, _session, socket) do
@@ -27,12 +27,14 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
           Screens.subscribe(room.id)
 
           {:ok,
-           assign(socket,
+           socket
+           |> assign(
              room: room,
              status: :open,
              page_title: room.title,
              watch_url: nil
-           )}
+           )
+           |> Soundboard.mount(room.guild_id)}
       end
     else
       {:ok, assign(socket, status: :connecting)}
@@ -67,7 +69,12 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
     ~H"""
     <.room_header room={@room} />
 
-    <form id="screen-title" phx-change="title" phx-submit="title" class="mb-4 flex items-center gap-2">
+    <form
+      id="screen-title"
+      phx-change="title"
+      phx-submit="title"
+      class="mb-4 flex items-center gap-2"
+    >
       <label for="screen-title-input" class="text-sm text-gray-400">Title</label>
       <input
         id="screen-title-input"
@@ -140,6 +147,8 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
       pick a browser tab or your entire screen (on Windows) and turn on audio sharing in the
       picker. Firefox can't share sound.
     </p>
+
+    <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
     """
   end
 
@@ -171,7 +180,13 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
     {:noreply, socket}
   end
 
+  def handle_event("sound:" <> _action = event, params, socket),
+    do: {:noreply, Soundboard.handle_event(event, params, socket)}
+
   @impl true
+  def handle_info({:soundboard, message}, socket),
+    do: {:noreply, Soundboard.handle_info(message, socket)}
+
   def handle_info({:screens, _room_id, {:ice_candidate, candidate}}, socket) do
     {:noreply, push_event(socket, "screen:ice_candidate", candidate)}
   end

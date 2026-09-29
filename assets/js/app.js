@@ -22,6 +22,7 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import {ScreenBroadcast, ScreenViewer} from "./hooks/screen_share"
+import {Soundboard} from "./hooks/soundboard"
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
@@ -33,7 +34,7 @@ let liveSocket = new LiveSocket("/live", Socket, {
     if (location.hash.length > 1) params.key = location.hash.slice(1)
     return params
   },
-  hooks: {ScreenBroadcast, ScreenViewer}
+  hooks: {ScreenBroadcast, ScreenViewer, Soundboard}
 })
 
 // Show progress bar on live navigation and form submits

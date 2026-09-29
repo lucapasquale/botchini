@@ -10,6 +10,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
 
   alias Botchini.Screens
   alias Botchini.Screens.Room
+  alias BotchiniWeb.ScreenLive.Soundboard
 
   @token_salt "screens guild"
   @token_max_age 86_400
@@ -51,7 +52,10 @@ defmodule BotchiniWeb.ScreenLive.Guild do
          false <- expired?(signed_at, rooms) do
       Screens.subscribe_guild(guild_id)
 
-      {:ok, assign(socket, status: :open, rooms: Enum.filter(rooms, & &1.live?))}
+      {:ok,
+       socket
+       |> assign(status: :open, rooms: Enum.filter(rooms, & &1.live?))
+       |> Soundboard.mount(guild_id)}
     else
       false -> {:ok, assign(socket, status: :connecting)}
       _invalid -> {:ok, assign(socket, status: :not_found)}
@@ -87,11 +91,14 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     """
   end
 
+  # The soundboard works without anyone sharing, for members hanging out on the page
   def render(%{rooms: []} = assigns) do
     ~H"""
     <.notice title="Nobody is sharing their screen right now">
       Screen shares show up here as soon as they go live.
     </.notice>
+
+    <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
     """
   end
 
@@ -165,6 +172,8 @@ defmodule BotchiniWeb.ScreenLive.Guild do
       Streams start muted, use the video controls to turn the sound on. Pin streams to watch
       them bigger.
     </p>
+
+    <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
     """
   end
 
@@ -231,7 +240,13 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     {:noreply, socket}
   end
 
+  def handle_event("sound:" <> _action = event, params, socket),
+    do: {:noreply, Soundboard.handle_event(event, params, socket)}
+
   @impl true
+  def handle_info({:soundboard, message}, socket),
+    do: {:noreply, Soundboard.handle_info(message, socket)}
+
   def handle_info({:screens, room_id, {:ice_candidate, candidate}}, socket) do
     {:noreply, push_event(socket, "screen:#{room_id}:ice_candidate", candidate)}
   end

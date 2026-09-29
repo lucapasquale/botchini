@@ -234,4 +234,78 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       assert_reply(view, %{error: "Couldn't connect to the screen share"})
     end
   end
+
+  describe "soundboard" do
+    defp play(view, sound_id),
+      do: view |> element("#soundboard button[phx-value-sound=#{sound_id}]") |> render_click()
+
+    test "plays sounds for everyone on the guild's pages", %{conn: conn, room: room} do
+      {:ok, watch, _html} = live(conn, ~p"/screens/#{room.id}")
+      {:ok, guild, _html} = live_guild(conn, "1")
+      Screens.broadcast(%{room | live?: true}, :live)
+
+      play(watch, "volibero")
+
+      assert_push_event(watch, "sound:play", %{
+        id: "volibero",
+        emoji: "🐻",
+        url: "/sounds/volibero.mp3"
+      })
+
+      assert_push_event(guild, "sound:play", %{id: "volibero"})
+    end
+
+    test "works while nobody is sharing", %{conn: conn, room: room} do
+      Screens.stop_room(room)
+      {:ok, guild, html} = live_guild(conn, "1")
+      {:ok, other, _html} = live_guild(conn, "1")
+
+      assert html =~ "Nobody is sharing their screen right now"
+      play(guild, "mj")
+
+      assert_push_event(other, "sound:play", %{id: "mj"})
+    end
+
+    test "stops the sound for everyone", %{conn: conn, room: room} do
+      {:ok, watch, _html} = live(conn, ~p"/screens/#{room.id}")
+      {:ok, guild, _html} = live_guild(conn, "1")
+
+      watch |> element("#soundboard button[phx-click='sound:stop']") |> render_click()
+
+      assert_push_event(watch, "sound:stop", %{})
+      assert_push_event(guild, "sound:stop", %{})
+    end
+
+    test "doesn't play sounds for other guilds", %{conn: conn, room: room} do
+      {:ok, watch, _html} = live(conn, ~p"/screens/#{room.id}")
+      {:ok, other, _html} = live_guild(conn, "9")
+
+      play(watch, "volibero")
+
+      assert_push_event(watch, "sound:play", %{id: "volibero"})
+      refute_push_event(other, "sound:play", %{})
+    end
+
+    test "waits after three sounds in a row", %{conn: conn, room: room} do
+      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
+
+      for _ <- 1..3, do: play(view, "scooby-doo")
+
+      assert has_element?(view, "#soundboard [data-sounds-cooldown]")
+      assert has_element?(view, "#soundboard button[phx-value-sound=scooby-doo][disabled]")
+
+      # Clicks during the cooldown, e.g. from a stale page, don't play
+      render_click(view, "sound:play", %{"sound" => "scooby-doo"})
+      for _ <- 1..3, do: assert_push_event(view, "sound:play", %{id: "scooby-doo"})
+      refute_push_event(view, "sound:play", %{})
+    end
+
+    test "ignores unknown sounds", %{conn: conn, room: room} do
+      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
+
+      render_click(view, "sound:play", %{"sound" => "missing"})
+
+      refute_push_event(view, "sound:play", %{})
+    end
+  end
 end

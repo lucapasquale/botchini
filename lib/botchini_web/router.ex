@@ -1,6 +1,8 @@
 defmodule BotchiniWeb.Router do
   use BotchiniWeb, :router
 
+  import BotchiniWeb.Auth, only: [require_user: 2]
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -8,6 +10,10 @@ defmodule BotchiniWeb.Router do
     plug :put_root_layout, html: {BotchiniWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+  end
+
+  pipeline :logged_in do
+    plug :require_user
   end
 
   pipeline :api do
@@ -23,10 +29,25 @@ defmodule BotchiniWeb.Router do
 
     get "/", PageController, :home
 
-    live_session :screens, layout: {BotchiniWeb.Layouts, :screen} do
+    get "/auth/login", AuthController, :login
+    get "/auth/discord", AuthController, :discord
+    get "/auth/discord/callback", AuthController, :callback
+    get "/auth/return", AuthController, :return
+
+    # Broadcasters get in with the key of their link instead
+    live_session :broadcast, layout: {BotchiniWeb.Layouts, :screen} do
+      live "/screens/:id/broadcast", ScreenLive.Broadcast
+    end
+  end
+
+  scope "/", BotchiniWeb do
+    pipe_through [:browser, :logged_in]
+
+    live_session :watch,
+      layout: {BotchiniWeb.Layouts, :screen},
+      on_mount: {BotchiniWeb.Auth, :require_user} do
       live "/screens", ScreenLive.Guild
       live "/screens/:id", ScreenLive.Watch
-      live "/screens/:id/broadcast", ScreenLive.Broadcast
     end
   end
 

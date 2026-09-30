@@ -10,6 +10,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
 
   alias Botchini.Screens
   alias Botchini.Screens.Room
+  alias BotchiniWeb.Auth
   alias BotchiniWeb.ScreenLive.Soundboard
 
   @token_salt "screens guild"
@@ -49,7 +50,8 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     with true <- connected?(socket),
          {:ok, {guild_id, signed_at}} <- verify_token(get_connect_params(socket)["key"]),
          rooms = Screens.list_rooms(guild_id),
-         false <- expired?(signed_at, rooms) do
+         false <- expired?(signed_at, rooms),
+         :member <- Auth.member_status(socket, guild_id) do
       Screens.subscribe_guild(guild_id)
 
       {:ok,
@@ -58,6 +60,8 @@ defmodule BotchiniWeb.ScreenLive.Guild do
        |> Soundboard.mount(guild_id)}
     else
       false -> {:ok, assign(socket, status: :connecting)}
+      :not_member -> {:ok, assign(socket, status: :not_member)}
+      :error -> {:ok, assign(socket, status: :unavailable)}
       _invalid -> {:ok, assign(socket, status: :not_found)}
     end
   end
@@ -80,6 +84,12 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   def render(%{status: :connecting} = assigns) do
     ~H"""
     <.notice title="Connecting...">Looking for screen shares.</.notice>
+    """
+  end
+
+  def render(%{status: status} = assigns) when status in [:not_member, :unavailable] do
+    ~H"""
+    <.denied status={@status} />
     """
   end
 

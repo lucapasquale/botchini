@@ -120,6 +120,8 @@ The bot needs the following env_vars:
  - `PHX_HOST` : The endpoint your bot is running on, without `https://`
  - `DATABASE_URL` : The url to connect to your postgres db
  - `DISCORD_TOKEN` : Token for your Discord Bot
+ - `DISCORD_APP_ID` : Application ID of your Discord application
+ - `DISCORD_CLIENT_SECRET` : Client Secret of your Discord application (`OAuth2 > Reset Secret`), used to log users in on the screen sharing pages. Add `https://<PHX_HOST>/auth/discord/callback` to `OAuth2 > Redirects`
  - `YOUTUBE_API_KEY` : YouTube API key
  - `YOUTUBE_WEBHOOK_SECRET` : Secret string to be used for validating YouTube webhooks
  - `TWITCH_CLIENT_ID` : Client ID for your Twitch application

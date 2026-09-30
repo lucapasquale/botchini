@@ -15,7 +15,7 @@ defmodule BotchiniWeb.ScreenLive.Watch do
 
   @impl true
   def mount(%{"id" => room_id}, _session, socket) do
-    socket = assign(socket, room: nil, admin?: false, page_title: "Screen share")
+    socket = assign(socket, room: nil, admin?: false, online: [], page_title: "Screen share")
 
     case Screens.get_room(room_id) do
       nil -> {:ok, assign(socket, status: :not_found)}
@@ -30,6 +30,7 @@ defmodule BotchiniWeb.ScreenLive.Watch do
 
         socket
         |> assign(room: room, admin?: access == :admin, status: :open, page_title: room.title)
+        |> join_online(access == :admin)
         |> Soundboard.mount(room.guild_id)
 
       :not_member ->
@@ -37,6 +38,20 @@ defmodule BotchiniWeb.ScreenLive.Watch do
 
       :error ->
         assign(socket, status: :unavailable)
+    end
+  end
+
+  # Online members are the ones on any of the server's screen sharing pages
+  defp join_online(socket, admin?) do
+    if connected?(socket) do
+      guild_id = socket.assigns.room.guild_id
+
+      # Subscribing first, so the page also hears about its own arrival
+      Screens.subscribe_online(guild_id)
+      Screens.track_online(guild_id, socket.assigns.current_user, admin?)
+      assign(socket, online: Screens.list_online(guild_id))
+    else
+      socket
     end
   end
 
@@ -61,6 +76,8 @@ defmodule BotchiniWeb.ScreenLive.Watch do
       {@room.owner_name} stopped sharing their screen.
     </.notice>
 
+    <.online_list users={@online} current_user_id={@current_user.id} />
+
     <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
     """
   end
@@ -80,6 +97,8 @@ defmodule BotchiniWeb.ScreenLive.Watch do
     <p class="mt-2 text-sm text-gray-500">
       The stream starts muted, use the video controls to turn the sound on.
     </p>
+
+    <.online_list users={@online} current_user_id={@current_user.id} />
 
     <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
     """
@@ -116,6 +135,10 @@ defmodule BotchiniWeb.ScreenLive.Watch do
   @impl true
   def handle_info({:soundboard, message}, socket),
     do: {:noreply, Soundboard.handle_info(message, socket)}
+
+  def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, socket) do
+    {:noreply, assign(socket, online: Screens.list_online(socket.assigns.room.guild_id))}
+  end
 
   def handle_info({:screens, room_id, {:ice_candidate, candidate}}, socket) do
     {:noreply, push_event(socket, "screen:#{room_id}:ice_candidate", candidate)}

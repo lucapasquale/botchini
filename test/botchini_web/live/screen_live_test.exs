@@ -89,6 +89,60 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     end
   end
 
+  describe "online members on the watch page" do
+    test "lists who has the server's pages open", %{conn: conn, room: room} do
+      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
+      assert has_element?(view, "#online-10", "Ana")
+      assert has_element?(view, "#online-10", "(you)")
+
+      {:ok, guild_page, _html} = conn |> log_in_as("11", "Bia") |> live_guild("1")
+
+      # The pages share one list
+      eventually(fn ->
+        assert has_element?(view, "#online-list", "Online · 2")
+        assert has_element?(view, "#online-11", "Bia")
+        assert has_element?(guild_page, "#online-10", "Ana")
+      end)
+
+      GenServer.stop(guild_page.pid)
+
+      eventually(fn -> refute has_element?(view, "#online-11") end)
+    end
+
+    test "shows admins in their own color", %{conn: conn, room: room} do
+      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
+
+      patch_function(Discord, :check_member, :admin)
+      {:ok, _admin, _html} = conn |> log_in_as("11", "Bia") |> live(~p"/screens/#{room.id}")
+
+      eventually(fn -> assert has_element?(view, "#online-11.text-amber-300", "Bia") end)
+      refute has_element?(view, "#online-10.text-amber-300")
+    end
+
+    test "is still shown when the room ends", %{conn: conn, room: room} do
+      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
+
+      Screens.stop_room(room)
+
+      assert render(view) =~ "Screen share ended"
+      assert has_element?(view, "#online-10", "Ana")
+    end
+
+    test "leaves out other guilds and people that got denied", %{conn: conn, room: room} do
+      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
+      {:ok, _other_guild, _html} = conn |> log_in_as("11", "Bia") |> live_guild("9")
+
+      patch_function(Discord, :check_member, :not_member)
+      {:ok, _denied, _html} = conn |> log_in_as("12", "Caio") |> live(~p"/screens/#{room.id}")
+
+      Process.sleep(50)
+
+      assert render(view) =~ "Online · 1"
+      refute has_element?(view, "#online-11")
+      refute has_element?(view, "#online-12")
+    end
+  end
+
   describe "server membership" do
     test "lets members watch a room", %{conn: conn, room: room} do
       {:ok, _view, html} = live(conn, ~p"/screens/#{room.id}")
@@ -289,6 +343,57 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       assert Screens.get_room(room.id).title == "Speedrun"
     end
 
+    test "tells the broadcaster's browser when viewers join and leave", %{conn: conn, room: room} do
+      {:ok, view, _html} =
+        conn
+        |> put_connect_params(%{"key" => room.broadcast_key})
+        |> live(~p"/screens/#{room.id}/broadcast")
+
+      Screens.broadcast(%{room | viewer_count: 1}, :updated)
+      assert_push_event(view, "screen:viewer_joined", %{})
+
+      Screens.broadcast(%{room | viewer_count: 3}, :updated)
+      assert_push_event(view, "screen:viewer_joined", %{})
+
+      Screens.broadcast(%{room | viewer_count: 2}, :updated)
+      assert_push_event(view, "screen:viewer_left", %{})
+
+      Screens.broadcast(%{room | viewer_count: 0}, :updated)
+      assert_push_event(view, "screen:viewer_left", %{})
+    end
+
+    test "stays quiet when the viewers didn't change", %{conn: conn, room: room} do
+      {:ok, view, _html} =
+        conn
+        |> put_connect_params(%{"key" => room.broadcast_key})
+        |> live(~p"/screens/#{room.id}/broadcast")
+
+      Screens.broadcast(%{room | viewer_count: 1}, :updated)
+      assert_push_event(view, "screen:viewer_joined", %{})
+
+      Screens.broadcast(%{room | viewer_count: 1, title: "Speedrun"}, :updated)
+      assert render(view) =~ "Speedrun"
+
+      refute_push_event(view, "screen:viewer_joined", %{}, 50)
+      refute_push_event(view, "screen:viewer_left", %{}, 50)
+    end
+
+    test "doesn't count everyone leaving as viewers leaving when the room ends",
+         %{conn: conn, room: room} do
+      {:ok, view, _html} =
+        conn
+        |> put_connect_params(%{"key" => room.broadcast_key})
+        |> live(~p"/screens/#{room.id}/broadcast")
+
+      Screens.broadcast(%{room | viewer_count: 2}, :updated)
+      assert_push_event(view, "screen:viewer_joined", %{})
+
+      Screens.broadcast(%{room | viewer_count: 0}, :ended)
+
+      assert render(view) =~ "Screen share ended"
+      refute_push_event(view, "screen:viewer_left", %{}, 50)
+    end
+
     test "doesn't check the key before connecting", %{conn: conn, room: room} do
       html = conn |> get(~p"/screens/#{room.id}/broadcast") |> html_response(200)
 
@@ -393,6 +498,115 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       render_click(view, "pin", %{"room_id" => "missing"})
 
       refute has_element?(view, "#screen-#{room.id}.order-2")
+    end
+
+    defp log_in_as(conn, id, name),
+      do: init_test_session(conn, %{"discord_user_id" => id, "discord_user_name" => name})
+
+    # Presence changes reach the page as messages, so they're not there right away
+    defp eventually(fun, attempts \\ 20) do
+      fun.()
+    rescue
+      error in ExUnit.AssertionError ->
+        if attempts == 0 do
+          reraise error, __STACKTRACE__
+        else
+          Process.sleep(25)
+          eventually(fun, attempts - 1)
+        end
+    end
+
+    test "lists who is online, as they come and go", %{conn: conn} do
+      {:ok, view, html} = live_guild(conn, "1")
+      assert html =~ "Online · 1"
+      assert has_element?(view, "#online-10", "Ana")
+      assert has_element?(view, "#online-10", "(you)")
+
+      {:ok, other, _html} = conn |> log_in_as("11", "Bia") |> live_guild("1")
+
+      eventually(fn ->
+        assert has_element?(view, "#online-list", "Online · 2")
+        assert has_element?(view, "#online-11", "Bia")
+        refute has_element?(view, "#online-11", "(you)")
+      end)
+
+      GenServer.stop(other.pid)
+
+      eventually(fn ->
+        assert has_element?(view, "#online-list", "Online · 1")
+        refute has_element?(view, "#online-11")
+      end)
+    end
+
+    test "lists members with several tabs open once", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      {:ok, tab, _html} = live_guild(conn, "1")
+
+      eventually(fn -> assert has_element?(view, "#online-list", "Online · 1") end)
+
+      # They're still online while one tab is left
+      GenServer.stop(tab.pid)
+      Process.sleep(50)
+      render(view)
+
+      assert has_element?(view, "#online-list", "Online · 1")
+      assert has_element?(view, "#online-10")
+    end
+
+    test "is shown while nobody is sharing", %{conn: conn} do
+      {:ok, view, html} = live_guild(conn, "1")
+
+      assert html =~ "Nobody is sharing their screen right now"
+      assert has_element?(view, "#online-10", "Ana")
+    end
+
+    test "is shown next to the screens", %{conn: conn, room: room} do
+      view = live_guild_with_room(conn, room)
+
+      assert has_element?(view, "#screen-#{room.id}")
+      assert has_element?(view, "#online-10", "Ana")
+    end
+
+    test "only has the guild's members that got in", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      {:ok, _other_guild, _html} = conn |> log_in_as("11", "Bia") |> live_guild("9")
+
+      patch_function(Discord, :check_member, :not_member)
+      {:ok, _denied, _html} = conn |> log_in_as("12", "Caio") |> live_guild("1")
+
+      # Once the others had time to show up, if they were going to
+      Process.sleep(50)
+      html = render(view)
+
+      assert html =~ "Online · 1"
+      refute html =~ "Bia"
+      refute html =~ "Caio"
+    end
+
+    test "shows admins in their own color", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      refute has_element?(view, "#online-10.text-amber-300")
+
+      patch_function(Discord, :check_member, :admin)
+      {:ok, _admin, _html} = conn |> log_in_as("11", "Bia") |> live_guild("1")
+
+      eventually(fn ->
+        assert has_element?(view, "#online-11.text-amber-300", "Bia")
+        assert has_element?(view, "#online-11", "(admin)")
+      end)
+
+      # Members keep the usual color
+      refute has_element?(view, "#online-10.text-amber-300")
+      refute has_element?(view, "#online-10", "(admin)")
+    end
+
+    test "shows a member as admin while any of their tabs is one", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      patch_function(Discord, :check_member, :admin)
+      {:ok, _tab, _html} = live_guild(conn, "1")
+
+      eventually(fn -> assert has_element?(view, "#online-10.text-amber-300") end)
     end
 
     test "doesn't show other guilds' rooms", %{conn: conn, room: room} do

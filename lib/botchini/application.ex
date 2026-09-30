@@ -28,6 +28,7 @@ defmodule Botchini.Application do
         # Screen sharing rooms
         {Registry, keys: :unique, name: Botchini.Screens.Registry},
         {DynamicSupervisor, name: Botchini.Screens.RoomSupervisor, strategy: :one_for_one},
+        Botchini.Screens.Presence,
         # Start a worker by calling: Botchini.Worker.start_link(arg)
         # {Botchini.Worker, arg},
         # Start to serve requests, typically the last entry

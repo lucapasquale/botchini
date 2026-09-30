@@ -119,6 +119,45 @@ defmodule BotchiniWeb.ScreenLive.Components do
     """
   end
 
+  attr :users, :list,
+    required: true,
+    doc: "Members with the page open, as `%{id, name, admin?}`"
+
+  attr :current_user_id, :string, required: true
+
+  @doc """
+  Members that have one of the server's screen sharing pages open right now.
+  Admins get their own color
+  """
+  def online_list(assigns) do
+    ~H"""
+    <section id="online-list" aria-label="Online" class="mt-6">
+      <h2 class="mb-2 text-sm font-semibold text-gray-400">Online · {length(@users)}</h2>
+
+      <ul class="flex flex-wrap gap-2">
+        <li
+          :for={user <- @users}
+          id={"online-#{user.id}"}
+          title={if user.admin?, do: "Admin"}
+          class={[
+            "flex items-center gap-2 rounded-full px-3 py-1 text-sm",
+            if(user.admin?, do: "bg-amber-500/20 text-amber-300", else: "bg-gray-800")
+          ]}
+        >
+          <span
+            class={["h-2 w-2 rounded-full", if(user.admin?, do: "bg-amber-400", else: "bg-green-500")]}
+            aria-hidden="true"
+          ></span>
+          {user.name}<span :if={user.admin?} class="sr-only"> (admin)</span><span
+            :if={user.id == @current_user_id}
+            class="text-gray-500"
+          >(you)</span>
+        </li>
+      </ul>
+    </section>
+    """
+  end
+
   attr :status, :atom, values: [:not_member, :unavailable], required: true
 
   def denied(%{status: :not_member} = assigns) do

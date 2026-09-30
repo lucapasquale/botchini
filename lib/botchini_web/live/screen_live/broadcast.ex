@@ -200,7 +200,24 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
   end
 
   def handle_info({:screen_room, _event, room}, socket) do
-    {:noreply, assign(socket, room: room, page_title: room.title)}
+    {:noreply,
+     socket
+     |> notify_viewer_change(room)
+     |> assign(room: room, page_title: room.title)}
+  end
+
+  # The browser plays a different sound for viewers coming and going
+  defp notify_viewer_change(socket, room) do
+    cond do
+      room.viewer_count > socket.assigns.room.viewer_count ->
+        push_event(socket, "screen:viewer_joined", %{})
+
+      room.viewer_count < socket.assigns.room.viewer_count ->
+        push_event(socket, "screen:viewer_left", %{})
+
+      true ->
+        socket
+    end
   end
 
   defp source("browser"), do: :tab

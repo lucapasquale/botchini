@@ -44,6 +44,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         page_title: "Screen shares",
         rooms: [],
         pinned: MapSet.new(),
+        online: [],
         admin?: false,
         full_width?: true
       )
@@ -54,10 +55,19 @@ defmodule BotchiniWeb.ScreenLive.Guild do
          false <- expired?(signed_at, rooms),
          access when access in [:member, :admin] <- Auth.member_status(socket, guild_id) do
       Screens.subscribe_guild(guild_id)
+      # Subscribing first, so the page also hears about its own arrival
+      Screens.subscribe_online(guild_id)
+      Screens.track_online(guild_id, socket.assigns.current_user, access == :admin)
 
       {:ok,
        socket
-       |> assign(status: :open, admin?: access == :admin, rooms: Enum.filter(rooms, & &1.live?))
+       |> assign(
+         status: :open,
+         guild_id: guild_id,
+         online: Screens.list_online(guild_id),
+         admin?: access == :admin,
+         rooms: Enum.filter(rooms, & &1.live?)
+       )
        |> Soundboard.mount(guild_id)}
     else
       false -> {:ok, assign(socket, status: :connecting)}
@@ -108,6 +118,8 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     <.notice title="Nobody is sharing their screen right now">
       Screen shares show up here as soon as they go live.
     </.notice>
+
+    <.online_list users={@online} current_user_id={@current_user.id} />
 
     <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
     """
@@ -189,6 +201,8 @@ defmodule BotchiniWeb.ScreenLive.Guild do
       Streams start muted, use the video controls to turn the sound on. Pin streams to watch
       them bigger.
     </p>
+
+    <.online_list users={@online} current_user_id={@current_user.id} />
 
     <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
     """
@@ -275,6 +289,10 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   @impl true
   def handle_info({:soundboard, message}, socket),
     do: {:noreply, Soundboard.handle_info(message, socket)}
+
+  def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, socket) do
+    {:noreply, assign(socket, online: Screens.list_online(socket.assigns.guild_id))}
+  end
 
   def handle_info({:screens, room_id, {:ice_candidate, candidate}}, socket) do
     {:noreply, push_event(socket, "screen:#{room_id}:ice_candidate", candidate)}

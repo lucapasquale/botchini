@@ -6,7 +6,7 @@ defmodule Botchini.Screens do
   """
 
   alias Botchini.Repo
-  alias Botchini.Screens.{Room, RoomSupervisor}
+  alias Botchini.Screens.{Presence, Room, RoomSupervisor}
   alias Botchini.Screens.Schema.{StreamChannel, StreamKey}
 
   @topic "screens"
@@ -189,6 +189,37 @@ defmodule Botchini.Screens do
   def subscribe_guild(guild_id),
     do: Phoenix.PubSub.subscribe(Botchini.PubSub, guild_topic(guild_id))
 
+  @doc """
+  Lists the members with the guild's page open. The page gets a `presence_diff`
+  broadcast whenever the list changes, once it called `subscribe_online/1`
+  """
+  @spec list_online(String.t()) :: [%{id: String.t(), name: String.t(), admin?: boolean()}]
+  def list_online(guild_id) do
+    guild_id
+    |> online_topic()
+    |> Presence.list()
+    |> Enum.map(fn {user_id, %{metas: [meta | _] = metas}} ->
+      %{id: user_id, name: meta.name, admin?: Enum.any?(metas, & &1.admin?)}
+    end)
+    |> Enum.sort_by(&{String.downcase(&1.name), &1.id})
+  end
+
+  @spec subscribe_online(String.t()) :: :ok | {:error, term()}
+  def subscribe_online(guild_id),
+    do: Phoenix.PubSub.subscribe(Botchini.PubSub, online_topic(guild_id))
+
+  @doc """
+  Marks the member as online in the guild for as long as the calling process lives.
+  Whether they're an admin is checked when they open the page, and kept until they leave
+  """
+  @spec track_online(String.t(), %{id: String.t(), name: String.t()}, boolean()) :: :ok
+  def track_online(guild_id, %{id: user_id, name: name}, admin?) do
+    {:ok, _ref} =
+      Presence.track(self(), online_topic(guild_id), user_id, %{name: name, admin?: admin?})
+
+    :ok
+  end
+
   @doc false
   @spec broadcast(Room.t(), :live | :updated | :ended) :: :ok
   def broadcast(%Room{} = room, event) do
@@ -213,6 +244,7 @@ defmodule Botchini.Screens do
 
   defp room_topic(room_id), do: "#{@topic}:#{room_id}"
   defp guild_topic(guild_id), do: "#{@topic}:guild:#{guild_id}"
+  defp online_topic(guild_id), do: "#{@topic}:online:#{guild_id}"
 
   # 128 bits of randomness, so links can't be guessed or enumerated
   defp random_id, do: 16 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)

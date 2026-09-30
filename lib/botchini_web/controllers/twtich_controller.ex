@@ -5,6 +5,7 @@ defmodule BotchiniWeb.TwitchController do
 
   alias Botchini.{Creators, Services}
   alias BotchiniDiscord.Creators.Responses.{Components, Embeds}
+  alias Nostrum.Api.Message
 
   @spec callback(Plug.Conn.t(), any) :: Plug.Conn.t()
   def callback(conn, _params) do
@@ -92,10 +93,7 @@ defmodule BotchiniWeb.TwitchController do
         follower_count: length(followers)
       )
 
-      Enum.each(followers, fn follower ->
-        Task.start(fn -> notify_followers(creator, follower, {user, stream}) end)
-      end)
-
+      notify_all(creator, followers, {user, stream})
       text(conn, "ok")
     else
       _ ->
@@ -107,11 +105,17 @@ defmodule BotchiniWeb.TwitchController do
     end
   end
 
+  defp notify_all(creator, followers, content) do
+    Enum.each(followers, fn follower ->
+      Task.start(fn -> notify_followers(creator, follower, content) end)
+    end)
+  end
+
   defp notify_followers(creator, follower, {user, stream}) do
     channel_id = follower.discord_channel_id
 
     msg_response =
-      Nostrum.Api.Message.create(
+      Message.create(
         String.to_integer(channel_id),
         embed: Embeds.twitch_stream_online(user, stream),
         components: [Components.unfollow_creator(creator.service, creator.service_id)]

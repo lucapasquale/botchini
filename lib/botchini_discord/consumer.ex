@@ -9,6 +9,7 @@ defmodule BotchiniDiscord.Consumer do
 
   alias Botchini.Discord
   alias BotchiniDiscord.{Interactions, Music}
+  alias Nostrum.Api.Self
 
   def handle_event({:READY, _data, _ws_state}) do
     # READY is sent again every time the gateway starts a new session,
@@ -19,7 +20,7 @@ defmodule BotchiniDiscord.Consumer do
     end
 
     version = to_string(Application.spec(:botchini, :vsn))
-    Nostrum.Api.Self.update_status(:online, {:playing, "on v#{version}"})
+    Self.update_status(:online, {:playing, "on v#{version}"})
 
     Logger.info("Bot started!", version: version)
   end

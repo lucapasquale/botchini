@@ -1,4 +1,9 @@
 defmodule Botchini.PromEx do
+  @moduledoc """
+  Prometheus metrics of the app, Phoenix, LiveView, the database and the BEAM,
+  with their Grafana dashboards
+  """
+
   use PromEx, otp_app: :botchini
 
   @impl true

@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
-/* With the pointer on, its dot replaces the mouse cursor, except over the floating
-   menu, and dragging draws instead of selecting text */
+/* With the pointer on, its dot replaces the mouse cursor, except over the menus,
+   and dragging draws instead of selecting text */
 html.pointer-on,
-html.pointer-on *:not(#soundboard, #soundboard *) {
+html.pointer-on *:not([data-pointer-menu], [data-pointer-menu] *) {
   cursor: none !important;
 }
 
-/* The cursor is inherited, so the menu brings it back itself. Its handles keep
-   their own grab and resize cursors */
-html.pointer-on #soundboard {
+/* The cursor is inherited, so the menus bring it back themselves. Their handles
+   keep their own grab and resize cursors */
+html.pointer-on [data-pointer-menu] {
   cursor: auto !important;
 }
 
@@ -19,4 +19,10 @@ html.pointer-on body {
 
 html.pointer-on [data-pointer-shield] {
   display: block;
+}
+
+/* Screens in the strip under the main one are previews that a click makes the
+   main one, so their video controls stay hidden */
+[data-main="false"] video::-webkit-media-controls {
+  display: none !important;
 }

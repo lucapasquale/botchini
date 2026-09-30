@@ -91,17 +91,25 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       view
     end
 
-    test "is a single collapsed line until opened", %{conn: conn, me: me} do
-      {:ok, view, _html} = live_guild(conn, "1")
+    test "is a single collapsed line until opened on the broadcast page", %{
+      conn: conn,
+      room: room,
+      n: n
+    } do
+      view = broadcast_view(conn, room)
+      Activity.record("1", :stream_started, "Luca#{n}")
 
       assert has_element?(view, "#activity-toggle[aria-expanded=false]")
       assert has_element?(view, "#activity-list[hidden]")
-      eventually(fn -> assert has_element?(view, "#activity-list", "#{me} joined") end)
+
+      eventually(fn ->
+        assert has_element?(view, "#activity-list", "Luca#{n} started streaming")
+      end)
     end
 
     # Tailwind keeps [hidden] elements hidden whatever their inline display is
-    test "opens by removing the list's hidden attribute", %{conn: conn} do
-      {:ok, view, _html} = live_guild(conn, "1")
+    test "opens by removing the list's hidden attribute", %{conn: conn, room: room} do
+      view = broadcast_view(conn, room)
 
       [click] =
         view
@@ -132,13 +140,14 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
       {:ok, view, _html} = live_guild(conn, "1")
 
-      assert has_element?(view, "#activity-list", "Luca#{n} started streaming")
-      assert has_element?(view, "#activity-list", "Bia#{n} played 🐻 Volibero")
-      refute has_element?(view, "#activity-list", "Caio#{n}")
+      assert has_element?(view, "#chat-lines", "Luca#{n} started streaming")
+      assert has_element?(view, "#chat-lines", "Bia#{n} played 🐻 Volibero")
+      refute has_element?(view, "#chat-lines", "Caio#{n}")
 
+      # Like a chat, the latest line is at the bottom
       html = render(view)
 
-      assert :binary.match(html, "Bia#{n} played") < :binary.match(html, "Luca#{n} started")
+      assert :binary.match(html, "Luca#{n} started") < :binary.match(html, "Bia#{n} played")
     end
 
     test "says when nothing happened" do
@@ -155,12 +164,8 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       Activity.record("1", :stream_ended, "Luca#{n}", "closed by an admin")
 
       eventually(fn ->
-        for view <- [guild_page, broadcast_page] do
-          assert has_element?(
-                   view,
-                   "#activity-list",
-                   "Luca#{n} stopped streaming (closed by an admin)"
-                 )
+        for {view, list} <- [{guild_page, "#chat-lines"}, {broadcast_page, "#activity-list"}] do
+          assert has_element?(view, list, "Luca#{n} stopped streaming (closed by an admin)")
         end
       end)
     end
@@ -169,39 +174,39 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       {:ok, view, _html} = live_guild(conn, "1")
       {:ok, _other, _html} = conn |> log_in_other(n, "Bia") |> live_guild("1")
 
-      eventually(fn -> assert has_element?(view, "#activity-list", "Bia#{n} joined") end)
+      eventually(fn -> assert has_element?(view, "#chat-lines", "Bia#{n} joined") end)
     end
 
     test "doesn't show more tabs of someone who is online as joining", %{conn: conn, n: n} do
       {:ok, view, _html} = live_guild(conn, "1")
       bia = log_in_other(conn, n, "Bia")
       {:ok, _tab, _html} = live_guild(bia, "1")
-      eventually(fn -> assert has_element?(view, "#activity-list", "Bia#{n} joined") end)
+      eventually(fn -> assert has_element?(view, "#chat-lines", "Bia#{n} joined") end)
 
       {:ok, _other_tab, _html} = live_guild(bia, "1")
       Process.sleep(100)
 
       # Rendering an element that matches more than once raises
-      assert view |> element("#activity-list li", "Bia#{n} joined") |> render() =~
+      assert view |> element("#chat-lines li", "Bia#{n} joined") |> render() =~
                "Bia#{n} joined"
     end
 
     test "shows who left, but not who just reloaded the page", %{conn: conn, n: n} do
       {:ok, view, _html} = live_guild(conn, "1")
       {:ok, bia, _html} = conn |> log_in_other(n, "Bia") |> live_guild("1")
-      eventually(fn -> assert has_element?(view, "#activity-list", "Bia#{n} joined") end)
+      eventually(fn -> assert has_element?(view, "#chat-lines", "Bia#{n} joined") end)
 
       # Reloading closes the page and opens it again right away
       GenServer.stop(bia.pid)
       {:ok, _bia_again, _html} = conn |> log_in_other(n, "Bia") |> live_guild("1")
       Process.sleep(300)
-      refute has_element?(view, "#activity-list", "Bia#{n} left")
+      refute has_element?(view, "#chat-lines", "Bia#{n} left")
 
       {:ok, caio, _html} = conn |> log_in_other(n, "Caio") |> live_guild("1")
-      eventually(fn -> assert has_element?(view, "#activity-list", "Caio#{n} joined") end)
+      eventually(fn -> assert has_element?(view, "#chat-lines", "Caio#{n} joined") end)
 
       GenServer.stop(caio.pid)
-      eventually(fn -> assert has_element?(view, "#activity-list", "Caio#{n} left") end)
+      eventually(fn -> assert has_element?(view, "#chat-lines", "Caio#{n} left") end)
     end
 
     test "shows the sounds members play and stop", %{conn: conn, n: n} do
@@ -211,13 +216,13 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       render_hook(player, "sound:play", %{"sound" => "volibero"})
 
       eventually(fn ->
-        assert has_element?(watcher, "#activity-list", "Bia#{n} played 🐻 Volibero")
+        assert has_element?(watcher, "#chat-lines", "Bia#{n} played 🐻 Volibero")
       end)
 
       render_hook(player, "sound:stop", %{})
 
       eventually(fn ->
-        assert has_element?(watcher, "#activity-list", "Bia#{n} stopped the sounds")
+        assert has_element?(watcher, "#chat-lines", "Bia#{n} stopped the sounds")
       end)
     end
 
@@ -228,7 +233,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       render_hook(broadcast_page, "sound:play", %{"sound" => "volibero"})
 
       eventually(fn ->
-        assert has_element?(watcher, "#activity-list", "Luca played 🐻 Volibero")
+        assert has_element?(watcher, "#chat-lines", "Luca played 🐻 Volibero")
       end)
     end
 
@@ -238,7 +243,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       render_hook(view, "sound:play", %{"sound" => "unknown"})
       Process.sleep(50)
 
-      refute has_element?(view, "#activity-list", "Ana#{n} played")
+      refute has_element?(view, "#chat-lines", "Ana#{n} played")
     end
   end
 
@@ -500,46 +505,77 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       refute render(view) =~ "Elden Ring"
     end
 
-    test "pinned rooms get big and the others shrink below them", %{conn: conn, room: room} do
-      other = %{room | id: "other", title: "Hades", started_at: DateTime.utc_now()}
+    test "watches the first screen big, and another one when clicked", %{conn: conn, room: room} do
+      other = %{
+        room
+        | id: "other",
+          title: "Hades",
+          owner_name: "Bia",
+          started_at: DateTime.utc_now()
+      }
+
       {:ok, view, _html} = live_guild(conn, "1")
       Screens.broadcast(%{room | live?: true}, :live)
       Screens.broadcast(%{other | live?: true}, :live)
 
-      refute has_element?(view, "#screen-#{room.id}.order-2")
-      refute has_element?(view, "#screen-other.order-2")
+      assert has_element?(view, "#screen-#{room.id}[data-main=true]")
+      assert has_element?(view, "#screen-other[data-main=false]")
+      assert has_element?(view, "#watching", "Elden Ring")
+      assert has_element?(view, "#watching", "Shared by Luca")
+      refute has_element?(view, "#screen-#{room.id} button[phx-click=watch]")
 
-      view |> element("#screen-#{room.id} button[phx-click=pin]") |> render_click()
+      view |> element("#screen-other button[phx-click=watch]") |> render_click()
 
-      refute has_element?(view, "#screen-#{room.id}.order-2")
-      assert has_element?(view, "#screen-#{room.id} button[aria-pressed=true]")
-      assert has_element?(view, "#screen-other.order-2")
-
-      # Unpinning brings back the grid of equal screens
-      view |> element("#screen-#{room.id} button[phx-click=pin]") |> render_click()
-      refute has_element?(view, "#screen-other.order-2")
+      assert has_element?(view, "#screen-other[data-main=true]")
+      assert has_element?(view, "#screen-#{room.id}[data-main=false]")
+      assert has_element?(view, "#watching", "Hades")
+      assert has_element?(view, "#watching", "Shared by Bia")
     end
 
-    test "forgets pins of rooms that ended", %{conn: conn, room: room} do
+    test "goes back to the first screen when the watched one ends", %{conn: conn, room: room} do
       other = %{room | id: "other", title: "Hades", started_at: DateTime.utc_now()}
       {:ok, view, _html} = live_guild(conn, "1")
       Screens.broadcast(%{room | live?: true}, :live)
       Screens.broadcast(%{other | live?: true}, :live)
 
-      view |> element("#screen-other button[phx-click=pin]") |> render_click()
+      view |> element("#screen-other button[phx-click=watch]") |> render_click()
       Screens.broadcast(other, :ended)
 
-      refute has_element?(view, "#screen-#{room.id}.order-2")
-      assert has_element?(view, "#screen-#{room.id} button[aria-pressed=false]")
+      assert has_element?(view, "#screen-#{room.id}[data-main=true]")
+      assert has_element?(view, "#watching", "Elden Ring")
     end
 
-    test "can't pin rooms that aren't on the page", %{conn: conn, room: room} do
+    test "can't watch rooms that aren't on the page", %{conn: conn, room: room} do
       {:ok, view, _html} = live_guild(conn, "1")
       Screens.broadcast(%{room | live?: true}, :live)
 
-      render_click(view, "pin", %{"room_id" => "missing"})
+      render_click(view, "watch", %{"room_id" => "missing"})
 
-      refute has_element?(view, "#screen-#{room.id}.order-2")
+      assert has_element?(view, "#screen-#{room.id}[data-main=true]")
+    end
+
+    test "doesn't show how many are watching", %{conn: conn, room: room} do
+      view = live_guild_with_room(conn, room)
+
+      Screens.broadcast(%{room | live?: true, viewer_count: 2}, :updated)
+
+      refute render(view) =~ "2 viewers"
+    end
+
+    test "has the soundboard, the pointer and the chat in the bar", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      assert has_element?(view, "#screen-bar #soundboard-toggle[aria-controls=soundboard-panel]")
+      assert has_element?(view, "#screen-bar #soundboard-panel[hidden]")
+      assert has_element?(view, "#screen-bar #pointer-toggle[aria-controls=pointer-panel]")
+      assert has_element?(view, "#screen-bar #chat-toggle[aria-pressed=true]")
+    end
+
+    test "lists who is online in a popover", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      assert has_element?(view, "#online-toggle[aria-controls=online-list]", "1 online")
+      assert has_element?(view, "#online-list[hidden]")
     end
 
     defp log_in_as(conn, id, name),
@@ -669,7 +705,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       view = live_guild_with_room(conn, room)
 
       Screens.broadcast(%{room | live?: true, viewer_count: 1}, :updated)
-      assert render(view) =~ "1 viewer"
+      render(view)
 
       refute_push_event(view, "screen:viewer_joined", %{}, 50)
     end
@@ -781,6 +817,84 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       render_click(view, "sound:play", %{"sound" => "missing"})
 
       refute_push_event(view, "sound:play", %{})
+    end
+  end
+
+  describe "chat" do
+    defp say(view, text), do: view |> element("#chat-form") |> render_submit(%{"text" => text})
+
+    test "sends messages to everyone on the guild's page", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      {:ok, other, _html} = conn |> log_in_as("11", "Bia") |> live_guild("1")
+
+      say(other, "gg")
+
+      eventually(fn ->
+        for page <- [view, other], do: assert(has_element?(page, "#chat-lines li", "Bia gg"))
+      end)
+    end
+
+    test "shows messages on the broadcast page's activity", %{conn: conn, room: room} do
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      {:ok, broadcast, _html} =
+        build_conn()
+        |> put_connect_params(%{"key" => room.broadcast_key})
+        |> live(~p"/screens/#{room.id}/broadcast")
+
+      say(view, "nice play")
+
+      eventually(fn -> assert has_element?(broadcast, "#activity-list", "Ana: nice play") end)
+    end
+
+    test "doesn't reach other guilds", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      {:ok, other, _html} = live_guild(conn, "9")
+
+      say(view, "only here")
+
+      eventually(fn -> assert has_element?(view, "#chat-lines", "only here") end)
+      refute has_element?(other, "#chat-lines", "only here")
+    end
+
+    test "only shows the latest lines", %{conn: conn} do
+      for number <- 1..10, do: Activity.record("1", :sound, "Bia", "sound #{number}")
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      # Someone joining can also be among them
+      assert has_element?(view, "#chat-lines", "sound 10")
+      assert has_element?(view, "#chat-lines", "sound 6")
+      refute has_element?(view, "#chat-lines", "sound 4")
+    end
+
+    test "asks to slow down after a few messages in a row", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      for number <- 1..6, do: say(view, "message #{number}")
+
+      assert has_element?(view, "#chat", "Slow down")
+      eventually(fn -> assert has_element?(view, "#chat-lines", "message 5") end)
+      refute has_element?(view, "#chat-lines", "message 6")
+    end
+
+    test "counts the others' messages while hidden", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      {:ok, other, _html} = conn |> log_in_as("11", "Bia") |> live_guild("1")
+
+      view |> element("#chat-toggle") |> render_click()
+      refute has_element?(view, "#chat")
+      assert has_element?(view, "#chat-toggle[aria-pressed=false]")
+
+      # The box is hidden with the chat, but a message could still come from a stale page
+      render_hook(view, "chat:send", %{"text" => "mine"})
+      say(other, "one")
+      say(other, "two")
+
+      eventually(fn -> assert has_element?(view, "#chat-unread", "2") end)
+
+      view |> element("#chat-toggle") |> render_click()
+      assert has_element?(view, "#chat-lines", "two")
+      refute has_element?(view, "#chat-unread")
     end
   end
 
@@ -927,7 +1041,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
         |> put_connect_params(%{"key" => room.broadcast_key})
         |> live(~p"/screens/#{room.id}/broadcast")
 
-      assert has_element?(guild, "#soundboard-tab-pointer[data-page-key='guild:1']")
+      assert has_element?(guild, "#pointer-menu[data-page-key='guild:1']")
       assert has_element?(broadcast, "#soundboard-tab-pointer[data-page-key='room:#{room.id}']")
     end
   end

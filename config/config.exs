@@ -80,7 +80,15 @@ config :logger, :console,
     :screen_title,
     :screen_owner_id,
     :screen_owner_name,
-    :viewer_count
+    :viewer_count,
+    :creator,
+    :follower_count,
+    :video_id,
+    :twitch_user_id,
+    :version,
+    :method,
+    :url,
+    :status
   ]
 
 # Use Jason for JSON parsing in Phoenix

@@ -3,8 +3,8 @@ defmodule BotchiniDiscord.Creators.Interactions.Info do
   Handles /info slash command
   """
 
-  alias Nostrum.Struct.{ApplicationCommand, Interaction}
   alias Nostrum.Constants.{ApplicationCommandOptionType, InteractionCallbackType}
+  alias Nostrum.Struct.{ApplicationCommand, Interaction}
 
   alias Botchini.{Creators, Services}
   alias BotchiniDiscord.Creators.Responses.{Components, Embeds}

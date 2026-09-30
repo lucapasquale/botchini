@@ -18,7 +18,7 @@ const MIN_SIZE = 60
 // Closed shapes have to end near where they started, as a share of their size
 const MAX_GAP = 0.35
 
-const CLOSED_SHAPES = new Set(["circle", "star", "heart", "infinity"])
+const CLOSED_SHAPES = new Set(["circle", "star", "heart", "infinity", "eggplant"])
 
 // A corner turns more than this within a short stretch of the stroke
 const CORNER_ANGLE = (70 * Math.PI) / 180
@@ -234,6 +234,30 @@ const infinityAt = t => ({x: Math.cos(t) / (1 + Math.sin(t) ** 2), y: (Math.sin(
 const infinityFromMiddle = curve(infinityAt, Math.PI / 2, 2.5 * Math.PI, 120)
 const infinityFromEnd = curve(infinityAt, 0, 2 * Math.PI, 120)
 
+// The classic one line doodle: up one side of the shaft, around the tip, down the
+// other side, then around both balls back to the start. Pointing up, in any
+// proportions from stubby to long
+function eggplant(shaft, ball) {
+  const arc = (cx, cy, r, from, to, steps = 24) =>
+    curve(t => ({x: cx + r * Math.cos(t), y: cy + r * Math.sin(t)}), from, to, steps)
+  const width = 0.25
+  const base = -0.2
+  const top = base - shaft
+  return [
+    ...polyline([[-width, base], [-width, top]], 24),
+    ...arc(0, top, width, Math.PI, 2 * Math.PI, 12),
+    ...polyline([[width, top], [width, base]], 24),
+    ...arc(ball + 0.05, 0.1, ball, -2.3, Math.PI * 0.85),
+    ...arc(-(ball + 0.05), 0.1, ball, 0.3, 2 * Math.PI - 0.8)
+  ]
+}
+const eggplants = [eggplant(1.8, 0.42), eggplant(1.1, 0.4), eggplant(2.6, 0.38)]
+// Also drawn starting from a ball
+const eggplantsFromBall = eggplants.map(points => {
+  const split = Math.round(points.length * 0.78)
+  return [...points.slice(split), ...points.slice(0, split)]
+})
+
 const zigzag = polyline([[0, 0], [1, 0.6], [0, 1.2], [1, 1.8], [0, 2.4]])
 const longZigzag = polyline([[0, 0], [1, 0.5], [0, 1], [1, 1.5], [0, 2], [1, 2.5]])
 const bolt = polyline([[0.7, 0], [0.1, 1.2], [0.8, 1.2], [0.2, 2.6]])
@@ -245,6 +269,7 @@ const TEMPLATES = [
   ...withVariants("heart", [heartFromTop, heartFromTip], {mirror: true}),
   ...withVariants("lightning", [zigzag, longZigzag, bolt], {mirror: true}),
   ...withVariants("infinity", [infinityFromMiddle, infinityFromEnd], {mirror: true}),
+  ...withVariants("eggplant", [...eggplants, ...eggplantsFromBall], {mirror: true}),
   // Decoys
   ...withVariants("none", [
     polyline([[0, 0], [1, 0]]),

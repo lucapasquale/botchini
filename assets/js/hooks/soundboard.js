@@ -282,7 +282,7 @@ export const Soundboard = {
 
   play({id, emoji, url, by}) {
     // Sounds from members this person muted don't play, or show, for them
-    if (Mutes.has(by)) return
+    if (Mutes.has("sounds", by)) return
 
     this.flash(id)
     this.throwEmoji(emoji)

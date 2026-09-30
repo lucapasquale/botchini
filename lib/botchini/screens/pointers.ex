@@ -12,7 +12,7 @@ defmodule Botchini.Screens.Pointers do
   @topic "screens:pointers"
 
   @styles ~w(matte glossy neon sparkle rainbow pixel comet)
-  @effects ~w(lightning star heart circle spiral target infinity)
+  @effects ~w(lightning star heart circle spiral target infinity eggplant)
   @colors 0..9
   @widths 4..24
 

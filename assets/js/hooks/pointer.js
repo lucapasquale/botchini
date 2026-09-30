@@ -588,7 +588,7 @@ export const Pointer = {
   },
 
   receiveEffect({u, e, a, x, y}) {
-    if (Mutes.has(u)) return
+    if (Mutes.has("pointer", u)) return
     this.showEffect(e, a, {x, y})
   },
 
@@ -647,7 +647,7 @@ export const Pointer = {
         this.users.delete(id)
         continue
       }
-      if (this.settings.hideOthers || Mutes.has(user.userId)) continue
+      if (this.settings.hideOthers || Mutes.has("pointer", user.userId)) continue
       this.drawUser(ctx, user, now, true)
     }
 
@@ -655,7 +655,7 @@ export const Pointer = {
     else this.drawStrokes(ctx, this.me, now)
 
     this.sparkles.draw(ctx, now, dt)
-    if (!this.settings.muteEffects) this.effects.draw(ctx, now, window.innerWidth, window.innerHeight)
+    if (!this.settings.muteEffects) this.effects.draw(ctx, now, dt, window.innerWidth, window.innerHeight)
   },
 
   drawStrokes(ctx, user, now) {

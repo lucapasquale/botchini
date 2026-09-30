@@ -907,8 +907,16 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       {:ok, _other, _html} = live_guild(log_in_as("11", "Bia"), "1")
       {:ok, view, _html} = live_guild(conn, "1")
 
-      assert has_element?(view, "#online-11 button[data-mute-user='11']")
+      assert has_element?(view, "#online-11 button[data-mute-user='11'][data-mute='sounds']")
+      assert has_element?(view, "#online-11 button[data-mute-user='11'][data-mute='pointer']")
       refute has_element?(view, "#online-10 button[data-mute-user]")
+    end
+
+    test "streams are covered while drawing, but not their controls", %{conn: conn, room: room} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      Screens.broadcast(%{room | live?: true}, :live)
+
+      assert has_element?(view, "#screen-viewer-#{room.id} [data-pointer-shield].bottom-12")
     end
 
     test "each page has its own drawing area", %{conn: conn, room: room} do

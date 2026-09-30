@@ -11,7 +11,8 @@ const DURATIONS = {
   circle: 1000,
   spiral: 1200,
   target: 1400,
-  infinity: 1600
+  infinity: 1600,
+  eggplant: 4000
 }
 
 const random = (min, max) => min + Math.random() * (max - min)
@@ -73,6 +74,20 @@ function create(name) {
 
     case "infinity":
       trip()
+      break
+
+    case "eggplant":
+      // Spread over the whole width, dropping one after another from above the screen
+      effect.particles = Array.from({length: 36}, () => ({
+        x: random(0, 1),
+        y: random(-900, -60),
+        vx: random(-40, 40),
+        vy: random(0, 150),
+        size: random(30, 56),
+        angle: random(0, 2 * Math.PI),
+        spin: random(-5, 5),
+        bounces: 0
+      }))
       break
 
     case "spiral":
@@ -168,6 +183,41 @@ function drawTarget(ctx, at, t) {
     ctx.font = "700 14px ui-sans-serif, system-ui, sans-serif"
     ctx.textAlign = "center"
     ctx.fillText("LOCKED", at.x, at.y - radius - 34)
+  }
+}
+
+// Eggplants rain down the whole screen, hit its bottom and bounce off, a bit lower
+// every time, until they come to rest and fade away
+const GRAVITY = 1_800
+const BOUNCE = 0.55
+
+function drawEggplants(ctx, effect, t, dt, width, height) {
+  ctx.textAlign = "center"
+  ctx.textBaseline = "middle"
+  ctx.globalAlpha = t < 0.8 ? 1 : 1 - (t - 0.8) / 0.2
+
+  for (const p of effect.particles) {
+    p.vy += GRAVITY * dt
+    p.y += p.vy * dt
+    p.x += (p.vx * dt) / width
+    p.angle += p.spin * dt
+
+    const floor = height - p.size / 2
+    if (p.y > floor) {
+      p.y = floor
+      p.vy = -p.vy * BOUNCE
+      p.spin *= 0.6
+      p.bounces++
+      // Barely moving anymore, it just rests on the floor
+      if (Math.abs(p.vy) < 60) p.vy = 0
+    }
+
+    ctx.save()
+    ctx.translate(p.x * width, p.y)
+    ctx.rotate(p.angle)
+    ctx.font = `${p.size}px sans-serif`
+    ctx.fillText("🍆", 0, 0)
+    ctx.restore()
   }
 }
 
@@ -310,7 +360,7 @@ export class Effects {
     this.active = []
   }
 
-  draw(ctx, now, width, height) {
+  draw(ctx, now, dt, width, height) {
     this.active = this.active.filter(effect => now - effect.born < effect.duration)
 
     for (const effect of this.active) {
@@ -339,6 +389,9 @@ export class Effects {
           break
         case "target":
           drawTarget(ctx, at, t)
+          break
+        case "eggplant":
+          drawEggplants(ctx, effect, t, dt, width, height)
           break
       }
       ctx.restore()

@@ -72,7 +72,7 @@ defmodule BotchiniTest.Screens.PointersTest do
 
     test "knows every shape's effect" do
       assert Enum.sort(Pointers.effects()) ==
-               ~w(circle heart infinity lightning spiral star target)
+               ~w(circle eggplant heart infinity lightning spiral star target)
     end
 
     test "takes known effects" do

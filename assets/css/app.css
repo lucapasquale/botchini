@@ -16,3 +16,7 @@ html.pointer-on #soundboard {
 html.pointer-on body {
   user-select: none;
 }
+
+html.pointer-on [data-pointer-shield] {
+  display: block;
+}

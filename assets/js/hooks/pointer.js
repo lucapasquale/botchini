@@ -13,6 +13,7 @@
 import {drawDot, drawName, drawStroke, drawTail, Sparkles} from "../pointer/render"
 import {Effects} from "../pointer/effects"
 import {recognize} from "../pointer/shapes"
+import {recognizeDrawing} from "../pointer/drawings"
 import {Mutes} from "../pointer/mutes"
 
 const SEND_INTERVAL_MS = 50
@@ -397,25 +398,40 @@ export const Pointer = {
     this.pressed = {x: event.clientX, y: event.clientY}
   },
 
-  startDrawing() {
-    this.swallowClick = true
+  // A click paints a dot, which is a line that didn't move, and leaves the click alone
+  startDrawing({click = false} = {}) {
+    if (!click) this.swallowClick = true
+
+    // The strokes still on screen make up the drawing, so it can be drawn in pieces
+    if (this.me.strokes.length === 0) this.drawing = {strokes: [], recognized: false}
+    // Keeping drawing means a circle drawn just before was only part of the drawing,
+    // which can still become something else
+    if (this.circle) {
+      clearTimeout(this.circle.timer)
+      this.circle = null
+      this.drawing.recognized = false
+    }
+
     this.me.drawing = true
     this.me.releasedAt = null
     // The line keeps what it's over at its start, so it stays in one piece
     this.strokeAnchor = this.anchorAt(this.pressed.x, this.pressed.y)
     this.strokeScreen = [{x: this.pressed.x, y: this.pressed.y}]
+    this.drawing.strokes.push(this.strokeScreen)
     this.me.strokes.push({look: this.myLook(), points: []})
     this.addPoint(this.pressed.x, this.pressed.y, true)
   },
 
   pointerUp(event) {
     if (!this.pressed) return
-    this.pressed = null
 
     if (!this.me.drawing) {
-      this.clickedInCircle(event)
-      return
+      // Clicking in a circle drawn just before makes it a target
+      const target = this.clickedInCircle(event)
+      this.startDrawing({click: true})
+      if (target) this.drawing.recognized = true
     }
+    this.pressed = null
 
     this.addPoint(event.clientX, event.clientY, true)
     this.me.drawing = false
@@ -423,9 +439,7 @@ export const Pointer = {
     // The last position goes out with the button up, which ends the line for everyone
     this.queuePoint(this.strokeAnchor, event.clientX, event.clientY, 0)
 
-    const shape = recognize(this.strokeScreen)
-    if (shape?.name === "circle") this.waitForTarget(shape)
-    else if (shape) this.setOffEffect(shape, this.strokeAnchor)
+    this.recognizeShapes()
     this.strokeAnchor = null
 
     // Browsers send the click right after the button goes up, when they send one
@@ -508,6 +522,26 @@ export const Pointer = {
     }
   },
 
+  // Whole drawings, like the eggplant, are looked at first, as their last stroke
+  // alone can look like another shape, like a ball looking like a circle. Each
+  // drawing only sets off one effect
+  recognizeShapes() {
+    if (this.drawing.recognized) return
+
+    const drawing = recognizeDrawing(this.drawing.strokes)
+    if (drawing) {
+      this.drawing.recognized = true
+      this.setOffEffect(drawing, this.anchorAt(drawing.center.x, drawing.center.y))
+      return
+    }
+
+    const shape = recognize(this.strokeScreen)
+    if (!shape) return
+    this.drawing.recognized = true
+    if (shape.name === "circle") this.waitForTarget(shape)
+    else this.setOffEffect(shape, this.strokeAnchor)
+  },
+
   // A circle is a shockwave, unless a click in its middle soon after makes it a target
   waitForTarget(shape) {
     clearTimeout(this.circle?.timer)
@@ -523,10 +557,10 @@ export const Pointer = {
 
   clickedInCircle(event) {
     const circle = this.circle
-    if (!circle) return
+    if (!circle) return false
 
     const {center} = circle.shape
-    if (Math.hypot(event.clientX - center.x, event.clientY - center.y) > circle.size * TARGET_CENTER) return
+    if (Math.hypot(event.clientX - center.x, event.clientY - center.y) > circle.size * TARGET_CENTER) return false
 
     clearTimeout(circle.timer)
     this.circle = null
@@ -534,6 +568,7 @@ export const Pointer = {
     this.swallowClick = true
     setTimeout(() => (this.swallowClick = false))
     this.setOffEffect({...circle.shape, name: "target"}, circle.anchor)
+    return true
   },
 
   setOffEffect(shape, anchor) {
@@ -588,7 +623,7 @@ export const Pointer = {
   },
 
   receiveEffect({u, e, a, x, y}) {
-    if (Mutes.has(u)) return
+    if (Mutes.has("pointer", u)) return
     this.showEffect(e, a, {x, y})
   },
 
@@ -647,7 +682,7 @@ export const Pointer = {
         this.users.delete(id)
         continue
       }
-      if (this.settings.hideOthers || Mutes.has(user.userId)) continue
+      if (this.settings.hideOthers || Mutes.has("pointer", user.userId)) continue
       this.drawUser(ctx, user, now, true)
     }
 
@@ -655,7 +690,7 @@ export const Pointer = {
     else this.drawStrokes(ctx, this.me, now)
 
     this.sparkles.draw(ctx, now, dt)
-    if (!this.settings.muteEffects) this.effects.draw(ctx, now, window.innerWidth, window.innerHeight)
+    if (!this.settings.muteEffects) this.effects.draw(ctx, now, dt, window.innerWidth, window.innerHeight)
   },
 
   drawStrokes(ctx, user, now) {

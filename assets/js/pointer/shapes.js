@@ -174,7 +174,7 @@ function distanceAtBestAngle(points, template) {
 // Templates, in any unit since they're normalized. Shapes can be drawn either way
 // around, so each comes reversed too
 
-function polyline(corners, steps = 16) {
+export function polyline(corners, steps = 16) {
   const points = []
   for (let i = 1; i < corners.length; i++) {
     const [ax, ay] = corners[i - 1]
@@ -189,7 +189,7 @@ function polyline(corners, steps = 16) {
   return points
 }
 
-function curve(fn, from, to, steps = 96) {
+export function curve(fn, from, to, steps = 96) {
   const points = []
   for (let i = 0; i <= steps; i++) points.push(fn(from + ((to - from) * i) / steps))
   return points

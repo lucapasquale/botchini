@@ -59,6 +59,11 @@ defmodule BotchiniWeb.ScreenLive.Components do
         controls
       ></video>
 
+      <%!-- With the pointer on, clicks and drags over the picture are for drawing, and
+        would otherwise pause the stream. The video's controls stay reachable below --%>
+      <div data-pointer-shield class="absolute inset-x-0 top-0 bottom-12 hidden" aria-hidden="true">
+      </div>
+
       <div
         :if={!@room.live?}
         class="absolute inset-0 flex items-center justify-center bg-black/80 text-gray-300"
@@ -130,7 +135,7 @@ defmodule BotchiniWeb.ScreenLive.Components do
 
   @doc """
   Members that have one of the server's screen sharing pages open right now.
-  Admins get their own color. Anyone can mute the others' pointers and sounds,
+  Admins get their own color. Anyone can mute the others' sounds and pointers,
   just for themselves, which the OnlineMutes hook keeps in the browser
   """
   def online_list(assigns) do
@@ -156,17 +161,20 @@ defmodule BotchiniWeb.ScreenLive.Components do
             :if={user.id == @current_user_id}
             class="text-gray-500"
           >(you)</span>
-          <button
-            :if={user.id != @current_user_id}
-            type="button"
-            data-mute-user={user.id}
-            data-name={user.name}
-            aria-pressed="false"
-            title={"Mute #{user.name}'s pointer and sounds"}
-            class="-mr-1 rounded-full px-1 text-xs opacity-70 transition hover:bg-white/10 hover:opacity-100"
-          >
-            🔈
-          </button>
+          <span :if={user.id != @current_user_id} class="-mr-1 flex items-center">
+            <button
+              :for={{kind, icon, what} <- [{"sounds", "🔊", "sounds"}, {"pointer", "✨", "pointer"}]}
+              type="button"
+              data-mute-user={user.id}
+              data-mute={kind}
+              data-name={user.name}
+              aria-pressed="false"
+              title={"Mute #{user.name}'s #{what}"}
+              class="rounded-full px-1 text-xs opacity-70 transition hover:bg-white/10 hover:opacity-100 aria-pressed:bg-red-500/30 aria-pressed:opacity-100"
+            >
+              {icon}
+            </button>
+          </span>
         </li>
       </ul>
     </section>

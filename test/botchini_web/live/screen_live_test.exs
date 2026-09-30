@@ -8,7 +8,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
   alias Botchini.Discord
   alias Botchini.Screens
   alias Botchini.Screens.Activity
-  alias BotchiniWeb.ScreenLive.{ActivityFeed, Guild}
+  alias BotchiniWeb.ScreenLive.Guild
 
   setup %{conn: conn} do
     {:ok, room} =
@@ -36,15 +36,6 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       conn = get(build_conn(), ~p"/screens/1")
 
       assert redirected_to(conn) == "/auth/login?return_to=%2Fscreens%2F1"
-    end
-
-    test "isn't needed to broadcast", %{room: room} do
-      {:ok, _view, html} =
-        build_conn()
-        |> put_connect_params(%{"key" => room.broadcast_key})
-        |> live(~p"/screens/#{room.id}/broadcast")
-
-      assert html =~ "Share screen"
     end
 
     test "shows who is logged in", %{conn: conn} do
@@ -82,57 +73,6 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     defp log_in_other(conn, n, label),
       do: log_in_as(conn, "#{label}-#{n}", "#{label}#{n}")
 
-    defp broadcast_view(conn, room) do
-      {:ok, view, _html} =
-        conn
-        |> put_connect_params(%{"key" => room.broadcast_key})
-        |> live(~p"/screens/#{room.id}/broadcast")
-
-      view
-    end
-
-    test "is a single collapsed line until opened on the broadcast page", %{
-      conn: conn,
-      room: room,
-      n: n
-    } do
-      view = broadcast_view(conn, room)
-      Activity.record("1", :stream_started, "Luca#{n}")
-
-      assert has_element?(view, "#activity-toggle[aria-expanded=false]")
-      assert has_element?(view, "#activity-list[hidden]")
-
-      eventually(fn ->
-        assert has_element?(view, "#activity-list", "Luca#{n} started streaming")
-      end)
-    end
-
-    # Tailwind keeps [hidden] elements hidden whatever their inline display is
-    test "opens by removing the list's hidden attribute", %{conn: conn, room: room} do
-      view = broadcast_view(conn, room)
-
-      [click] =
-        view
-        |> element("#activity-toggle")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.attribute("phx-click")
-
-      assert [["toggle_attr", %{"to" => "#activity-list", "attr" => ["hidden", "hidden"]}] | _] =
-               Jason.decode!(click)
-    end
-
-    test "shows the latest event on the line" do
-      events = [
-        %{id: 2, at: DateTime.utc_now(), kind: :sound, actor: "Bia", detail: "🐻 Volibero"},
-        %{id: 1, at: DateTime.utc_now(), kind: :joined, actor: "Ana", detail: nil}
-      ]
-
-      html = render_component(&ActivityFeed.feed/1, events: events)
-
-      assert html =~ ~r/id="activity-latest"[^>]*>\s*Bia played 🐻 Volibero\s*</
-    end
-
     test "shows what happened before the page opened, newest first", %{conn: conn, n: n} do
       Activity.record("1", :stream_started, "Luca#{n}")
       Activity.record("1", :sound, "Bia#{n}", "🐻 Volibero")
@@ -150,23 +90,17 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       assert :binary.match(html, "Luca#{n} started") < :binary.match(html, "Bia#{n} played")
     end
 
-    test "says when nothing happened" do
-      html = render_component(&ActivityFeed.feed/1, events: [])
-
-      assert html =~ "Nothing yet"
-      assert html =~ "Nothing happened yet."
-    end
-
-    test "gets new events as they happen, on every page", %{conn: conn, room: room, n: n} do
-      {:ok, guild_page, _html} = live_guild(conn, "1")
-      broadcast_page = broadcast_view(conn, room)
+    test "gets new events as they happen", %{conn: conn, n: n} do
+      {:ok, view, _html} = live_guild(conn, "1")
 
       Activity.record("1", :stream_ended, "Luca#{n}", "closed by an admin")
 
       eventually(fn ->
-        for {view, list} <- [{guild_page, "#chat-lines"}, {broadcast_page, "#activity-list"}] do
-          assert has_element?(view, list, "Luca#{n} stopped streaming (closed by an admin)")
-        end
+        assert has_element?(
+                 view,
+                 "#chat-lines",
+                 "Luca#{n} stopped streaming (closed by an admin)"
+               )
       end)
     end
 
@@ -223,17 +157,6 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
       eventually(fn ->
         assert has_element?(watcher, "#chat-lines", "Bia#{n} stopped the sounds")
-      end)
-    end
-
-    test "names the broadcaster when they play sounds", %{conn: conn, room: room} do
-      {:ok, watcher, _html} = live_guild(conn, "1")
-      broadcast_page = broadcast_view(conn, room)
-
-      render_hook(broadcast_page, "sound:play", %{"sound" => "volibero"})
-
-      eventually(fn ->
-        assert has_element?(watcher, "#chat-lines", "Luca played 🐻 Volibero")
       end)
     end
 
@@ -358,121 +281,6 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
       assert Screens.get_room(other.id)
       assert Screens.get_room(room.id)
-    end
-  end
-
-  describe "broadcast page" do
-    test "requires the broadcast key", %{conn: conn, room: room} do
-      {:ok, _view, html} =
-        conn
-        |> put_connect_params(%{"key" => room.id})
-        |> live(~p"/screens/#{room.id}/broadcast")
-
-      assert html =~ "Screen share not found"
-
-      {:ok, _view, html} = live(conn, ~p"/screens/#{room.id}/broadcast")
-      assert html =~ "Screen share not found"
-    end
-
-    test "lets the owner share and stop their screen", %{conn: conn, room: room} do
-      {:ok, view, html} =
-        conn
-        |> put_connect_params(%{"key" => room.broadcast_key})
-        |> live(~p"/screens/#{room.id}/broadcast")
-
-      assert html =~ "Share screen"
-
-      render_hook(view, "stop", %{})
-
-      assert render(view) =~ "Screen share ended"
-      assert Screens.get_room(room.id) == nil
-    end
-
-    test "shows the watch link when it couldn't be posted on Discord", %{conn: conn, room: room} do
-      {:ok, view, html} =
-        conn
-        |> put_connect_params(%{"key" => room.broadcast_key})
-        |> live(~p"/screens/#{room.id}/broadcast")
-
-      refute html =~ "post the watch link on Discord"
-
-      Screens.broadcast_announcement_failed(room)
-
-      html = render(view)
-      assert html =~ "post the watch link on Discord"
-      assert html =~ ~r"/screens/1[\"<]"
-    end
-
-    test "names the room after the shared source or the owner's title", %{conn: conn, room: room} do
-      {:ok, view, _html} =
-        conn
-        |> put_connect_params(%{"key" => room.broadcast_key})
-        |> live(~p"/screens/#{room.id}/broadcast")
-
-      render_hook(view, "source", %{"surface" => "window"})
-      assert render(view) =~ "Luca&#39;s window"
-
-      view |> form("#screen-title", title: "Speedrun") |> render_submit()
-      assert render(view) =~ "Speedrun"
-      assert Screens.get_room(room.id).title == "Speedrun"
-    end
-
-    test "tells the broadcaster's browser when viewers join and leave", %{conn: conn, room: room} do
-      {:ok, view, _html} =
-        conn
-        |> put_connect_params(%{"key" => room.broadcast_key})
-        |> live(~p"/screens/#{room.id}/broadcast")
-
-      Screens.broadcast(%{room | viewer_count: 1}, :updated)
-      assert_push_event(view, "screen:viewer_joined", %{})
-
-      Screens.broadcast(%{room | viewer_count: 3}, :updated)
-      assert_push_event(view, "screen:viewer_joined", %{})
-
-      Screens.broadcast(%{room | viewer_count: 2}, :updated)
-      assert_push_event(view, "screen:viewer_left", %{})
-
-      Screens.broadcast(%{room | viewer_count: 0}, :updated)
-      assert_push_event(view, "screen:viewer_left", %{})
-    end
-
-    test "stays quiet when the viewers didn't change", %{conn: conn, room: room} do
-      {:ok, view, _html} =
-        conn
-        |> put_connect_params(%{"key" => room.broadcast_key})
-        |> live(~p"/screens/#{room.id}/broadcast")
-
-      Screens.broadcast(%{room | viewer_count: 1}, :updated)
-      assert_push_event(view, "screen:viewer_joined", %{})
-
-      Screens.broadcast(%{room | viewer_count: 1, title: "Speedrun"}, :updated)
-      assert render(view) =~ "Speedrun"
-
-      refute_push_event(view, "screen:viewer_joined", %{}, 50)
-      refute_push_event(view, "screen:viewer_left", %{}, 50)
-    end
-
-    test "doesn't count everyone leaving as viewers leaving when the room ends",
-         %{conn: conn, room: room} do
-      {:ok, view, _html} =
-        conn
-        |> put_connect_params(%{"key" => room.broadcast_key})
-        |> live(~p"/screens/#{room.id}/broadcast")
-
-      Screens.broadcast(%{room | viewer_count: 2}, :updated)
-      assert_push_event(view, "screen:viewer_joined", %{})
-
-      Screens.broadcast(%{room | viewer_count: 0}, :ended)
-
-      assert render(view) =~ "Screen share ended"
-      refute_push_event(view, "screen:viewer_left", %{}, 50)
-    end
-
-    test "doesn't check the key before connecting", %{conn: conn, room: room} do
-      html = conn |> get(~p"/screens/#{room.id}/broadcast") |> html_response(200)
-
-      assert html =~ "Connecting..."
-      refute html =~ "Elden Ring"
     end
   end
 
@@ -822,7 +630,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
     test "plays sounds for everyone on the guild's pages", %{conn: conn, room: room} do
       {:ok, watch, _html} = live_guild(conn, "1")
-      broadcast_page = broadcast_view(conn, room)
+      {:ok, other, _html} = live_guild(log_in(build_conn()), "1")
       Screens.broadcast(%{room | live?: true}, :live)
 
       play(watch, "volibero")
@@ -833,7 +641,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
         url: "/sounds/volibero.mp3"
       })
 
-      assert_push_event(broadcast_page, "sound:play", %{id: "volibero"})
+      assert_push_event(other, "sound:play", %{id: "volibero"})
     end
 
     test "works while nobody is sharing", %{conn: conn, room: room} do
@@ -904,19 +712,6 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       end)
     end
 
-    test "shows messages on the broadcast page's activity", %{conn: conn, room: room} do
-      {:ok, view, _html} = live_guild(conn, "1")
-
-      {:ok, broadcast, _html} =
-        build_conn()
-        |> put_connect_params(%{"key" => room.broadcast_key})
-        |> live(~p"/screens/#{room.id}/broadcast")
-
-      say(view, "nice play")
-
-      eventually(fn -> assert has_element?(broadcast, "#activity-list", "Ana: nice play") end)
-    end
-
     test "doesn't reach other guilds", %{conn: conn} do
       {:ok, view, _html} = live_guild(conn, "1")
       {:ok, other, _html} = live_guild(conn, "9")
@@ -976,8 +771,6 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       "st" => "sparkle",
       "w" => 12
     }
-
-    defp live_guild(conn, guild_id), do: live(conn, ~p"/screens/#{guild_id}")
 
     defp log_in_as(id, name),
       do: init_test_session(build_conn(), %{"discord_user_id" => id, "discord_user_name" => name})
@@ -1066,19 +859,6 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       refute_push_event(other, "pointer:effect", %{e: "star"})
     end
 
-    test "the broadcaster's pointer is theirs", %{room: room} do
-      {:ok, broadcast, _html} =
-        build_conn()
-        |> put_connect_params(%{"key" => room.broadcast_key})
-        |> live(~p"/screens/#{room.id}/broadcast")
-
-      {:ok, other, _html} = live_guild(log_in_as("11", "Bia"), "1")
-
-      render_hook(broadcast, "pointer:move", %{@move | "a" => %{"k" => "s", "i" => room.id}})
-
-      assert_push_event(other, "pointer:move", %{u: "3", n: "Luca"})
-    end
-
     test "sounds say who played them, so they can be muted", %{conn: conn} do
       {:ok, view, _html} = live_guild(conn, "1")
 
@@ -1102,24 +882,12 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
       assert has_element?(view, "#screen-viewer-#{room.id} [data-pointer-shield].bottom-12")
     end
-
-    test "each page has its own drawing area", %{conn: conn, room: room} do
-      {:ok, guild, _html} = live_guild(conn, "1")
-
-      {:ok, broadcast, _html} =
-        build_conn()
-        |> put_connect_params(%{"key" => room.broadcast_key})
-        |> live(~p"/screens/#{room.id}/broadcast")
-
-      assert has_element?(guild, "#pointer-menu[data-page-key='guild:1']")
-      assert has_element?(broadcast, "#soundboard-tab-pointer[data-page-key='room:#{room.id}']")
-    end
   end
 
   describe "managing your own stream" do
     defp live_manage(conn) do
-      {:ok, guild, _html} = live(conn, ~p"/screens/1")
-      {guild, find_live_child(guild, "manage-stream-live")}
+      {:ok, manage, _html} = live(conn, ~p"/screens/1/share")
+      manage
     end
 
     defp my_room, do: Screens.find_owner_room("1", "10")
@@ -1128,16 +896,48 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       on_exit(fn -> if room = my_room(), do: Screens.stop_room(room) end)
     end
 
-    test "is a collapsed section of the guild page, with the same controls as the broadcast page",
-         %{conn: conn} do
-      {guild, manage} = live_manage(conn)
+    test "is linked from the guild page's header, opening a new tab", %{conn: conn} do
+      {:ok, guild, _html} = live(conn, ~p"/screens/1")
 
-      assert has_element?(guild, "#manage-stream-toggle[aria-expanded=false]", "Manage my stream")
-      assert has_element?(guild, "#manage-stream-body[style*='display: none']")
+      assert has_element?(
+               guild,
+               "#share-link[href='/screens/1/share'][target=_blank]",
+               "Share my screen"
+             )
+
+      refute has_element?(guild, "#manage-stream")
+    end
+
+    test "has the controls to share a screen", %{conn: conn} do
+      manage = live_manage(conn)
+
+      assert has_element?(manage, "h1", "Share your screen")
+      assert has_element?(manage, "#watch-link[href='/screens/1'][target=_blank]")
       assert has_element?(manage, "[data-screen-start]", "Share screen")
       assert has_element?(manage, "[data-screen-switch]")
       assert has_element?(manage, "[data-screen-stop]")
       assert has_element?(manage, "#manage-stream-title-input")
+    end
+
+    test "keeps other people out", %{conn: conn} do
+      patch_function(Discord, :check_member, :not_member)
+
+      manage = live_manage(conn)
+
+      assert render(manage) =~ "Not in this server"
+      refute has_element?(manage, "[data-screen-start]")
+    end
+
+    test "only works for real guilds", %{conn: conn} do
+      {:ok, manage, _html} = live(conn, ~p"/screens/abc/share")
+
+      assert render(manage) =~ "Server not found"
+    end
+
+    test "needs a login" do
+      conn = get(build_conn(), ~p"/screens/1/share")
+
+      assert redirected_to(conn) == "/auth/login?return_to=%2Fscreens%2F1%2Fshare"
     end
 
     test "doesn't make a room until something is picked to share", %{conn: conn} do
@@ -1148,7 +948,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
     test "makes the member's room, without a channel to announce in, once they pick a source",
          %{conn: conn} do
-      {_guild, manage} = live_manage(conn)
+      manage = live_manage(conn)
 
       render_hook(manage, "source", %{"surface" => "window"})
 
@@ -1158,7 +958,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     end
 
     test "keeps the title typed before sharing", %{conn: conn} do
-      {_guild, manage} = live_manage(conn)
+      manage = live_manage(conn)
 
       manage
       |> element("#manage-stream-title")
@@ -1170,7 +970,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     end
 
     test "renames the room while sharing", %{conn: conn} do
-      {_guild, manage} = live_manage(conn)
+      manage = live_manage(conn)
       render_hook(manage, "source", %{"surface" => "monitor"})
 
       manage |> element("#manage-stream-title") |> render_change(%{"title" => "Boss fight"})
@@ -1179,7 +979,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     end
 
     test "stops the room", %{conn: conn} do
-      {_guild, manage} = live_manage(conn)
+      manage = live_manage(conn)
       render_hook(manage, "source", %{"surface" => "monitor"})
       room_id = my_room().id
 
@@ -1190,30 +990,47 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     end
 
     test "finds the room again when the page reloads", %{conn: conn} do
-      {_guild, manage} = live_manage(conn)
+      manage = live_manage(conn)
       render_hook(manage, "source", %{"surface" => "monitor"})
       room_id = my_room().id
 
-      {_guild, manage} = live_manage(conn)
+      manage = live_manage(conn)
       render_hook(manage, "source", %{"surface" => "window"})
 
       assert my_room().id == room_id
       assert my_room().source == :window
     end
 
-    test "marks the section live while the member is sharing", %{conn: conn} do
-      {guild, manage} = live_manage(conn)
+    test "tells the member's browser when viewers join and leave", %{conn: conn} do
+      manage = live_manage(conn)
+      render_hook(manage, "source", %{"surface" => "monitor"})
+      room = my_room()
+
+      Screens.broadcast(%{room | viewer_count: 2}, :updated)
+      assert_push_event(manage, "screen:viewer_joined", %{})
+
+      Screens.broadcast(%{room | viewer_count: 2, title: "Speedrun"}, :updated)
+      refute_push_event(manage, "screen:viewer_joined", %{}, 50)
+
+      Screens.broadcast(%{room | viewer_count: 1}, :updated)
+      assert_push_event(manage, "screen:viewer_left", %{})
+    end
+
+    test "marks the guild page's link live while the member is sharing", %{conn: conn} do
+      {:ok, guild, _html} = live(conn, ~p"/screens/1")
+      manage = live_manage(conn)
       render_hook(manage, "source", %{"surface" => "monitor"})
 
-      refute has_element?(guild, "#manage-stream-toggle", "LIVE")
+      refute has_element?(guild, "#share-link", "LIVE")
 
       Screens.broadcast(%{my_room() | live?: true}, :live)
 
-      assert has_element?(guild, "#manage-stream-toggle", "LIVE")
+      assert has_element?(guild, "#share-link", "Manage my stream")
+      assert has_element?(guild, "#share-link", "LIVE")
     end
 
     test "never touches other members' rooms", %{conn: conn, room: room} do
-      {_guild, manage} = live_manage(conn)
+      manage = live_manage(conn)
 
       render_hook(manage, "source", %{"surface" => "monitor"})
 
@@ -1222,7 +1039,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     end
 
     test "asks to stop OBS before sharing from here", %{conn: conn} do
-      {_guild, manage} = live_manage(conn)
+      manage = live_manage(conn)
       render_hook(manage, "source", %{"surface" => "monitor"})
 
       Screens.broadcast(%{my_room() | live?: true, source: :obs}, :updated)

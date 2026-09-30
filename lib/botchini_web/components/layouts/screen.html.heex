@@ -2,7 +2,25 @@
   <a href={~p"/"}>
     <h2 class="text-lg font-semibold leading-6 my-0 hover:underline">Botchini</h2>
   </a>
-  <span :if={assigns[:current_user]} class="text-gray-400">{@current_user.name}</span>
+  <div class="flex items-center gap-4">
+    <%!-- A new tab, so the stream keeps going while watching here --%>
+    <a
+      :if={assigns[:share_path]}
+      id="share-link"
+      href={@share_path}
+      target="_blank"
+      class="flex items-center gap-2 font-semibold text-indigo-400 hover:underline"
+    >
+      {if assigns[:sharing?], do: "Manage my stream", else: "Share my screen"}
+      <span
+        :if={assigns[:sharing?]}
+        class="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-white"
+      >
+        LIVE
+      </span>
+    </a>
+    <span :if={assigns[:current_user]} class="text-gray-400">{@current_user.name}</span>
+  </div>
 </header>
 
 <main class="px-4 py-6 sm:px-8">

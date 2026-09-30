@@ -90,13 +90,11 @@ defmodule BotchiniTest.ScreensTest do
   end
 
   describe "start_room/1" do
-    test "starts a room with unguessable ids" do
+    test "starts a room with an unguessable id" do
       room = start_room()
 
       assert %Room{title: "Elden Ring", live?: false, viewer_count: 0} = room
       assert byte_size(room.id) >= 22
-      assert byte_size(room.broadcast_key) >= 22
-      assert room.id != room.broadcast_key
       assert Screens.get_room(room.id) == room
     end
 
@@ -144,15 +142,6 @@ defmodule BotchiniTest.ScreensTest do
 
     assert "1" |> Screens.list_rooms() |> Enum.map(& &1.id) |> Enum.sort() ==
              Enum.sort([room.id, other_room.id])
-  end
-
-  test "get_room_for_broadcast/2 requires the room's broadcast key" do
-    room = start_room()
-
-    assert Screens.get_room_for_broadcast(room.id, room.broadcast_key) == room
-    assert Screens.get_room_for_broadcast(room.id, "wrong key") == nil
-    assert Screens.get_room_for_broadcast(room.id, nil) == nil
-    assert Screens.get_room_for_broadcast("unknown", room.broadcast_key) == nil
   end
 
   test "stop_room/2 ends the room and notifies subscribers" do

@@ -21,7 +21,6 @@ defmodule Botchini.Screens.Room do
 
   @type t :: %__MODULE__{
           id: String.t(),
-          broadcast_key: String.t(),
           title: String.t(),
           guild_id: String.t(),
           channel_id: String.t() | nil,
@@ -36,7 +35,7 @@ defmodule Botchini.Screens.Room do
 
   @type source :: :screen | :window | :tab | :obs
 
-  @enforce_keys [:id, :broadcast_key, :title, :guild_id, :channel_id, :owner_id, :owner_name]
+  @enforce_keys [:id, :title, :guild_id, :channel_id, :owner_id, :owner_name]
   defstruct @enforce_keys ++
               [:started_at, :source, live?: false, viewer_count: 0, custom_title?: false]
 

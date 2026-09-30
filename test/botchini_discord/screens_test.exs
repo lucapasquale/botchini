@@ -36,6 +36,19 @@ defmodule BotchiniDiscordTest.ScreensTest do
     }
   end
 
+  defp start_room(owner_id \\ "3") do
+    {:ok, room} =
+      Screens.start_room(%{
+        title: "Luca's screen",
+        guild_id: "1",
+        channel_id: nil,
+        owner_id: owner_id,
+        owner_name: "Luca"
+      })
+
+    room
+  end
+
   defp subcommand(name), do: [%{name: name, value: "", focused: false}]
 
   defp buttons(response) do
@@ -43,20 +56,24 @@ defmodule BotchiniDiscordTest.ScreensTest do
   end
 
   describe "/stream start" do
-    test "privately sends the broadcast and watch all links" do
+    test "privately sends the links to the share page and to watch all" do
       response = Screen.handle_interaction(interaction(), subcommand("start"))
 
       assert response.data.flags == 64
-      assert response.data.content =~ "**Luca's screen**"
+      assert response.data.content =~ "Start sharing"
+      refute response.data.content =~ "I'll list you"
 
-      room = Screens.find_owner_room("1", "3")
-      assert %Room{title: "Luca's screen", channel_id: "2", owner_name: "Luca"} = room
-
-      assert [broadcast, watch_all] = buttons(response)
-      assert broadcast.url =~ ~r"/screens/#{room.id}/broadcast##{room.broadcast_key}$"
+      assert [share, watch_all] = buttons(response)
+      assert share.label == "Start sharing"
+      assert share.url =~ ~r"/screens/1/share$"
       assert watch_all.label == "Watch all"
       assert watch_all.url =~ ~r"/screens/1$"
-      refute watch_all.url =~ room.broadcast_key
+    end
+
+    test "doesn't start a room, the share page does once something is picked" do
+      Screen.handle_interaction(interaction(), subcommand("start"))
+
+      assert Screens.list_rooms("1") == []
     end
 
     test "points to the streams channel when the server has one" do
@@ -66,21 +83,11 @@ defmodule BotchiniDiscordTest.ScreensTest do
 
       assert response.data.content =~ "I'll list you in <#5> once you're live"
     end
-
-    test "sends the running room's links again" do
-      first = Screen.handle_interaction(interaction(), subcommand("start"))
-      response = Screen.handle_interaction(interaction(), subcommand("start"))
-
-      # The watch all link is signed again on every reply
-      assert [broadcast, %{label: "Watch all"}] = buttons(response)
-      assert [^broadcast, _watch_all] = buttons(first)
-      assert length(Screens.list_rooms("1")) == 1
-    end
   end
 
   describe "/stream stop" do
     test "ends the user's room" do
-      Screen.handle_interaction(interaction(), subcommand("start"))
+      start_room()
       response = Screen.handle_interaction(interaction(), subcommand("stop"))
 
       assert response.data.content =~ "Stopped sharing"
@@ -88,7 +95,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
     end
 
     test "doesn't end other users' rooms" do
-      Screen.handle_interaction(interaction(4), subcommand("start"))
+      start_room("4")
       response = Screen.handle_interaction(interaction(), subcommand("stop"))
 
       assert response.data.content == "You're not sharing your screen"
@@ -106,7 +113,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
   end
 
   test "/stream watch only shows rooms that are live" do
-    Screen.handle_interaction(interaction(), subcommand("start"))
+    start_room()
     response = Screen.handle_interaction(interaction(), subcommand("watch"))
 
     assert response.data.content =~ "Nobody is sharing their screen right now"
@@ -115,8 +122,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
   end
 
   test "/stream watch names every live room and only links to all of them" do
-    Screen.handle_interaction(interaction(), subcommand("start"))
-    room = Screens.find_owner_room("1", "3")
+    room = start_room()
     patch(Screens, :list_rooms, [%{room | live?: true}])
 
     response = Screen.handle_interaction(interaction(), subcommand("watch"))
@@ -152,7 +158,6 @@ defmodule BotchiniDiscordTest.ScreensTest do
 
       room = %Room{
         id: "room",
-        broadcast_key: "key",
         title: "Elden Ring",
         guild_id: "1",
         channel_id: "2",
@@ -190,21 +195,6 @@ defmodule BotchiniDiscordTest.ScreensTest do
       assert_called_once(Nostrum.Api.request(:patch, "/channels/2/messages/20", edited))
       assert edited.content =~ "**Boss \\*fight\\***"
       assert [%{components: [%{label: "Watch all"}]}] = edited.components
-    end
-
-    test "tells the broadcaster when it can't post the watch link", %{room: room} do
-      error = %ApiError{
-        status_code: 403,
-        response: %{code: 50_013, message: "Missing Permissions"}
-      }
-
-      patch(Nostrum.Api, :request, {:error, error})
-      Screens.subscribe(room.id)
-
-      Screens.broadcast(room, :live)
-
-      assert_receive {:screen_announcement_failed, "room"}
-      assert Process.alive?(Process.whereis(Announcer))
     end
 
     test "only announces rooms that went live", %{room: room} do

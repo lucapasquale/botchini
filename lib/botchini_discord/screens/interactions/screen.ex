@@ -25,7 +25,7 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
       options: [
         %{
           name: "start",
-          description: "Get a private link to start sharing your screen",
+          description: "Get the link to start sharing your screen",
           type: ApplicationCommandOptionType.sub_command()
         },
         %{
@@ -68,26 +68,25 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
     end
   end
 
+  # The page logs the member in with Discord, so the link is the same for everyone
   defp handle_start(interaction) do
-    owner_name = owner_name(interaction)
-
-    {:ok, room} =
-      Screens.start_room(%{
-        title: "#{owner_name}'s screen",
-        guild_id: Integer.to_string(interaction.guild_id),
-        channel_id: Integer.to_string(interaction.channel_id),
-        owner_id: Integer.to_string(interaction.user.id),
-        owner_name: owner_name
-      })
+    guild_id = Integer.to_string(interaction.guild_id)
 
     reply(
-      """
-      Your screen share **#{Helpers.escape_markdown(room.title)}** is ready! Open **Start sharing** and pick a screen or window.
-      Keep that link to yourself, anyone with it can share as you. \
-      #{announcement(room.guild_id)} once you're live.
-      """,
-      components: [Components.broadcast_screen(room)]
+      "Open **Start sharing** and pick a screen or window.#{listing(guild_id)}",
+      components: [Components.share_screen(guild_id)]
     )
+  end
+
+  # Screens shared from the page have no channel to be posted in, only the list
+  defp listing(guild_id) do
+    case Screens.get_stream_channel(guild_id) do
+      nil ->
+        ""
+
+      stream_channel ->
+        " I'll list you in <##{stream_channel.discord_channel_id}> once you're live."
+    end
   end
 
   defp handle_stop(interaction) do

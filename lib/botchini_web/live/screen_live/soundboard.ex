@@ -131,115 +131,8 @@ defmodule BotchiniWeb.ScreenLive.Soundboard do
     {"comet", "☄️ Comet"}
   ]
 
-  @tab_active "bg-gray-700 text-white"
-  @tab_inactive "text-gray-400 hover:text-white"
-
   # Popovers of the bar open above it, lined up with its right edge
   @bar_panel "absolute bottom-full right-0 z-50 mb-2 flex max-h-[70dvh] w-80 max-w-[calc(100vw_-_2rem)] flex-col rounded-lg border border-gray-700 bg-gray-900/95 shadow-2xl"
-
-  attr :cooldown?, :boolean, required: true
-  attr :cooldown_message, :string, default: nil
-
-  attr :page_key, :string,
-    required: true,
-    doc: "Identifies the page, so pointers drawn on it only show on the same page"
-
-  @doc """
-  Floating menu, a button members drag anywhere on the screen that opens the
-  soundboard and the pointer settings next to it. The Soundboard hook places it,
-  so it stays out of the page's layout, and the Pointer hook runs the pointers.
-  Browsers only play audio once the page was clicked, so a hint asks for a click
-  when a sound couldn't play
-  """
-  def soundboard(assigns) do
-    ~H"""
-    <aside
-      id="soundboard"
-      phx-hook="Soundboard"
-      data-pointer-menu
-      class="invisible fixed left-0 top-0 z-50"
-    >
-      <div data-sounds-card class="flex gap-2">
-        <button
-          type="button"
-          data-sounds-toggle
-          data-drag-handle
-          title="Soundboard and pointer"
-          aria-controls="soundboard-panel"
-          aria-expanded="false"
-          class="h-14 w-14 shrink-0 cursor-grab touch-none select-none overflow-hidden rounded-full shadow-lg ring-2 ring-indigo-500 transition hover:ring-indigo-300 active:cursor-grabbing"
-        >
-          <img
-            src={~p"/images/soundboard.jpg"}
-            alt="Soundboard"
-            draggable="false"
-            class="h-full w-full object-cover"
-          />
-        </button>
-
-        <div
-          id="soundboard-panel"
-          data-sounds-panel
-          hidden
-          class="flex max-h-[70dvh] w-80 flex-col rounded-lg border border-gray-700 bg-gray-900/95 shadow-2xl"
-        >
-          <div
-            data-drag-handle
-            class="flex cursor-grab touch-none select-none items-center justify-between gap-2 border-b border-gray-700 px-3 py-2 active:cursor-grabbing"
-          >
-            <div role="tablist" class="flex gap-1 rounded-lg bg-gray-800 p-1 text-sm font-semibold">
-              <button
-                id="soundboard-tab-button-sounds"
-                type="button"
-                role="tab"
-                aria-selected="true"
-                phx-click={show_tab("sounds", "pointer")}
-                class={["rounded-md px-2.5 py-1 transition", tab_class(true)]}
-              >
-                🔊 Sounds
-              </button>
-              <button
-                id="soundboard-tab-button-pointer"
-                type="button"
-                role="tab"
-                aria-selected="false"
-                phx-click={show_tab("pointer", "sounds")}
-                class={["rounded-md px-2.5 py-1 transition", tab_class(false)]}
-              >
-                ✨ Pointer
-              </button>
-            </div>
-          </div>
-
-          <div data-sounds-scroll class="min-h-0 flex-1 overflow-y-auto p-3 pb-1">
-            <div id="soundboard-tab-sounds" role="tabpanel">
-              <.sound_controls cooldown?={@cooldown?} cooldown_message={@cooldown_message} />
-            </div>
-
-            <div
-              id="soundboard-tab-pointer"
-              role="tabpanel"
-              phx-hook="Pointer"
-              phx-update="ignore"
-              data-page-key={@page_key}
-              class="hidden space-y-4 text-sm"
-            >
-              <.pointer_settings />
-            </div>
-          </div>
-
-          <div
-            data-sounds-resize
-            title="Drag to resize"
-            class="flex h-4 shrink-0 cursor-ns-resize touch-none select-none items-center justify-center"
-          >
-            <span class="h-1 w-10 rounded-full bg-gray-600"></span>
-          </div>
-        </div>
-      </div>
-    </aside>
-    """
-  end
 
   attr :cooldown?, :boolean, required: true
   attr :cooldown_message, :string, default: nil
@@ -474,20 +367,5 @@ defmodule BotchiniWeb.ScreenLive.Soundboard do
       </button>
     </div>
     """
-  end
-
-  defp tab_class(true), do: @tab_active
-  defp tab_class(false), do: @tab_inactive
-
-  # Switching tabs stays in the browser, and survives the menu being re-rendered
-  defp show_tab(tab, other) do
-    JS.show(to: "#soundboard-tab-#{tab}")
-    |> JS.hide(to: "#soundboard-tab-#{other}")
-    |> JS.add_class(@tab_active, to: "#soundboard-tab-button-#{tab}")
-    |> JS.remove_class(@tab_inactive, to: "#soundboard-tab-button-#{tab}")
-    |> JS.remove_class(@tab_active, to: "#soundboard-tab-button-#{other}")
-    |> JS.add_class(@tab_inactive, to: "#soundboard-tab-button-#{other}")
-    |> JS.set_attribute({"aria-selected", "true"}, to: "#soundboard-tab-button-#{tab}")
-    |> JS.set_attribute({"aria-selected", "false"}, to: "#soundboard-tab-button-#{other}")
   end
 end

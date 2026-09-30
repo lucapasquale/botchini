@@ -10,33 +10,6 @@ defmodule BotchiniWeb.ScreenLive.Components do
   alias Botchini.Screens
 
   attr :room, :map, required: true
-  slot :inner_block, doc: "Actions shown next to the room's status"
-
-  def room_header(assigns) do
-    ~H"""
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <div>
-        <h1 class="text-2xl font-semibold">{@room.title}</h1>
-        <p class="text-sm text-gray-400">Shared by {@room.owner_name}</p>
-      </div>
-
-      <div class="flex items-center gap-3 text-sm">
-        <span :if={@room.live?} class="rounded bg-red-600 px-2 py-0.5 font-semibold text-white">
-          LIVE
-        </span>
-        <span :if={!@room.live?} class="rounded bg-gray-700 px-2 py-0.5 font-semibold">
-          OFFLINE
-        </span>
-        <span class="text-gray-400">
-          {viewers(@room.viewer_count)}
-        </span>
-        {render_slot(@inner_block)}
-      </div>
-    </div>
-    """
-  end
-
-  attr :room, :map, required: true
   slot :inner_block, doc: "Overlays shown on top of the video"
 
   def viewer(assigns) do
@@ -340,6 +313,26 @@ defmodule BotchiniWeb.ScreenLive.Components do
     """
   end
 
+  @doc """
+  Discord ids are numbers, anything else can't be a guild
+  """
+  @spec parse_guild_id(term()) :: {:ok, String.t()} | :invalid
+  def parse_guild_id(guild_id) when is_binary(guild_id) do
+    if Regex.match?(~r/\A\d{1,20}\z/, guild_id), do: {:ok, guild_id}, else: :invalid
+  end
+
+  def parse_guild_id(_missing), do: :invalid
+
+  def guild_not_found(assigns) do
+    ~H"""
+    <.notice title="Server not found">
+      Open <strong>Watch all</strong>
+      on Discord, or run <code>/stream watch</code>
+      there to get the link.
+    </.notice>
+    """
+  end
+
   attr :status, :atom, values: [:not_member, :unavailable], required: true
 
   def denied(%{status: :not_member} = assigns) do
@@ -371,10 +364,6 @@ defmodule BotchiniWeb.ScreenLive.Components do
     do: push_event(socket, "screen:viewer_left", %{})
 
   def push_viewer_chime(socket, _before, _now), do: socket
-
-  @spec viewers(non_neg_integer()) :: String.t()
-  def viewers(1), do: "1 viewer"
-  def viewers(count), do: "#{count} viewers"
 
   @doc """
   STUN/TURN servers the browsers use to find a route to the server

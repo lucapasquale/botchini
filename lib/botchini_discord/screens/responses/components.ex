@@ -7,16 +7,15 @@ defmodule BotchiniDiscord.Screens.Responses.Components do
 
   alias Nostrum.Constants.{ButtonStyle, ComponentType}
 
-  alias Botchini.Screens.Room
-  alias BotchiniWeb.ScreenLive.Guild
+  alias BotchiniWeb.ScreenLive.{Guild, ManageStream}
 
-  @spec broadcast_screen(Room.t()) :: map()
-  def broadcast_screen(room) do
+  @spec share_screen(String.t()) :: map()
+  def share_screen(guild_id) do
     %{
       type: ComponentType.action_row(),
       components: [
-        link_button("Start sharing", broadcast_url(room)),
-        link_button("Watch all", Guild.watch_url(room.guild_id))
+        link_button("Start sharing", ManageStream.share_url(guild_id)),
+        link_button("Watch all", Guild.watch_url(guild_id))
       ]
     }
   end
@@ -31,11 +30,6 @@ defmodule BotchiniDiscord.Screens.Responses.Components do
 
   @spec whip_url() :: String.t()
   def whip_url, do: url(~p"/api/whip")
-
-  # The key goes in the fragment, which browsers never send to the server,
-  # so it stays out of request logs, traces and Referer headers
-  @spec broadcast_url(Room.t()) :: String.t()
-  def broadcast_url(room), do: url(~p"/screens/#{room.id}/broadcast") <> "#" <> room.broadcast_key
 
   defp link_button(label, url) do
     %{type: ComponentType.button(), style: ButtonStyle.link(), label: label, url: url}

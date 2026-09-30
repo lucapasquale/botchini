@@ -48,10 +48,12 @@ defmodule BotchiniWeb.ScreenLive.Guild do
        |> assign(
          status: :open,
          guild_id: guild_id,
+         share_path: ~p"/screens/#{guild_id}/share",
          online: Screens.list_online(guild_id),
          admin?: access == :admin,
          rooms: guild_id |> Screens.list_rooms() |> Enum.filter(& &1.live?)
        )
+       |> assign_sharing()
        |> Chat.mount(guild_id, socket.assigns.current_user)
        |> Soundboard.mount(guild_id, socket.assigns.current_user)
        |> Pointers.mount(guild_id, socket.assigns.current_user)}
@@ -62,13 +64,6 @@ defmodule BotchiniWeb.ScreenLive.Guild do
       :invalid -> {:ok, assign(socket, status: :not_found)}
     end
   end
-
-  # Discord ids are numbers, anything else can't be a guild
-  defp parse_guild_id(guild_id) when is_binary(guild_id) do
-    if Regex.match?(~r/\A\d{1,20}\z/, guild_id), do: {:ok, guild_id}, else: :invalid
-  end
-
-  defp parse_guild_id(_missing), do: :invalid
 
   @impl true
   def render(%{status: :connecting} = assigns) do
@@ -85,11 +80,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
 
   def render(%{status: :not_found} = assigns) do
     ~H"""
-    <.notice title="Server not found">
-      Open <strong>Watch all</strong>
-      on Discord, or run <code>/stream watch</code>
-      there to get the link.
-    </.notice>
+    <.guild_not_found />
     """
   end
 
@@ -106,54 +97,10 @@ defmodule BotchiniWeb.ScreenLive.Guild do
       assign(assigns,
         big: big,
         main: main,
-        layout: layout(length(big)),
-        sharing?: Enum.any?(assigns.rooms, &(&1.owner_id == assigns.current_user.id))
+        layout: layout(length(big))
       )
 
     ~H"""
-    <%!-- Collapsed by default to leave the room to the screens. Hidden instead of removed
-         when collapsed, as the controls keep a connection going while sharing --%>
-    <section
-      id="manage-stream"
-      class="mx-auto mb-3 w-full rounded-xl border border-gray-800 bg-gray-900"
-      style={max_width(@layout)}
-    >
-      <button
-        type="button"
-        id="manage-stream-toggle"
-        aria-controls="manage-stream-body"
-        aria-expanded="false"
-        phx-click={
-          JS.toggle(to: "#manage-stream-body")
-          |> JS.toggle_attribute({"aria-expanded", "true", "false"})
-        }
-        class="group flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm font-semibold"
-      >
-        <span class="flex items-center gap-2">
-          Manage my stream
-          <span
-            :if={@sharing?}
-            class="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-white"
-          >
-            LIVE
-          </span>
-        </span>
-        <span
-          class="text-xs text-gray-400 transition group-aria-expanded:rotate-180"
-          aria-hidden="true"
-        >
-          ▼
-        </span>
-      </button>
-
-      <div id="manage-stream-body" style="display: none" class="border-t border-gray-800 p-3">
-        {live_render(@socket, BotchiniWeb.ScreenLive.ManageStream,
-          id: "manage-stream-live",
-          session: %{"guild_id" => @guild_id, "user" => @current_user}
-        )}
-      </div>
-    </section>
-
     <div
       id="screens"
       phx-hook="Popovers"
@@ -307,9 +254,9 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   end
 
   # Big screens are capped so they fit the window's height, leaving room for the
-  # manage bar, the header, the strip and the note below them
+  # header, the strip and the note below them
   defp max_width(%{per_row: per_row, rows: rows}) do
-    height = "(100dvh - 19rem - #{rows - 1} * 0.75rem) / #{rows}"
+    height = "(100dvh - 16rem - #{rows - 1} * 0.75rem) / #{rows}"
     "max-width: calc(#{height} * 16 / 9 * #{per_row} + #{per_row - 1} * 0.75rem);"
   end
 
@@ -428,14 +375,22 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     {:noreply,
      socket
      |> update(:rooms, &Enum.reject(&1, fn r -> r.id == room.id end))
-     |> update(:pinned, &List.delete(&1, room.id))}
+     |> update(:pinned, &List.delete(&1, room.id))
+     |> assign_sharing()}
   end
 
   def handle_info({:screen_room, _event, room}, socket) do
     {:noreply,
      socket
      |> chime_for_owner(room)
-     |> update(:rooms, &put_room(&1, room))}
+     |> update(:rooms, &put_room(&1, room))
+     |> assign_sharing()}
+  end
+
+  # Marks the header's share link live, for the layout to show
+  defp assign_sharing(socket) do
+    user_id = socket.assigns.current_user.id
+    assign(socket, sharing?: Enum.any?(socket.assigns.rooms, &(&1.owner_id == user_id)))
   end
 
   # Streamers hear their viewers come and go here too, which is the only place

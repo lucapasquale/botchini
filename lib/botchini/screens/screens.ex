@@ -16,7 +16,7 @@ defmodule Botchini.Screens do
     ice_port_range: nil,
     announced_ip: nil,
     max_viewers: 20,
-    # How long the broadcaster has to open their link after creating the room
+    # How long the broadcaster has to go live after the room is made
     start_timeout_ms: :timer.minutes(10),
     # How long the room waits for an OBS broadcaster to come back after disconnecting
     reconnect_timeout_ms: :timer.minutes(2),
@@ -54,7 +54,7 @@ defmodule Botchini.Screens do
 
       nil ->
         room =
-          struct!(Room, Map.merge(attrs, %{id: random_id(), broadcast_key: random_id()}))
+          struct!(Room, Map.put(attrs, :id, random_id()))
 
         with {:ok, _pid} <- DynamicSupervisor.start_child(RoomSupervisor, {Room, room}),
              do: Room.info(room.id)
@@ -68,23 +68,6 @@ defmodule Botchini.Screens do
       {:error, :not_found} -> nil
     end
   end
-
-  @doc """
-  Gets the room the broadcast key belongs to, without leaking through timing
-  whether the room exists but the key is wrong
-  """
-  @spec get_room_for_broadcast(String.t(), String.t()) :: Room.t() | nil
-  def get_room_for_broadcast(room_id, broadcast_key)
-      when is_binary(room_id) and is_binary(broadcast_key) do
-    with %Room{} = room <- get_room(room_id),
-         true <- Plug.Crypto.secure_compare(room.broadcast_key, broadcast_key) do
-      room
-    else
-      _ -> nil
-    end
-  end
-
-  def get_room_for_broadcast(_room_id, _broadcast_key), do: nil
 
   @spec list_rooms(String.t()) :: [Room.t()]
   def list_rooms(guild_id) do
@@ -234,18 +217,6 @@ defmodule Botchini.Screens do
     if event in [:live, :ended], do: Phoenix.PubSub.broadcast(Botchini.PubSub, @topic, message)
     Phoenix.PubSub.broadcast(Botchini.PubSub, guild_topic(room.guild_id), message)
     Phoenix.PubSub.broadcast(Botchini.PubSub, room_topic(room.id), message)
-  end
-
-  @doc """
-  Tells the room's pages that its watch link couldn't be posted on Discord
-  """
-  @spec broadcast_announcement_failed(Room.t()) :: :ok
-  def broadcast_announcement_failed(%Room{} = room) do
-    Phoenix.PubSub.broadcast(
-      Botchini.PubSub,
-      room_topic(room.id),
-      {:screen_announcement_failed, room.id}
-    )
   end
 
   defp room_topic(room_id), do: "#{@topic}:#{room_id}"

@@ -1,29 +1,87 @@
 defmodule BotchiniWeb.ScreenLive.ManageStream do
   @moduledoc """
-  Controls on the guild page for sharing your own screen, like the broadcast page
-  but for logged in members. It's a LiveView of its own inside the guild page, as a
-  room talks to one process per peer, and the page's process is already watching.
+  Page where members share their own screen, logged in with Discord. It's apart
+  from the guild page, as a room talks to one process per peer, and that page's
+  process is already watching. The guild page's header and /stream start link here.
   The room is only made once the member picks something to share
   """
 
   use BotchiniWeb, :live_view
 
-  import BotchiniWeb.ScreenLive.Components, only: [ice_servers_json: 0]
+  import BotchiniWeb.ScreenLive.Components,
+    only: [
+      denied: 1,
+      guild_not_found: 1,
+      ice_servers_json: 0,
+      notice: 1,
+      parse_guild_id: 1,
+      push_viewer_chime: 3
+    ]
 
   alias Botchini.Screens
   alias Botchini.Screens.Room
+  alias BotchiniWeb.Auth
+
+  @doc """
+  Link to this page for a guild, where members log in to share their screen
+  """
+  @spec share_url(String.t()) :: String.t()
+  def share_url(guild_id), do: url(~p"/screens/#{guild_id}/share")
 
   @impl true
-  def mount(_params, %{"guild_id" => guild_id, "user" => user}, socket) do
-    room = if connected?(socket), do: Screens.find_owner_room(guild_id, user.id)
-    if room, do: Screens.subscribe(room.id)
+  def mount(params, _session, socket) do
+    socket = assign(socket, page_title: "Share your screen", user: socket.assigns.current_user)
 
-    {:ok, assign(socket, guild_id: guild_id, user: user, room: room, pending_title: "")}
+    # Discord is only asked once connected, instead of for both renders
+    with true <- connected?(socket),
+         {:ok, guild_id} <- parse_guild_id(params["guild_id"]),
+         access when access in [:member, :admin] <- Auth.member_status(socket, guild_id) do
+      room = Screens.find_owner_room(guild_id, socket.assigns.user.id)
+      if room, do: Screens.subscribe(room.id)
+
+      {:ok, assign(socket, status: :open, guild_id: guild_id, room: room, pending_title: "")}
+    else
+      false -> {:ok, assign(socket, status: :connecting)}
+      :not_member -> {:ok, assign(socket, status: :not_member)}
+      :error -> {:ok, assign(socket, status: :unavailable)}
+      :invalid -> {:ok, assign(socket, status: :not_found)}
+    end
   end
 
   @impl true
+  def render(%{status: :connecting} = assigns) do
+    ~H"""
+    <.notice title="Connecting...">Checking your access to the server.</.notice>
+    """
+  end
+
+  def render(%{status: status} = assigns) when status in [:not_member, :unavailable] do
+    ~H"""
+    <.denied status={@status} />
+    """
+  end
+
+  def render(%{status: :not_found} = assigns) do
+    ~H"""
+    <.guild_not_found />
+    """
+  end
+
   def render(assigns) do
     ~H"""
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <h1 class="text-2xl font-semibold">Share your screen</h1>
+      <%!-- A new tab, as leaving this one ends the stream --%>
+      <a
+        id="watch-link"
+        href={~p"/screens/#{@guild_id}"}
+        target="_blank"
+        class="text-sm text-indigo-400 hover:underline"
+      >
+        Watch the server's streams
+      </a>
+    </div>
+
     <p :if={obs?(@room)} class="text-sm text-gray-400">
       You're sharing from OBS. Stop that stream to share your screen from here.
     </p>
@@ -181,12 +239,19 @@ defmodule BotchiniWeb.ScreenLive.ManageStream do
   end
 
   def handle_info({:screen_room, _event, room}, socket) do
-    if socket.assigns.room && socket.assigns.room.id == room.id,
-      do: {:noreply, assign(socket, room: room)},
-      else: {:noreply, socket}
+    case socket.assigns.room do
+      %Room{id: id} = before when id == room.id ->
+        {:noreply,
+         socket
+         |> push_viewer_chime(before.viewer_count, room.viewer_count)
+         |> assign(room: room)}
+
+      _other_room ->
+        {:noreply, socket}
+    end
   end
 
-  # Room events this page doesn't care about, like the activity or the announcements
+  # Room events this page doesn't care about, like the activity
   def handle_info(_message, socket), do: {:noreply, socket}
 
   # The member picked something to share, so there's a room to put it in. Someone who

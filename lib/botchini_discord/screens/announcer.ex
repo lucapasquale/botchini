@@ -84,9 +84,7 @@ defmodule BotchiniDiscord.Screens.Announcer do
   def handle_info({:screen_room, :live, %Room{} = room}, state) do
     if Map.has_key?(state.guilds, room.guild_id) do
       Screens.subscribe(room.id)
-      {result, state} = update_rooms(state, room.guild_id, &Map.put(&1, room.id, room))
-      if result == :error, do: announcement_failed(room)
-
+      {_result, state} = update_rooms(state, room.guild_id, &Map.put(&1, room.id, room))
       {:noreply, state}
     else
       case post_live(room) do
@@ -100,7 +98,6 @@ defmodule BotchiniDiscord.Screens.Announcer do
            put_in(state.messages[room.id], {message.channel_id, message.id, room.title})}
 
         {:error, _reason} ->
-          announcement_failed(room)
           {:noreply, state}
       end
     end
@@ -191,9 +188,6 @@ defmodule BotchiniDiscord.Screens.Announcer do
       rename_timer: nil
     }
   end
-
-  # The broadcaster still has the watch link from the /stream start reply
-  defp announcement_failed(room), do: Screens.broadcast_announcement_failed(room)
 
   defp live_rooms(guild_id) do
     guild_id
@@ -427,7 +421,7 @@ defmodule BotchiniDiscord.Screens.Announcer do
   defp to_id(id) when is_binary(id), do: String.to_integer(id)
 
   # Interactions reply without any channel permissions, so the bot can answer
-  # /stream start in a channel it isn't allowed to post in
+  # /stream commands in a channel it isn't allowed to post in
   defp describe_error(%ApiError{status_code: 403}),
     do: "missing the View Channel or Send Messages permission in the channel"
 

@@ -32,11 +32,6 @@ defmodule BotchiniWeb.Router do
     get "/auth/login", AuthController, :login
     get "/auth/discord", AuthController, :discord
     get "/auth/discord/callback", AuthController, :callback
-
-    # Broadcasters get in with the key of their link instead
-    live_session :broadcast, layout: {BotchiniWeb.Layouts, :screen} do
-      live "/screens/:id/broadcast", ScreenLive.Broadcast
-    end
   end
 
   scope "/", BotchiniWeb do
@@ -47,6 +42,7 @@ defmodule BotchiniWeb.Router do
       on_mount: {BotchiniWeb.Auth, :require_user} do
       live "/screens", ScreenLive.Guild
       live "/screens/:guild_id", ScreenLive.Guild
+      live "/screens/:guild_id/share", ScreenLive.ManageStream
     end
   end
 

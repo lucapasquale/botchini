@@ -22,7 +22,6 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import {ScreenBroadcast, ScreenViewer} from "./hooks/screen_share"
-import {LocalTime} from "./hooks/local_time"
 import {playNotification} from "./hooks/notification_sounds"
 import {Soundboard} from "./hooks/soundboard"
 import {Pointer} from "./hooks/pointer"
@@ -32,14 +31,8 @@ import {ChatForm, Popovers} from "./hooks/popovers"
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  // Read on every connect, so screen keys (kept in the URL fragment to never
-  // reach the server logs) reach the LiveView on reconnects too
-  params: () => {
-    const params = {_csrf_token: csrfToken}
-    if (location.hash.length > 1) params.key = location.hash.slice(1)
-    return params
-  },
-  hooks: {ChatForm, LocalTime, OnlineMutes, Pointer, Popovers, ScreenBroadcast, ScreenViewer, Soundboard}
+  params: {_csrf_token: csrfToken},
+  hooks: {ChatForm, OnlineMutes, Pointer, Popovers, ScreenBroadcast, ScreenViewer, Soundboard}
 })
 
 // Show progress bar on live navigation and form submits

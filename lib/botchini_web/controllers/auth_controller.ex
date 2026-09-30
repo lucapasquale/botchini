@@ -10,18 +10,17 @@ defmodule BotchiniWeb.AuthController do
 
   @default_return_to "/screens"
 
-  # The screens page is the only one behind the login, and a fixed destination
-  # means the login can't be used to send people elsewhere
-  def login(conn, _params) do
-    render(conn, :login, page_title: "Log in", return_to: @default_return_to, error: nil)
+  def login(conn, params) do
+    render(conn, :login, page_title: "Log in", return_to: return_to(params), error: nil)
   end
 
-  def discord(conn, _params) do
+  def discord(conn, params) do
     if OAuth.configured?() do
       state = 16 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
 
       conn
       |> put_session(:oauth_state, state)
+      |> put_session(:return_to, return_to(params))
       |> redirect(external: OAuth.authorize_url(redirect_uri(), state))
     else
       Logger.error("Discord login isn't configured, DISCORD_CLIENT_SECRET is missing")
@@ -31,13 +30,14 @@ defmodule BotchiniWeb.AuthController do
 
   def callback(conn, %{"code" => code, "state" => state}) when is_binary(state) do
     expected = get_session(conn, :oauth_state)
-    conn = delete_session(conn, :oauth_state)
+    return_to = return_to(%{"return_to" => get_session(conn, :return_to)})
+    conn = conn |> delete_session(:oauth_state) |> delete_session(:return_to)
 
     with true <- is_binary(expected) and Plug.Crypto.secure_compare(expected, state),
          {:ok, user} <- OAuth.fetch_user(code, redirect_uri()) do
       conn
       |> Auth.log_in(user)
-      |> redirect(to: ~p"/auth/return")
+      |> redirect(to: return_to)
     else
       false ->
         login_failed(conn, "The login expired, please try again")
@@ -51,12 +51,6 @@ defmodule BotchiniWeb.AuthController do
   # Discord sends an error instead of a code when the user cancels
   def callback(conn, _params), do: login_failed(conn, "You need to log in to watch screen shares")
 
-  @doc """
-  Where the login ends. The browser script sends the visitor back to the page they came
-  from, as the key in its URL fragment never reaches the server
-  """
-  def return(conn, _params), do: render(conn, :return, page_title: "Logging in")
-
   defp login_failed(conn, error) do
     conn
     |> put_status(:unauthorized)
@@ -64,4 +58,11 @@ defmodule BotchiniWeb.AuthController do
   end
 
   defp redirect_uri, do: url(~p"/auth/discord/callback")
+
+  # Only screen pages are valid, so the login can't be used to send people elsewhere
+  defp return_to(%{"return_to" => path}) when is_binary(path) do
+    if Regex.match?(~r{\A/screens(/\d+)?\z}, path), do: path, else: @default_return_to
+  end
+
+  defp return_to(_params), do: @default_return_to
 end

@@ -34,7 +34,8 @@ defmodule Botchini.Discord do
       {:ok, member} ->
         if manage_guild?(guild_id, member), do: :admin, else: :member
 
-      {:error, %ApiError{status_code: 404}} ->
+      # Discord doesn't let the bot see guilds it isn't in
+      {:error, %ApiError{status_code: status}} when status in [403, 404] ->
         :not_member
 
       {:error, error} ->

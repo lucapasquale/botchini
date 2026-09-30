@@ -55,7 +55,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
       assert [broadcast, watch_all] = buttons(response)
       assert broadcast.url =~ ~r"/screens/#{room.id}/broadcast##{room.broadcast_key}$"
       assert watch_all.label == "Watch all"
-      assert watch_all.url =~ ~r"/screens#.+$"
+      assert watch_all.url =~ ~r"/screens/1$"
       refute watch_all.url =~ room.broadcast_key
     end
 
@@ -111,7 +111,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
 
     assert response.data.content =~ "Nobody is sharing their screen right now"
     assert [%{label: "Watch all", url: url}] = buttons(response)
-    assert url =~ ~r"/screens#.+$"
+    assert url =~ ~r"/screens/1$"
   end
 
   test "/stream watch names every live room and only links to all of them" do
@@ -123,7 +123,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
 
     assert response.data.content =~ "**Luca's screen** by <@3>"
     assert [%{label: "Watch all", url: url}] = buttons(response)
-    assert url =~ ~r"/screens#.+$"
+    assert url =~ ~r"/screens/1$"
     refute url =~ room.id
   end
 
@@ -174,7 +174,7 @@ defmodule BotchiniDiscordTest.ScreensTest do
       assert live.content =~ "<@3> is sharing their screen: **Elden Ring**"
       assert live.allowed_mentions == %{parse: []}
       assert [%{components: [%{label: "Watch all", url: url}]}] = live.components
-      assert url =~ ~r"/screens#.+$"
+      assert url =~ ~r"/screens/1$"
       refute url =~ "/screens/room"
 
       assert_called(Nostrum.Api.request(:delete, "/channels/2/messages/20"))
@@ -277,6 +277,16 @@ defmodule BotchiniDiscordTest.ScreensTest do
       :sys.get_state(Announcer)
       assert ended = List.last(status_edits())
       assert ended.content =~ "Nobody is sharing their screen right now"
+    end
+
+    # Messages posted before the links became fixed get the new one on the next start
+    test "updates the streams channel's watch all link on start" do
+      {:ok, _stream_channel} = Screens.put_stream_channel("1", "5", "30")
+      restart_announcer()
+
+      assert_called(Nostrum.Api.request(:patch, "/channels/5/messages/30", idle))
+      assert [%{components: [%{label: "Watch all", url: url}]}] = idle.components
+      assert url =~ ~r"^https?://[^/]+/screens/1$"
     end
 
     test "posts the streams channel's message again when it was deleted", %{room: room} do

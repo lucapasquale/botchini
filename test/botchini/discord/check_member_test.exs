@@ -72,6 +72,16 @@ defmodule Botchini.Discord.CheckMemberTest do
     assert Discord.check_member("1", "10") == :not_member
   end
 
+  test "finds nobody in guilds the bot isn't in" do
+    patch_function(
+      GuildApi,
+      :member,
+      {:error, %ApiError{status_code: 403, response: %{code: 50_001}}}
+    )
+
+    assert Discord.check_member("1", "10") == :not_member
+  end
+
   test "doesn't take other errors for people who left" do
     patch_function(GuildApi, :member, {:error, %ApiError{status_code: 500, response: %{}}})
     assert Discord.check_member("1", "10") == :error

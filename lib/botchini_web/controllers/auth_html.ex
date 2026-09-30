@@ -15,21 +15,11 @@ defmodule BotchiniWeb.AuthHTML do
       Screen shares are only for members of the server, log in with Discord to continue.
       <span :if={@error} class="mt-3 block text-red-400">{@error}</span>
       <a
-        href={~p"/auth/discord"}
-        data-login
-        data-return-to={@return_to}
+        href={~p"/auth/discord?#{[return_to: @return_to]}"}
         class="mt-6 inline-block rounded bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-500"
       >
         Log in with Discord
       </a>
-    </.notice>
-    """
-  end
-
-  def return(assigns) do
-    ~H"""
-    <.notice title="Logging you in...">
-      <a href={~p"/screens"} class="underline">Continue</a> if nothing happens.
     </.notice>
     """
   end

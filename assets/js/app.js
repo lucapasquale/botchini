@@ -48,31 +48,6 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 window.addEventListener("phx:screen:viewer_joined", () => playNotification("join"))
 window.addEventListener("phx:screen:viewer_left", () => playNotification("leave"))
 
-// Screen links keep their keys in the URL fragment, which the server never sees,
-// so it's kept here while the visitor logs in with Discord
-const LOGIN_RETURN = "botchini:login_return"
-
-document.addEventListener("click", event => {
-  const link = event.target.closest("[data-login]")
-  if (!link) return
-
-  try {
-    sessionStorage.setItem(LOGIN_RETURN, link.dataset.returnTo + location.hash)
-  } catch (_error) {}
-})
-
-if (location.pathname === "/auth/return") {
-  let destination = null
-
-  try {
-    destination = sessionStorage.getItem(LOGIN_RETURN)
-    sessionStorage.removeItem(LOGIN_RETURN)
-  } catch (_error) {}
-
-  const valid = /^\/screens(#.*)?$/.test(destination || "")
-  location.replace(valid ? destination : "/screens")
-}
-
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 

@@ -20,9 +20,6 @@ defmodule BotchiniDiscord.Screens.Announcer do
   alias BotchiniDiscord.Screens.ChannelName
   alias BotchiniDiscord.Screens.Responses.Components
 
-  # Watch all links expire after a day, so the streams channels' messages get
-  # fresh ones well before that, even when nobody shares for a while
-  @refresh_links_ms :timer.hours(12)
   # Keeps the message under Discord's 2000 characters
   @max_listed_rooms 15
   # Discord allows renaming a channel twice every 10 minutes
@@ -51,9 +48,8 @@ defmodule BotchiniDiscord.Screens.Announcer do
   end
 
   @impl true
+  # Editing every guild's message on start also keeps its Watch all link up to date
   def handle_continue(:load_channels, state) do
-    Process.send_after(self(), :refresh_links, @refresh_links_ms)
-
     guilds =
       Map.new(Screens.list_stream_channels(), fn %StreamChannel{discord_guild_id: guild_id} =
                                                    channel ->
@@ -138,18 +134,6 @@ defmodule BotchiniDiscord.Screens.Announcer do
     else
       {:noreply, state}
     end
-  end
-
-  def handle_info(:refresh_links, state) do
-    Process.send_after(self(), :refresh_links, @refresh_links_ms)
-
-    guilds =
-      Map.new(state.guilds, fn {guild_id, guild} ->
-        {_result, guild} = update_status(guild)
-        {guild_id, guild}
-      end)
-
-    {:noreply, %{state | guilds: guilds}}
   end
 
   def handle_info({:sync_name, guild_id}, state) do

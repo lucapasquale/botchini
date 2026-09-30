@@ -12,14 +12,20 @@ defmodule BotchiniWebTest.AuthControllerTest do
       html = conn |> get(~p"/auth/login") |> html_response(200)
 
       assert html =~ "Log in with Discord"
-      assert html =~ ~s(data-return-to="/screens")
+      assert html =~ ~s(href="/auth/discord?return_to=%2Fscreens")
     end
 
-    test "always goes back to the screens page", %{conn: conn} do
-      for path <- ["//evil.com", "https://evil.com", "/screens/../x", "/screens/abc_-1", "/other"] do
+    test "remembers the guild page to go back to", %{conn: conn} do
+      html = conn |> get(~p"/auth/login?return_to=/screens/123") |> html_response(200)
+
+      assert html =~ ~s(href="/auth/discord?return_to=%2Fscreens%2F123")
+    end
+
+    test "only goes back to screen pages", %{conn: conn} do
+      for path <- ["//evil.com", "https://evil.com", "/screens/../x", "/screens/abc", "/other"] do
         html = conn |> get(~p"/auth/login?#{[return_to: path]}") |> html_response(200)
 
-        assert html =~ ~s(data-return-to="/screens")
+        assert html =~ ~s(href="/auth/discord?return_to=%2Fscreens")
       end
     end
   end
@@ -37,6 +43,14 @@ defmodule BotchiniWebTest.AuthControllerTest do
       assert query["response_type"] == "code"
       assert query["redirect_uri"] =~ "/auth/discord/callback"
       assert query["state"] == get_session(conn, :oauth_state)
+    end
+
+    test "remembers where to go back to after the login", %{conn: conn} do
+      conn = get(conn, ~p"/auth/discord?return_to=/screens/123")
+      assert get_session(conn, :return_to) == "/screens/123"
+
+      conn = get(recycle(conn), ~p"/auth/discord?return_to=https://evil.com")
+      assert get_session(conn, :return_to) == "/screens"
     end
 
     test "fails when the application has no client secret", %{conn: conn} do
@@ -58,11 +72,23 @@ defmodule BotchiniWebTest.AuthControllerTest do
 
       conn = get(conn, ~p"/auth/discord/callback?code=abc&state=state123")
 
-      assert redirected_to(conn) == "/auth/return"
+      assert redirected_to(conn) == "/screens"
       assert get_session(conn, "discord_user_id") == "10"
       assert get_session(conn, "discord_user_name") == "Ana"
       assert get_session(conn, :oauth_state) == nil
       assert_called_once(OAuth.fetch_user("abc", _redirect_uri))
+    end
+
+    test "goes back to the page the visitor logged in from", %{conn: conn} do
+      patch_function(OAuth, :fetch_user, {:ok, %{id: "10", name: "Ana"}})
+
+      conn =
+        conn
+        |> init_test_session(%{oauth_state: "state123", return_to: "/screens/123"})
+        |> get(~p"/auth/discord/callback?code=abc&state=state123")
+
+      assert redirected_to(conn) == "/screens/123"
+      assert get_session(conn, :return_to) == nil
     end
 
     test "rejects a state that isn't the one that was sent", %{conn: conn} do
@@ -94,12 +120,6 @@ defmodule BotchiniWebTest.AuthControllerTest do
       conn = get(conn, ~p"/auth/discord/callback?error=access_denied&state=state123")
 
       assert html_response(conn, 401) =~ "You need to log in"
-    end
-  end
-
-  describe "return page" do
-    test "renders the page the browser script redirects from", %{conn: conn} do
-      assert conn |> get(~p"/auth/return") |> html_response(200) =~ "Logging you in"
     end
   end
 end

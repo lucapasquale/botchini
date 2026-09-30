@@ -32,10 +32,10 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     do: init_test_session(conn, %{"discord_user_id" => "10", "discord_user_name" => "Ana"})
 
   describe "login" do
-    test "is needed for the guild page" do
-      conn = get(build_conn(), ~p"/screens")
+    test "is needed for the guild page, and brings the visitor back to it" do
+      conn = get(build_conn(), ~p"/screens/1")
 
-      assert redirected_to(conn) == "/auth/login?return_to=%2Fscreens"
+      assert redirected_to(conn) == "/auth/login?return_to=%2Fscreens%2F1"
     end
 
     test "isn't needed to broadcast", %{room: room} do
@@ -56,7 +56,10 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
   describe "single screen page" do
     test "is gone, as everyone watches on the guild page", %{conn: conn, room: room} do
-      assert conn |> get("/screens/#{room.id}") |> response(404)
+      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
+
+      assert render(view) =~ "Server not found"
+      refute render(view) =~ "Elden Ring"
     end
 
     test "isn't linked from the guild page", %{conn: conn, room: room} do
@@ -265,8 +268,15 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     end
 
     test "doesn't ask Discord for links that don't work", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/screens")
-      assert html =~ "Link expired"
+      for path <- [
+            ~p"/screens",
+            ~p"/screens/abc",
+            ~p"/screens/1x",
+            "/screens/#{String.duplicate("1", 21)}"
+          ] do
+        {:ok, view, _html} = live(conn, path)
+        assert render(view) =~ "Server not found"
+      end
 
       refute_called(Discord.check_member(_guild_id, _user_id))
     end
@@ -385,8 +395,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
       html = render(view)
       assert html =~ "post the watch link on Discord"
-      assert html =~ ~r"/screens#[^\"<]+"
-      refute html =~ ~r"/screens/#{room.id}[\"<]"
+      assert html =~ ~r"/screens/1[\"<]"
     end
 
     test "names the room after the shared source or the owner's title", %{conn: conn, room: room} do
@@ -463,44 +472,17 @@ defmodule BotchiniWebTest.ScreenLiveTest do
   end
 
   describe "guild page" do
-    defp live_guild(conn, guild_id, signed_at \\ System.system_time(:second)) do
-      conn
-      |> put_connect_params(%{"key" => Guild.sign_token(guild_id, signed_at)})
-      |> live(~p"/screens")
+    defp live_guild(conn, guild_id), do: live(conn, ~p"/screens/#{guild_id}")
+
+    test "has a fixed link for each guild" do
+      assert Guild.watch_url("1") =~ ~r"^https?://[^/]+/screens/1$"
     end
 
-    defp days_ago(days), do: System.system_time(:second) - days * 86_400
+    test "only asks Discord once connected", %{conn: conn} do
+      html = conn |> get(~p"/screens/1") |> html_response(200)
 
-    test "requires a valid key", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/screens")
-      assert html =~ "Link expired"
-
-      {:ok, _view, html} =
-        conn
-        |> put_connect_params(%{"key" => "invalid"})
-        |> live(~p"/screens")
-
-      assert html =~ "Link expired"
-    end
-
-    test "expires after a day when nobody is sharing", %{conn: conn, room: room} do
-      Screens.stop_room(room)
-
-      {:ok, _view, html} = live_guild(conn, "1", days_ago(2))
-      assert html =~ "Link expired"
-    end
-
-    test "keeps working after a day while a room from before it expired is open",
-         %{conn: conn, room: room} do
-      # The room started after the link expired, so it doesn't keep it working
-      {:ok, _view, html} = live_guild(conn, "1", days_ago(2))
-      assert html =~ "Link expired"
-
-      started_at = DateTime.add(DateTime.utc_now(), -2, :day)
-      patch_function(Screens, :list_rooms, [%{room | live?: true, started_at: started_at}])
-
-      {:ok, _view, html} = live_guild(conn, "1", days_ago(2))
-      assert html =~ "Elden Ring"
+      assert html =~ "Connecting..."
+      refute_called(Discord.check_member(_guild_id, _user_id))
     end
 
     test "shows the guild's rooms while they're live", %{conn: conn, room: room} do

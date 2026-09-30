@@ -13,32 +13,19 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   alias BotchiniWeb.Auth
   alias BotchiniWeb.ScreenLive.{ActivityFeed, Soundboard}
 
-  @token_salt "screens guild"
-  @token_max_age 86_400
-
   # Widths of the screens in rows of two and three, minus the gaps between them
   @half "lg:w-[calc(50%_-_0.5rem)]"
   @third "xl:w-[calc(33.333%_-_0.667rem)]"
 
   @doc """
-  Signs a key for the guild's page. It expires after a day, unless a screen share
-  that was running by then is still going, so links don't die mid-stream
-  """
-  @spec sign_token(String.t(), integer()) :: String.t()
-  def sign_token(guild_id, signed_at \\ System.system_time(:second)) do
-    # Phoenix.Token can't tell when a token was signed, so it's kept in the payload
-    Phoenix.Token.sign(BotchiniWeb.Endpoint, @token_salt, {guild_id, signed_at})
-  end
-
-  @doc """
-  Link to this page for a guild. It's how members get to the screens, so the
-  token lives in the fragment, which browsers never send to the server
+  Link to this page for a guild. Anyone can know it, as only the guild's
+  members get in
   """
   @spec watch_url(String.t()) :: String.t()
-  def watch_url(guild_id), do: url(~p"/screens") <> "#" <> sign_token(guild_id)
+  def watch_url(guild_id), do: url(~p"/screens/#{guild_id}")
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     socket =
       assign(socket,
         page_title: "Screen shares",
@@ -49,10 +36,9 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         full_width?: true
       )
 
+    # Discord is only asked once connected, instead of for both renders
     with true <- connected?(socket),
-         {:ok, {guild_id, signed_at}} <- verify_token(get_connect_params(socket)["key"]),
-         rooms = Screens.list_rooms(guild_id),
-         false <- expired?(signed_at, rooms),
+         {:ok, guild_id} <- parse_guild_id(params["guild_id"]),
          access when access in [:member, :admin] <- Auth.member_status(socket, guild_id) do
       Screens.subscribe_guild(guild_id)
       # Subscribing first, so the page also hears about its own arrival
@@ -66,7 +52,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
          guild_id: guild_id,
          online: Screens.list_online(guild_id),
          admin?: access == :admin,
-         rooms: Enum.filter(rooms, & &1.live?)
+         rooms: guild_id |> Screens.list_rooms() |> Enum.filter(& &1.live?)
        )
        |> ActivityFeed.mount(guild_id)
        |> Soundboard.mount(guild_id, socket.assigns.current_user.name)}
@@ -74,23 +60,16 @@ defmodule BotchiniWeb.ScreenLive.Guild do
       false -> {:ok, assign(socket, status: :connecting)}
       :not_member -> {:ok, assign(socket, status: :not_member)}
       :error -> {:ok, assign(socket, status: :unavailable)}
-      _invalid -> {:ok, assign(socket, status: :not_found)}
+      :invalid -> {:ok, assign(socket, status: :not_found)}
     end
   end
 
-  defp verify_token(token) when is_binary(token),
-    do: Phoenix.Token.verify(BotchiniWeb.Endpoint, @token_salt, token, max_age: :infinity)
-
-  defp verify_token(_token), do: {:error, :missing}
-
-  # Only rooms already open when the link expired keep it working, otherwise any
-  # old link would work again as soon as someone starts sharing
-  defp expired?(signed_at, rooms) do
-    expires_at = DateTime.from_unix!(signed_at + @token_max_age)
-
-    DateTime.after?(DateTime.utc_now(), expires_at) and
-      not Enum.any?(rooms, &DateTime.before?(&1.started_at, expires_at))
+  # Discord ids are numbers, anything else can't be a guild
+  defp parse_guild_id(guild_id) when is_binary(guild_id) do
+    if Regex.match?(~r/\A\d{1,20}\z/, guild_id), do: {:ok, guild_id}, else: :invalid
   end
+
+  defp parse_guild_id(_missing), do: :invalid
 
   @impl true
   def render(%{status: :connecting} = assigns) do
@@ -107,8 +86,10 @@ defmodule BotchiniWeb.ScreenLive.Guild do
 
   def render(%{status: :not_found} = assigns) do
     ~H"""
-    <.notice title="Link expired">
-      The link is invalid or expired. Run <code>/stream watch</code> on Discord to get a new one!
+    <.notice title="Server not found">
+      Open <strong>Watch all</strong>
+      on Discord, or run <code>/stream watch</code>
+      there to get the link.
     </.notice>
     """
   end

@@ -69,7 +69,7 @@ if (location.pathname === "/auth/return") {
     sessionStorage.removeItem(LOGIN_RETURN)
   } catch (_error) {}
 
-  const valid = /^\/screens(\/[\w-]+)?(#.*)?$/.test(destination || "")
+  const valid = /^\/screens(#.*)?$/.test(destination || "")
   location.replace(valid ? destination : "/screens")
 }
 

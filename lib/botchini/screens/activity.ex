@@ -46,8 +46,7 @@ defmodule Botchini.Screens.Activity do
   @doc """
   Turns a change of the guild's online members into events. Someone only counts as
   joined with their first tab and as left with their last one, and leaving is only
-  reported when they don't come back right away: reloading a page or going to
-  another one of the guild's pages is not leaving
+  reported when they don't come back right away: reloading the page is not leaving
   """
   @spec presence_changed(String.t(), %{joins: map(), leaves: map()}, map()) :: :ok
   def presence_changed(guild_id, %{joins: joins, leaves: leaves}, presences) do

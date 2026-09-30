@@ -31,8 +31,8 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   end
 
   @doc """
-  Link to this page for a guild. Links to a single room are only shown here,
-  so the token lives in the fragment, which browsers never send to the server
+  Link to this page for a guild. It's how members get to the screens, so the
+  token lives in the fragment, which browsers never send to the server
   """
   @spec watch_url(String.t()) :: String.t()
   def watch_url(guild_id), do: url(~p"/screens") <> "#" <> sign_token(guild_id)
@@ -173,26 +173,6 @@ defmodule BotchiniWeb.ScreenLive.Guild do
                   <path d="M16 3a1 1 0 0 1 .7 1.7L15 6.4v4.2l2.7 2.7a1 1 0 0 1-.7 1.7h-4v6a1 1 0 0 1-2 0v-6H7a1 1 0 0 1-.7-1.7L9 10.6V6.4L7.3 4.7A1 1 0 0 1 8 3h8Z" />
                 </svg>
               </button>
-
-              <.link
-                navigate={~p"/screens/#{room.id}"}
-                title="Open on its own page"
-                class="rounded p-1.5 text-gray-200 hover:bg-white/20"
-              >
-                <span class="sr-only">Open on its own page</span>
-                <svg
-                  class="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
-                </svg>
-              </.link>
             </div>
           </div>
         </.viewer>

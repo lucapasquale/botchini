@@ -15,14 +15,8 @@ defmodule BotchiniWebTest.AuthControllerTest do
       assert html =~ ~s(data-return-to="/screens")
     end
 
-    test "remembers the screen page to go back to", %{conn: conn} do
-      html = conn |> get(~p"/auth/login?return_to=/screens/abc_-1") |> html_response(200)
-
-      assert html =~ ~s(data-return-to="/screens/abc_-1")
-    end
-
-    test "only goes back to screen pages", %{conn: conn} do
-      for path <- ["//evil.com", "https://evil.com", "/screens/../x", "/other"] do
+    test "always goes back to the screens page", %{conn: conn} do
+      for path <- ["//evil.com", "https://evil.com", "/screens/../x", "/screens/abc_-1", "/other"] do
         html = conn |> get(~p"/auth/login?#{[return_to: path]}") |> html_response(200)
 
         assert html =~ ~s(data-return-to="/screens")

@@ -32,11 +32,6 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     do: init_test_session(conn, %{"discord_user_id" => "10", "discord_user_name" => "Ana"})
 
   describe "login" do
-    test "is needed to watch a room", %{room: room} do
-      assert {:error, {:redirect, %{to: to}}} = live(build_conn(), ~p"/screens/#{room.id}")
-      assert to == "/auth/login?return_to=%2Fscreens%2F#{room.id}"
-    end
-
     test "is needed for the guild page" do
       conn = get(build_conn(), ~p"/screens")
 
@@ -52,96 +47,22 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       assert html =~ "Share screen"
     end
 
-    test "shows who is logged in", %{conn: conn, room: room} do
-      {:ok, _view, html} = live(conn, ~p"/screens/#{room.id}")
+    test "shows who is logged in", %{conn: conn} do
+      {:ok, _view, html} = live_guild(conn, "1")
 
       assert html =~ "Ana"
     end
   end
 
-  describe "watch page" do
-    test "shows the room waiting for the broadcaster", %{conn: conn, room: room} do
-      {:ok, _view, html} = live(conn, ~p"/screens/#{room.id}")
-
-      assert html =~ "Elden Ring"
-      assert html =~ "Waiting for Luca to start sharing"
-      refute html =~ room.broadcast_key
+  describe "single screen page" do
+    test "is gone, as everyone watches on the guild page", %{conn: conn, room: room} do
+      assert conn |> get("/screens/#{room.id}") |> response(404)
     end
 
-    test "shows when the room ends", %{conn: conn, room: room} do
-      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
+    test "isn't linked from the guild page", %{conn: conn, room: room} do
+      view = live_guild_with_room(conn, room)
 
-      Screens.stop_room(room)
-
-      assert render(view) =~ "Screen share ended"
-    end
-
-    test "shows unknown rooms as not found", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/screens/unknown")
-
-      assert html =~ "Screen share not found"
-    end
-
-    test "replies with an error to invalid offers", %{conn: conn, room: room} do
-      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
-
-      render_hook(view, "offer", %{"type" => "offer"})
-
-      assert_reply(view, %{error: "Couldn't connect to the screen share"})
-    end
-  end
-
-  describe "online members on the watch page" do
-    test "lists who has the server's pages open", %{conn: conn, room: room} do
-      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
-      assert has_element?(view, "#online-10", "Ana")
-      assert has_element?(view, "#online-10", "(you)")
-
-      {:ok, guild_page, _html} = conn |> log_in_as("11", "Bia") |> live_guild("1")
-
-      # The pages share one list
-      eventually(fn ->
-        assert has_element?(view, "#online-list", "Online · 2")
-        assert has_element?(view, "#online-11", "Bia")
-        assert has_element?(guild_page, "#online-10", "Ana")
-      end)
-
-      GenServer.stop(guild_page.pid)
-
-      eventually(fn -> refute has_element?(view, "#online-11") end)
-    end
-
-    test "shows admins in their own color", %{conn: conn, room: room} do
-      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
-
-      patch_function(Discord, :check_member, :admin)
-      {:ok, _admin, _html} = conn |> log_in_as("11", "Bia") |> live(~p"/screens/#{room.id}")
-
-      eventually(fn -> assert has_element?(view, "#online-11.text-amber-300", "Bia") end)
-      refute has_element?(view, "#online-10.text-amber-300")
-    end
-
-    test "is still shown when the room ends", %{conn: conn, room: room} do
-      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
-
-      Screens.stop_room(room)
-
-      assert render(view) =~ "Screen share ended"
-      assert has_element?(view, "#online-10", "Ana")
-    end
-
-    test "leaves out other guilds and people that got denied", %{conn: conn, room: room} do
-      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
-      {:ok, _other_guild, _html} = conn |> log_in_as("11", "Bia") |> live_guild("9")
-
-      patch_function(Discord, :check_member, :not_member)
-      {:ok, _denied, _html} = conn |> log_in_as("12", "Caio") |> live(~p"/screens/#{room.id}")
-
-      Process.sleep(50)
-
-      assert render(view) =~ "Online · 1"
-      refute has_element?(view, "#online-11")
-      refute has_element?(view, "#online-12")
+      refute has_element?(view, ~s(a[href="/screens/#{room.id}"]))
     end
   end
 
@@ -226,13 +147,12 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
     test "gets new events as they happen, on every page", %{conn: conn, room: room, n: n} do
       {:ok, guild_page, _html} = live_guild(conn, "1")
-      {:ok, watch_page, _html} = live(conn, ~p"/screens/#{room.id}")
       broadcast_page = broadcast_view(conn, room)
 
       Activity.record("1", :stream_ended, "Luca#{n}", "closed by an admin")
 
       eventually(fn ->
-        for view <- [guild_page, watch_page, broadcast_page] do
+        for view <- [guild_page, broadcast_page] do
           assert has_element?(
                    view,
                    "#activity-list",
@@ -263,15 +183,14 @@ defmodule BotchiniWebTest.ScreenLiveTest do
                "Bia#{n} joined"
     end
 
-    test "shows who left, but not who just went to another page",
-         %{conn: conn, room: room, n: n} do
+    test "shows who left, but not who just reloaded the page", %{conn: conn, n: n} do
       {:ok, view, _html} = live_guild(conn, "1")
       {:ok, bia, _html} = conn |> log_in_other(n, "Bia") |> live_guild("1")
       eventually(fn -> assert has_element?(view, "#activity-list", "Bia#{n} joined") end)
 
-      # Moving to a stream's page closes the page and opens the other right away
+      # Reloading closes the page and opens it again right away
       GenServer.stop(bia.pid)
-      {:ok, _bia_again, _html} = conn |> log_in_other(n, "Bia") |> live(~p"/screens/#{room.id}")
+      {:ok, _bia_again, _html} = conn |> log_in_other(n, "Bia") |> live_guild("1")
       Process.sleep(300)
       refute has_element?(view, "#activity-list", "Bia#{n} left")
 
@@ -282,9 +201,9 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       eventually(fn -> assert has_element?(view, "#activity-list", "Caio#{n} left") end)
     end
 
-    test "shows the sounds members play and stop", %{conn: conn, room: room, n: n} do
+    test "shows the sounds members play and stop", %{conn: conn, n: n} do
       {:ok, watcher, _html} = live_guild(conn, "1")
-      {:ok, player, _html} = conn |> log_in_other(n, "Bia") |> live(~p"/screens/#{room.id}")
+      {:ok, player, _html} = conn |> log_in_other(n, "Bia") |> live_guild("1")
 
       render_hook(player, "sound:play", %{"sound" => "volibero"})
 
@@ -321,21 +240,11 @@ defmodule BotchiniWebTest.ScreenLiveTest do
   end
 
   describe "server membership" do
-    test "lets members watch a room", %{conn: conn, room: room} do
-      {:ok, _view, html} = live(conn, ~p"/screens/#{room.id}")
+    test "lets members watch the guild's rooms", %{conn: conn, room: room} do
+      view = live_guild_with_room(conn, room)
 
-      assert html =~ "Elden Ring"
+      assert render(view) =~ "Elden Ring"
       assert_called(Discord.check_member("1", "10"))
-    end
-
-    test "keeps other people out of a room", %{conn: conn, room: room} do
-      patch_function(Discord, :check_member, :not_member)
-
-      {:ok, view, html} = live(conn, ~p"/screens/#{room.id}")
-
-      assert html =~ "Not in this server"
-      refute html =~ "Elden Ring"
-      refute render(view) =~ "Elden Ring"
     end
 
     test "keeps other people out of the guild page", %{conn: conn, room: room} do
@@ -351,17 +260,11 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     test "asks to try again when Discord can't tell", %{conn: conn, room: room} do
       patch_function(Discord, :check_member, :error)
 
-      {:ok, _view, html} = live(conn, ~p"/screens/#{room.id}")
-      assert html =~ "check your access"
-
       {:ok, view, _html} = live_guild(conn, room.guild_id)
       assert render(view) =~ "check your access"
     end
 
     test "doesn't ask Discord for links that don't work", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/screens/unknown")
-      assert html =~ "Screen share not found"
-
       {:ok, _view, html} = live(conn, ~p"/screens")
       assert html =~ "Link expired"
 
@@ -378,32 +281,16 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       view
     end
 
-    test "is offered to admins on both pages", %{conn: conn, room: room} do
+    test "is offered to admins", %{conn: conn, room: room} do
       patch_function(Discord, :check_member, :admin)
-
-      {:ok, _view, html} = live(conn, ~p"/screens/#{room.id}")
-      assert html =~ ~s(phx-click="close")
 
       view = live_guild_with_room(conn, room)
       assert has_element?(view, ~s(button[phx-click="close"]))
     end
 
     test "isn't offered to other members", %{conn: conn, room: room} do
-      {:ok, _view, html} = live(conn, ~p"/screens/#{room.id}")
-      refute html =~ ~s(phx-click="close")
-
       view = live_guild_with_room(conn, room)
       refute has_element?(view, ~s(button[phx-click="close"]))
-    end
-
-    test "ends the room from its page", %{conn: conn, room: room} do
-      patch_function(Discord, :check_member, :admin)
-      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
-
-      view |> element(~s(button[phx-click="close"])) |> render_click()
-
-      assert render(view) =~ "Screen share ended"
-      assert Screens.get_room(room.id) == nil
     end
 
     test "ends the room from the guild page", %{conn: conn, room: room} do
@@ -418,12 +305,10 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
     test "checks the user is still an admin when closing", %{conn: conn, room: room} do
       patch_function(Discord, :check_member, :admin)
-      {:ok, page, _html} = live(conn, ~p"/screens/#{room.id}")
       guild_page = live_guild_with_room(conn, room)
 
       patch_function(Discord, :check_member, :member)
 
-      render_hook(page, "close", %{})
       render_hook(guild_page, "close", %{"room_id" => room.id})
 
       assert %{live?: _live} = Screens.get_room(room.id)
@@ -431,10 +316,8 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     end
 
     test "can't be forged by members", %{conn: conn, room: room} do
-      {:ok, page, _html} = live(conn, ~p"/screens/#{room.id}")
       guild_page = live_guild_with_room(conn, room)
 
-      render_hook(page, "close", %{})
       render_hook(guild_page, "close", %{"room_id" => room.id})
 
       assert Screens.get_room(room.id)
@@ -828,6 +711,14 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       refute render(view) =~ "Elden Ring"
     end
 
+    test "replies with an error to invalid offers", %{conn: conn, room: room} do
+      view = live_guild_with_room(conn, room)
+
+      render_hook(view, "offer", %{"room_id" => room.id, "type" => "offer"})
+
+      assert_reply(view, %{error: "Couldn't connect to the screen share"})
+    end
+
     test "only connects to rooms on the page", %{conn: conn, room: room} do
       {:ok, view, _html} = live_guild(conn, "1")
 
@@ -842,8 +733,8 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       do: view |> element("#soundboard button[phx-value-sound=#{sound_id}]") |> render_click()
 
     test "plays sounds for everyone on the guild's pages", %{conn: conn, room: room} do
-      {:ok, watch, _html} = live(conn, ~p"/screens/#{room.id}")
-      {:ok, guild, _html} = live_guild(conn, "1")
+      {:ok, watch, _html} = live_guild(conn, "1")
+      broadcast_page = broadcast_view(conn, room)
       Screens.broadcast(%{room | live?: true}, :live)
 
       play(watch, "volibero")
@@ -854,7 +745,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
         url: "/sounds/volibero.mp3"
       })
 
-      assert_push_event(guild, "sound:play", %{id: "volibero"})
+      assert_push_event(broadcast_page, "sound:play", %{id: "volibero"})
     end
 
     test "works while nobody is sharing", %{conn: conn, room: room} do
@@ -868,8 +759,8 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       assert_push_event(other, "sound:play", %{id: "mj"})
     end
 
-    test "stops the sound for everyone", %{conn: conn, room: room} do
-      {:ok, watch, _html} = live(conn, ~p"/screens/#{room.id}")
+    test "stops the sound for everyone", %{conn: conn} do
+      {:ok, watch, _html} = live_guild(conn, "1")
       {:ok, guild, _html} = live_guild(conn, "1")
 
       watch |> element("#soundboard button[phx-click='sound:stop']") |> render_click()
@@ -878,8 +769,8 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       assert_push_event(guild, "sound:stop", %{})
     end
 
-    test "doesn't play sounds for other guilds", %{conn: conn, room: room} do
-      {:ok, watch, _html} = live(conn, ~p"/screens/#{room.id}")
+    test "doesn't play sounds for other guilds", %{conn: conn} do
+      {:ok, watch, _html} = live_guild(conn, "1")
       {:ok, other, _html} = live_guild(conn, "9")
 
       play(watch, "volibero")
@@ -888,8 +779,8 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       refute_push_event(other, "sound:play", %{})
     end
 
-    test "waits after three sounds in a row", %{conn: conn, room: room} do
-      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
+    test "waits after three sounds in a row", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
 
       for _ <- 1..3, do: play(view, "scooby-doo")
 
@@ -902,8 +793,8 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       refute_push_event(view, "sound:play", %{})
     end
 
-    test "ignores unknown sounds", %{conn: conn, room: room} do
-      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
+    test "ignores unknown sounds", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
 
       render_click(view, "sound:play", %{"sound" => "missing"})
 

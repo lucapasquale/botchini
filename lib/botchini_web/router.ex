@@ -47,7 +47,6 @@ defmodule BotchiniWeb.Router do
       layout: {BotchiniWeb.Layouts, :screen},
       on_mount: {BotchiniWeb.Auth, :require_user} do
       live "/screens", ScreenLive.Guild
-      live "/screens/:id", ScreenLive.Watch
     end
   end
 

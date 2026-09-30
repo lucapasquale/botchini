@@ -10,8 +10,10 @@ defmodule BotchiniWeb.AuthController do
 
   @default_return_to "/screens"
 
-  def login(conn, params) do
-    render(conn, :login, page_title: "Log in", return_to: return_to(params), error: nil)
+  # The screens page is the only one behind the login, and a fixed destination
+  # means the login can't be used to send people elsewhere
+  def login(conn, _params) do
+    render(conn, :login, page_title: "Log in", return_to: @default_return_to, error: nil)
   end
 
   def discord(conn, _params) do
@@ -62,11 +64,4 @@ defmodule BotchiniWeb.AuthController do
   end
 
   defp redirect_uri, do: url(~p"/auth/discord/callback")
-
-  # Only screen pages are valid, so the login can't be used to send people elsewhere
-  defp return_to(%{"return_to" => path}) when is_binary(path) do
-    if Regex.match?(~r{\A/screens(/[\w-]+)?\z}, path), do: path, else: @default_return_to
-  end
-
-  defp return_to(_params), do: @default_return_to
 end

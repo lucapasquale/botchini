@@ -18,8 +18,12 @@ defmodule Botchini.Screens do
     max_viewers: 20,
     # How long the broadcaster has to open their link after creating the room
     start_timeout_ms: :timer.minutes(10),
-    # How long the room waits for the broadcaster to come back after disconnecting
+    # How long the room waits for an OBS broadcaster to come back after disconnecting
     reconnect_timeout_ms: :timer.minutes(2),
+    # Browser broadcasters come back on their own within seconds after a network
+    # blip, and can't resume after closing or reloading the tab, which needs a
+    # click to share again. So a closed tab ends the stream soon
+    tab_reconnect_timeout_ms: :timer.seconds(15),
     max_duration_ms: :timer.hours(12),
     # How long a member has to come back before leaving is shown in the activity
     activity_leave_grace_ms: :timer.seconds(5)

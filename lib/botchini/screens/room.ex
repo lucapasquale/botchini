@@ -596,12 +596,16 @@ defmodule Botchini.Screens.Room do
 
         %{state | publisher: nil}
         |> update_room(%{live?: false}, :updated)
-        |> schedule_idle_timeout(state.config[:reconnect_timeout_ms])
+        |> schedule_idle_timeout(reconnect_timeout(state.config, peer))
 
       :publisher ->
         state
     end
   end
+
+  # Only browser broadcasters have a page, OBS ones connect over WHIP
+  defp reconnect_timeout(config, %{lv: nil}), do: config[:reconnect_timeout_ms]
+  defp reconnect_timeout(config, _browser), do: config[:tab_reconnect_timeout_ms]
 
   defp answer_whip(state, pc) do
     case Map.pop(state.whip_answers, pc) do

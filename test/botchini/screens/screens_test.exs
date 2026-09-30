@@ -381,8 +381,38 @@ defmodule BotchiniTest.ScreensTest do
       assert_receive {:screen_room, :updated, %Room{viewer_count: 0}}, 1_000
     end
 
+    test "ends the room soon after the broadcaster's tab closes" do
+      # OBS broadcasters get longer, and this one shares from a browser tab
+      put_config(reconnect_timeout_ms: :timer.minutes(2), tab_reconnect_timeout_ms: 100)
+      room = start_room()
+      Screens.subscribe(room.id)
+
+      publisher = connect(room, :publisher)
+      assert_receive {:screen_room, :live, _room}
+
+      TestBrowser.close(publisher)
+      assert_receive {:screen_room, :ended, %Room{id: id}}, 1_000
+      assert id == room.id
+    end
+
+    test "keeps the room while the broadcaster's tab reconnects" do
+      put_config(tab_reconnect_timeout_ms: 500)
+      room = start_room()
+      Screens.subscribe(room.id)
+
+      publisher = connect(room, :publisher)
+      assert_receive {:screen_room, :live, _room}
+
+      TestBrowser.close(publisher)
+      assert_receive {:screen_room, :updated, %Room{live?: false}}, 1_000
+      connect(room, :publisher)
+      assert_receive {:screen_room, :updated, %Room{live?: true}}, @connect_timeout
+
+      refute_receive {:screen_room, :ended, _room}, 800
+    end
+
     test "ends the room when the broadcaster doesn't come back" do
-      put_config(reconnect_timeout_ms: 100)
+      put_config(tab_reconnect_timeout_ms: 100)
       room = start_room()
       Screens.subscribe(room.id)
 

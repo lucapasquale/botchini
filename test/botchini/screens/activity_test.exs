@@ -22,6 +22,54 @@ defmodule BotchiniTest.Screens.ActivityTest do
 
   defp kinds(guild_id), do: guild_id |> Activity.list() |> Enum.map(&{&1.kind, &1.actor})
 
+  describe "say/3" do
+    @ana %{id: "10", name: "Ana"}
+
+    test "adds the message, saying who wrote it", %{guild_id: guild_id} do
+      Activity.subscribe(guild_id)
+
+      assert Activity.say(guild_id, @ana, "gg") == :ok
+
+      assert_receive {:screen_activity,
+                      %{kind: :message, actor: "Ana", actor_id: "10", detail: "gg"}}
+
+      assert [%{kind: :message, detail: "gg"}] = Activity.list(guild_id)
+    end
+
+    test "drops blank messages", %{guild_id: guild_id} do
+      assert Activity.say(guild_id, @ana, "  \n ") == :blank
+      assert Activity.list(guild_id) == []
+    end
+
+    test "keeps messages on one line, and cuts long ones", %{guild_id: guild_id} do
+      Activity.say(guild_id, @ana, " one\ntwo\t ")
+      Activity.say(guild_id, @ana, String.duplicate("a", 400))
+
+      assert [%{detail: long}, %{detail: "one two"}] = Activity.list(guild_id)
+      assert String.length(long) == Activity.max_message_length()
+    end
+
+    test "other events don't say who did them", %{guild_id: guild_id} do
+      Activity.record(guild_id, :sound_stopped, "Ana")
+
+      assert [%{actor_id: nil}] = Activity.list(guild_id)
+    end
+  end
+
+  describe "hit/2" do
+    test "lets members send a few messages in a row, then makes them wait" do
+      limiter =
+        Enum.reduce(1..5, Activity.new_limiter(), fn second, limiter ->
+          assert {:ok, limiter} = Activity.hit(limiter, second * 100)
+          limiter
+        end)
+
+      assert Activity.hit(limiter, 600) == :limited
+      # The first message is out of the window 10 seconds after it was sent
+      assert {:ok, _limiter} = Activity.hit(limiter, 10_100)
+    end
+  end
+
   describe "record/4" do
     test "lists the latest events first", %{guild_id: guild_id} do
       assert Activity.list(guild_id) == []
@@ -42,13 +90,13 @@ defmodule BotchiniTest.Screens.ActivityTest do
     end
 
     test "only keeps the latest events", %{guild_id: guild_id} do
-      for number <- 1..60, do: Activity.record(guild_id, :joined, "User #{number}")
+      for number <- 1..120, do: Activity.record(guild_id, :joined, "User #{number}")
 
       events = Activity.list(guild_id)
 
-      assert length(events) == 50
-      assert hd(events).actor == "User 60"
-      assert List.last(events).actor == "User 11"
+      assert length(events) == 100
+      assert hd(events).actor == "User 120"
+      assert List.last(events).actor == "User 21"
     end
 
     test "tells the subscribers", %{guild_id: guild_id} do

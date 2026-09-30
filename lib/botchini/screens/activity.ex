@@ -1,8 +1,9 @@
 defmodule Botchini.Screens.Activity do
   @moduledoc """
   What happened lately on a guild's screen sharing pages, for the members to check
-  what they missed: who came and went, which sounds were played and who started or
-  stopped streaming. Only the last few events of each guild are kept, in memory.
+  what they missed: who came and went, which sounds were played, who started or
+  stopped streaming, and what members said in the chat. Only the last few events
+  of each guild are kept, in memory.
 
   Pages get `{:screen_activity, event}` messages once they subscribe.
   """
@@ -11,17 +12,29 @@ defmodule Botchini.Screens.Activity do
 
   alias Botchini.Screens
 
-  @max_events 50
+  @max_events 100
+  @max_message_length 300
 
-  @type kind :: :joined | :left | :sound | :sound_stopped | :stream_started | :stream_ended
+  # Members can send a few messages in a row, then have to wait
+  @burst 5
+  @burst_window_ms 10_000
 
+  @type kind ::
+          :joined | :left | :sound | :sound_stopped | :stream_started | :stream_ended | :message
+
+  @typedoc """
+  `actor_id` is only known for messages, for the pages to tell who wrote them
+  """
   @type event :: %{
           id: pos_integer(),
           at: DateTime.t(),
           kind: kind(),
           actor: String.t(),
+          actor_id: String.t() | nil,
           detail: String.t() | nil
         }
+
+  @type limiter :: [integer()]
 
   @spec start_link(term()) :: GenServer.on_start()
   def start_link(_opts), do: GenServer.start_link(__MODULE__, nil, name: __MODULE__)
@@ -33,6 +46,44 @@ defmodule Botchini.Screens.Activity do
   @spec record(String.t(), kind(), String.t(), String.t() | nil) :: :ok
   def record(guild_id, kind, actor, detail \\ nil),
     do: GenServer.cast(__MODULE__, {:record, guild_id, new_event(kind, actor, detail)})
+
+  @doc """
+  Adds a chat message from `user`. Blank messages are dropped and long ones cut
+  short, and line breaks become spaces as messages are shown on a single line
+  """
+  @spec say(String.t(), %{id: String.t(), name: String.t()}, String.t()) :: :ok | :blank
+  def say(guild_id, %{id: user_id, name: name}, text) when is_binary(text) do
+    case clean_message(text) do
+      "" ->
+        :blank
+
+      text ->
+        GenServer.cast(__MODULE__, {:record, guild_id, new_event(:message, name, text, user_id)})
+    end
+  end
+
+  defp clean_message(text) do
+    text
+    |> String.replace(~r/[[:cntrl:]]+/u, " ")
+    |> String.trim()
+    |> String.slice(0, @max_message_length)
+  end
+
+  @spec max_message_length() :: pos_integer()
+  def max_message_length, do: @max_message_length
+
+  @spec new_limiter() :: limiter()
+  def new_limiter, do: []
+
+  @doc """
+  Counts a message sent at `now` (in milliseconds), unless the member sent too
+  many in the last few seconds
+  """
+  @spec hit(limiter(), integer()) :: {:ok, limiter()} | :limited
+  def hit(limiter, now) do
+    recent = Enum.filter(limiter, &(now - &1 < @burst_window_ms))
+    if length(recent) >= @burst, do: :limited, else: {:ok, [now | recent]}
+  end
 
   @doc """
   The guild's latest events, newest first
@@ -73,12 +124,13 @@ defmodule Botchini.Screens.Activity do
 
   defp named(key, %{metas: [%{name: name} | _]}), do: {key, name}
 
-  defp new_event(kind, actor, detail) do
+  defp new_event(kind, actor, detail, actor_id \\ nil) do
     %{
       id: System.unique_integer([:positive, :monotonic]),
       at: DateTime.utc_now(),
       kind: kind,
       actor: actor,
+      actor_id: actor_id,
       detail: detail
     }
   end

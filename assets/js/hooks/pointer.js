@@ -113,6 +113,10 @@ export const Pointer = {
     this.pending = []
     this.lastEffectAt = -Infinity
 
+    this.barToggle = this.el.querySelector("[data-pointer-bar-toggle]")
+    // Hidden settings can't be measured, so the preview is drawn again once they show
+    this.el.addEventListener("popover:open", () => this.drawPreview())
+
     this.setupCanvas()
     this.setupSettings()
     this.setupInput()
@@ -281,6 +285,8 @@ export const Pointer = {
     this.toggleButton.setAttribute("aria-pressed", String(on))
     this.toggleButton.classList.toggle("bg-indigo-600", !on)
     this.toggleButton.classList.toggle("bg-green-600", on)
+    this.barToggle?.setAttribute("aria-pressed", String(on))
+    this.barToggle?.setAttribute("title", on ? "Pointer and drawing (on)" : "Pointer and drawing")
 
     this.el.querySelectorAll("[data-pointer-color]").forEach(button => {
       button.setAttribute("aria-pressed", String(Number(button.dataset.pointerColor) === color))
@@ -366,9 +372,10 @@ export const Pointer = {
     window.removeEventListener("storage", this.onStorage)
   },
 
-  // Over the floating menu the normal cursor comes back, to click its buttons
+  // Over the menus, like the bar under the screens, the normal cursor comes back
+  // to click their buttons
   overMenu(event) {
-    return event.target instanceof Element && event.target.closest("#soundboard")
+    return event.target instanceof Element && event.target.closest("[data-pointer-menu]")
   },
 
   pointerMoved(event) {

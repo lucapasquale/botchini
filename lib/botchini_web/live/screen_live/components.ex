@@ -66,7 +66,7 @@ defmodule BotchiniWeb.ScreenLive.Components do
 
       <div
         :if={!@room.live?}
-        class="absolute inset-0 flex items-center justify-center bg-black/80 text-gray-300"
+        class="absolute inset-0 flex items-center justify-center bg-black/80 p-2 text-center text-sm text-gray-300"
       >
         Waiting for {@room.owner_name} to start sharing...
       </div>
@@ -127,6 +127,30 @@ defmodule BotchiniWeb.ScreenLive.Components do
     """
   end
 
+  # Each member gets one of these colors, the same on every page and in every chat line
+  @user_colors [
+    {"bg-sky-400", "text-sky-300"},
+    {"bg-pink-400", "text-pink-300"},
+    {"bg-emerald-400", "text-emerald-300"},
+    {"bg-orange-400", "text-orange-300"},
+    {"bg-violet-400", "text-violet-300"},
+    {"bg-cyan-400", "text-cyan-300"},
+    {"bg-lime-400", "text-lime-300"},
+    {"bg-rose-400", "text-rose-300"}
+  ]
+
+  @doc """
+  Color of a member, as a background for their avatar or as a text color for their name
+  """
+  @spec user_color(String.t(), :bg | :text) :: String.t()
+  def user_color(user_id, kind) do
+    {bg, text} = Enum.at(@user_colors, :erlang.phash2(user_id, length(@user_colors)))
+    if kind == :bg, do: bg, else: text
+  end
+
+  # How many avatars the online button shows before it only counts
+  @max_avatars 5
+
   attr :users, :list,
     required: true,
     doc: "Members with the page open, as `%{id, name, admin?}`"
@@ -134,50 +158,185 @@ defmodule BotchiniWeb.ScreenLive.Components do
   attr :current_user_id, :string, required: true
 
   @doc """
-  Members that have one of the server's screen sharing pages open right now.
-  Admins get their own color. Anyone can mute the others' sounds and pointers,
-  just for themselves, which the OnlineMutes hook keeps in the browser
+  Members that have one of the server's screen sharing pages open right now, as a
+  button with their avatars that opens the list. Admins get their own color.
+  Anyone can mute the others' sounds and pointers, just for themselves, which the
+  OnlineMutes hook keeps in the browser
   """
-  def online_list(assigns) do
-    ~H"""
-    <section id="online-list" aria-label="Online" phx-hook="OnlineMutes" class="mt-6">
-      <h2 class="mb-2 text-sm font-semibold text-gray-400">Online · {length(@users)}</h2>
+  def online(assigns) do
+    assigns = assign(assigns, avatars: Enum.take(assigns.users, @max_avatars))
 
-      <ul class="flex flex-wrap gap-2">
-        <li
-          :for={user <- @users}
-          id={"online-#{user.id}"}
-          title={if user.admin?, do: "Admin"}
-          class={[
-            "flex items-center gap-2 rounded-full px-3 py-1 text-sm",
-            if(user.admin?, do: "bg-amber-500/20 text-amber-300", else: "bg-gray-800")
-          ]}
-        >
+    ~H"""
+    <div data-pointer-menu class="relative shrink-0">
+      <button
+        type="button"
+        id="online-toggle"
+        data-popover-toggle
+        aria-controls="online-list"
+        aria-expanded="false"
+        title="Who's online"
+        class="flex items-center gap-2 rounded-full bg-gray-800 py-1 pl-1 pr-3 text-xs font-semibold transition hover:bg-gray-700 aria-expanded:ring-2 aria-expanded:ring-indigo-400"
+      >
+        <span class="flex" aria-hidden="true">
           <span
-            class={["h-2 w-2 rounded-full", if(user.admin?, do: "bg-amber-400", else: "bg-green-500")]}
-            aria-hidden="true"
-          ></span>
-          {user.name}<span :if={user.admin?} class="sr-only"> (admin)</span><span
-            :if={user.id == @current_user_id}
-            class="text-gray-500"
-          >(you)</span>
-          <span :if={user.id != @current_user_id} class="-mr-1 flex items-center">
-            <button
-              :for={{kind, icon, what} <- [{"sounds", "🔊", "sounds"}, {"pointer", "✨", "pointer"}]}
-              type="button"
-              data-mute-user={user.id}
-              data-mute={kind}
-              data-name={user.name}
-              aria-pressed="false"
-              title={"Mute #{user.name}'s #{what}"}
-              class="rounded-full px-1 text-xs opacity-70 transition hover:bg-white/10 hover:opacity-100 aria-pressed:bg-red-500/30 aria-pressed:opacity-100"
-            >
-              {icon}
-            </button>
+            :for={user <- @avatars}
+            class={[
+              "-ml-1.5 grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold text-gray-950 ring-2 ring-gray-800 first:ml-0",
+              user_color(user.id, :bg)
+            ]}
+          >
+            {initial(user.name)}
           </span>
-        </li>
-      </ul>
-    </section>
+        </span>
+        {length(@users)} online
+      </button>
+
+      <section
+        id="online-list"
+        aria-label="Online"
+        phx-hook="OnlineMutes"
+        data-popover
+        hidden
+        class="absolute right-0 top-full z-50 mt-2 max-h-[60dvh] w-64 overflow-y-auto rounded-lg border border-gray-700 bg-gray-900/95 p-2 shadow-2xl"
+      >
+        <h2 class="px-2 pb-1.5 pt-1 text-xs font-semibold text-gray-400">
+          Online · {length(@users)}
+        </h2>
+
+        <ul class="flex flex-col gap-1">
+          <li
+            :for={user <- @users}
+            id={"online-#{user.id}"}
+            title={if user.admin?, do: "Admin"}
+            class={[
+              "flex items-center gap-2 rounded-md px-2 py-1 text-sm",
+              if(user.admin?, do: "bg-amber-500/20 text-amber-300", else: "hover:bg-gray-800")
+            ]}
+          >
+            <span
+              class={[
+                "grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-bold text-gray-950",
+                user_color(user.id, :bg)
+              ]}
+              aria-hidden="true"
+            >
+              {initial(user.name)}
+            </span>
+            <span class="min-w-0 flex-1 truncate">
+              {user.name}<span :if={user.admin?} class="sr-only"> (admin)</span><span
+                :if={user.id == @current_user_id}
+                class="text-gray-500"
+              > (you)</span>
+            </span>
+            <span :if={user.id != @current_user_id} class="flex shrink-0 items-center">
+              <button
+                :for={{kind, icon, what} <- [{"sounds", "🔊", "sounds"}, {"pointer", "✨", "pointer"}]}
+                type="button"
+                data-mute-user={user.id}
+                data-mute={kind}
+                data-name={user.name}
+                aria-pressed="false"
+                title={"Mute #{user.name}'s #{what}"}
+                class="rounded-full px-1 text-xs opacity-70 transition hover:bg-white/10 hover:opacity-100 aria-pressed:bg-red-500/30 aria-pressed:opacity-100"
+              >
+                {icon}
+              </button>
+            </span>
+          </li>
+        </ul>
+      </section>
+    </div>
+    """
+  end
+
+  defp initial(name), do: name |> String.first() |> Kernel.||("?") |> String.upcase()
+
+  attr :title, :string, required: true
+  attr :panel, :string, default: nil, doc: "Id of the popover the button opens, if any"
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  @doc """
+  Icon button of the bar under the screens. It's filled while what it controls
+  is on, with `aria-pressed`, and ringed while the popover it opens is open
+  """
+  def bar_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      title={@title}
+      data-popover-toggle={@panel && true}
+      aria-controls={@panel}
+      aria-expanded={@panel && "false"}
+      class="group relative grid h-9 w-9 place-items-center rounded-lg text-gray-400 transition hover:bg-gray-800 hover:text-white aria-pressed:bg-indigo-600 aria-pressed:text-white aria-pressed:hover:bg-indigo-500 aria-expanded:ring-2 aria-expanded:ring-indigo-300"
+      {@rest}
+    >
+      <span class="sr-only">{@title}</span>
+      {render_slot(@inner_block)}
+    </button>
+    """
+  end
+
+  attr :name, :atom, required: true
+  attr :class, :any, default: nil
+
+  @doc """
+  Outline icons of the bar, drawn on a 24px grid
+  """
+  def bar_icon(assigns) do
+    ~H"""
+    <svg
+      class={["h-5 w-5", @class]}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      {icon_paths(@name)}
+    </svg>
+    """
+  end
+
+  defp icon_paths(:sound) do
+    assigns = %{}
+
+    ~H"""
+    <path d="M11 5 6 9H2v6h4l5 4V5Z" /><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" />
+    """
+  end
+
+  defp icon_paths(:muted) do
+    assigns = %{}
+
+    ~H"""
+    <path d="M11 5 6 9H2v6h4l5 4V5Z" /><path d="m22 9-6 6M16 9l6 6" />
+    """
+  end
+
+  defp icon_paths(:pen) do
+    assigns = %{}
+
+    ~H"""
+    <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    """
+  end
+
+  defp icon_paths(:chat) do
+    assigns = %{}
+
+    ~H"""
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />
+    """
+  end
+
+  defp icon_paths(:send) do
+    assigns = %{}
+
+    ~H"""
+    <path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" />
     """
   end
 

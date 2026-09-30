@@ -3,8 +3,10 @@
 // next time. Browsers only play audio once the page was clicked, so a hint asks
 // for a click when a sound couldn't play.
 //
-// The soundboard floats over the page as a button members drag anywhere on the
-// screen, which opens the sounds next to it. Its place is remembered too.
+// On the broadcast page, the soundboard floats over the page as a button members
+// drag anywhere on the screen, which opens the sounds next to it. Its place is
+// remembered too. On the guild page it's a button of the bar under the screens,
+// filled while the sounds can be heard, and the Popovers hook opens it.
 
 import {Mutes} from "../pointer/mutes"
 
@@ -55,6 +57,7 @@ export const Soundboard = {
     this.muteButton = this.el.querySelector("[data-sounds-mute]")
     this.volumeInput = this.el.querySelector("[data-sounds-volume]")
     this.blockedHint = this.el.querySelector("[data-sounds-blocked]")
+    this.barToggle = this.el.querySelector("[data-sounds-bar-toggle]")
     this.audio = null
 
     this.loadVolume()
@@ -82,7 +85,7 @@ export const Soundboard = {
     this.handleEvent("sound:play", sound => this.play(sound))
     this.handleEvent("sound:stop", () => this.stop())
 
-    this.mountFloating()
+    if (this.el.querySelector("[data-sounds-card]")) this.mountFloating()
   },
 
   destroyed() {
@@ -277,6 +280,10 @@ export const Soundboard = {
   renderVolume() {
     this.muteButton.textContent = this.muted ? "🔇" : "🔊"
     this.muteButton.title = this.muted ? "Unmute sounds" : "Mute sounds"
+    if (this.barToggle) {
+      this.js().setAttribute(this.barToggle, "aria-pressed", String(!this.muted))
+      this.js().setAttribute(this.barToggle, "title", this.muted ? "Soundboard (muted)" : "Soundboard")
+    }
     if (this.audio) this.audio.volume = this.volume()
   },
 

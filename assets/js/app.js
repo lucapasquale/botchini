@@ -22,6 +22,8 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import {ScreenBroadcast, ScreenViewer} from "./hooks/screen_share"
+import {LocalTime} from "./hooks/local_time"
+import {playNotification} from "./hooks/notification_sounds"
 import {Soundboard} from "./hooks/soundboard"
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
@@ -34,13 +36,17 @@ let liveSocket = new LiveSocket("/live", Socket, {
     if (location.hash.length > 1) params.key = location.hash.slice(1)
     return params
   },
-  hooks: {ScreenBroadcast, ScreenViewer, Soundboard}
+  hooks: {LocalTime, ScreenBroadcast, ScreenViewer, Soundboard}
 })
 
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+
+// Streamers hear viewers come and go on their own page and on the server's page
+window.addEventListener("phx:screen:viewer_joined", () => playNotification("join"))
+window.addEventListener("phx:screen:viewer_left", () => playNotification("leave"))
 
 // Screen links keep their keys in the URL fragment, which the server never sees,
 // so it's kept here while the visitor logs in with Discord

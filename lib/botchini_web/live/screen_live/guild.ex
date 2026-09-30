@@ -11,7 +11,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   alias Botchini.Screens
   alias Botchini.Screens.Room
   alias BotchiniWeb.Auth
-  alias BotchiniWeb.ScreenLive.Soundboard
+  alias BotchiniWeb.ScreenLive.{ActivityFeed, Soundboard}
 
   @token_salt "screens guild"
   @token_max_age 86_400
@@ -68,7 +68,8 @@ defmodule BotchiniWeb.ScreenLive.Guild do
          admin?: access == :admin,
          rooms: Enum.filter(rooms, & &1.live?)
        )
-       |> Soundboard.mount(guild_id)}
+       |> ActivityFeed.mount(guild_id)
+       |> Soundboard.mount(guild_id, socket.assigns.current_user.name)}
     else
       false -> {:ok, assign(socket, status: :connecting)}
       :not_member -> {:ok, assign(socket, status: :not_member)}
@@ -120,6 +121,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     </.notice>
 
     <.online_list users={@online} current_user_id={@current_user.id} />
+    <ActivityFeed.feed events={@activity} />
 
     <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
     """
@@ -203,6 +205,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     </p>
 
     <.online_list users={@online} current_user_id={@current_user.id} />
+    <ActivityFeed.feed events={@activity} />
 
     <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
     """
@@ -290,6 +293,9 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   def handle_info({:soundboard, message}, socket),
     do: {:noreply, Soundboard.handle_info(message, socket)}
 
+  def handle_info({:screen_activity, _event} = message, socket),
+    do: {:noreply, ActivityFeed.handle_info(message, socket)}
+
   def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, socket) do
     {:noreply, assign(socket, online: Screens.list_online(socket.assigns.guild_id))}
   end
@@ -310,7 +316,21 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   end
 
   def handle_info({:screen_room, _event, room}, socket) do
-    {:noreply, update(socket, :rooms, &put_room(&1, room))}
+    {:noreply,
+     socket
+     |> chime_for_owner(room)
+     |> update(:rooms, &put_room(&1, room))}
+  end
+
+  # Streamers hear their viewers come and go here too, which is the only place
+  # they can hear it when streaming from OBS
+  defp chime_for_owner(socket, room) do
+    with true <- room.owner_id == socket.assigns.current_user.id,
+         %Room{} = before <- Enum.find(socket.assigns.rooms, &(&1.id == room.id)) do
+      push_viewer_chime(socket, before.viewer_count, room.viewer_count)
+    else
+      _not_owner_or_new_room -> socket
+    end
   end
 
   defp put_room(rooms, room) do

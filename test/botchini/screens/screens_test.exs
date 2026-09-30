@@ -4,7 +4,7 @@ defmodule BotchiniTest.ScreensTest do
   @moduletag :capture_log
 
   alias Botchini.Screens
-  alias Botchini.Screens.{Room, TestBrowser}
+  alias Botchini.Screens.{Activity, Room, TestBrowser}
 
   # ICE over localhost is quick, but DTLS handshakes can take a moment on busy CI machines
   @connect_timeout 5_000
@@ -306,6 +306,36 @@ defmodule BotchiniTest.ScreensTest do
       # A refreshed broadcaster tab is the same screen share, not a new one
       connect(room, :publisher)
       refute_receive {:telemetry, [:botchini, :screens, :room, :live]}, 500
+    end
+
+    test "tells the guild's activity when a stream starts and ends" do
+      guild_id = "activity-#{System.unique_integer([:positive])}"
+      Activity.subscribe(guild_id)
+      room = start_room(%{guild_id: guild_id})
+
+      publisher = connect(room, :publisher)
+      assert_receive {:screen_activity, %{kind: :stream_started, actor: "Luca"}}
+
+      # A refreshed broadcaster tab is the same stream
+      connect(room, :publisher)
+      refute_receive {:screen_activity, %{kind: :stream_started}}, 300
+
+      TestBrowser.close(publisher)
+      Screens.stop_room(room, :closed_by_admin)
+
+      assert_receive {:screen_activity,
+                      %{kind: :stream_ended, actor: "Luca", detail: "closed by an admin"}}
+    end
+
+    test "doesn't tell the activity about rooms that never went live" do
+      guild_id = "activity-#{System.unique_integer([:positive])}"
+      Activity.subscribe(guild_id)
+      room = start_room(%{guild_id: guild_id})
+
+      Screens.stop_room(room)
+      assert Screens.get_room(room.id) == nil
+
+      refute_receive {:screen_activity, _event}, 200
     end
 
     test "viewers can join before the broadcaster" do

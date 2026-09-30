@@ -29,6 +29,7 @@ defmodule Botchini.Application do
         {Registry, keys: :unique, name: Botchini.Screens.Registry},
         {DynamicSupervisor, name: Botchini.Screens.RoomSupervisor, strategy: :one_for_one},
         Botchini.Screens.Presence,
+        Botchini.Screens.Activity,
         # Start a worker by calling: Botchini.Worker.start_link(arg)
         # {Botchini.Worker, arg},
         # Start to serve requests, typically the last entry

@@ -17,6 +17,7 @@ defmodule Botchini.Screens.Room do
   alias ExWebRTC.RTP.Munger
 
   alias Botchini.Screens
+  alias Botchini.Screens.Activity
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -301,6 +302,16 @@ defmodule Botchini.Screens.Room do
     room = %{state.room | live?: false, viewer_count: 0}
     Screens.broadcast(room, :ended)
 
+    # Rooms that nobody started sharing on, like ones nobody opened, weren't streams
+    if state.went_live? do
+      Activity.record(
+        room.guild_id,
+        :stream_ended,
+        room.owner_name,
+        ended_detail(state.end_reason)
+      )
+    end
+
     :telemetry.execute(
       [:botchini, :screens, :room, :stop],
       %{duration: System.monotonic_time() - state.started_at, peak_viewers: state.peak_viewers},
@@ -309,6 +320,9 @@ defmodule Botchini.Screens.Room do
 
     Logger.info("Screen room ended", event: "screen_room_ended", reason: state.end_reason)
   end
+
+  defp ended_detail(:closed_by_admin), do: "closed by an admin"
+  defp ended_detail(_reason), do: nil
 
   ## Peer events
 
@@ -348,6 +362,9 @@ defmodule Botchini.Screens.Room do
       :publisher ->
         event = if state.went_live?, do: :updated, else: :live
         log_broadcaster_connected(event)
+
+        if event == :live,
+          do: Activity.record(state.room.guild_id, :stream_started, state.room.owner_name)
 
         %{state | went_live?: true}
         |> cancel_idle_timeout()

@@ -1,8 +1,6 @@
 // WebRTC hooks for screen sharing. The browser always makes the offer and the
 // server answers, with ICE candidates trickled both ways through the LiveView.
 
-import {playNotification} from "./notification_sounds"
-
 // Tuned for games: the source's full resolution at up to 60 fps, only for
 // friends, so the bitrate can be high
 const MAX_BITRATE = 20_000_000
@@ -89,8 +87,6 @@ export const ScreenBroadcast = {
 
     this.handleEvent("screen:ice_candidate", candidate => this.connection?.addRemoteCandidate(candidate))
     this.handleEvent("screen:ended", () => this.teardown())
-    this.handleEvent("screen:viewer_joined", () => playNotification("join"))
-    this.handleEvent("screen:viewer_left", () => playNotification("leave"))
   },
 
   // The new LiveView process doesn't know about the old connection, and the room

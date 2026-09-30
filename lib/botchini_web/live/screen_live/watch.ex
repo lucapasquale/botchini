@@ -11,7 +11,7 @@ defmodule BotchiniWeb.ScreenLive.Watch do
   alias Botchini.Screens
   alias Botchini.Screens.Room
   alias BotchiniWeb.Auth
-  alias BotchiniWeb.ScreenLive.Soundboard
+  alias BotchiniWeb.ScreenLive.{ActivityFeed, Soundboard}
 
   @impl true
   def mount(%{"id" => room_id}, _session, socket) do
@@ -31,7 +31,8 @@ defmodule BotchiniWeb.ScreenLive.Watch do
         socket
         |> assign(room: room, admin?: access == :admin, status: :open, page_title: room.title)
         |> join_online(access == :admin)
-        |> Soundboard.mount(room.guild_id)
+        |> ActivityFeed.mount(room.guild_id)
+        |> Soundboard.mount(room.guild_id, socket.assigns.current_user.name)
 
       :not_member ->
         assign(socket, status: :not_member)
@@ -77,6 +78,7 @@ defmodule BotchiniWeb.ScreenLive.Watch do
     </.notice>
 
     <.online_list users={@online} current_user_id={@current_user.id} />
+    <ActivityFeed.feed events={@activity} />
 
     <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
     """
@@ -99,6 +101,7 @@ defmodule BotchiniWeb.ScreenLive.Watch do
     </p>
 
     <.online_list users={@online} current_user_id={@current_user.id} />
+    <ActivityFeed.feed events={@activity} />
 
     <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
     """
@@ -135,6 +138,9 @@ defmodule BotchiniWeb.ScreenLive.Watch do
   @impl true
   def handle_info({:soundboard, message}, socket),
     do: {:noreply, Soundboard.handle_info(message, socket)}
+
+  def handle_info({:screen_activity, _event} = message, socket),
+    do: {:noreply, ActivityFeed.handle_info(message, socket)}
 
   def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, socket) do
     {:noreply, assign(socket, online: Screens.list_online(socket.assigns.room.guild_id))}

@@ -5,6 +5,8 @@ defmodule BotchiniWeb.ScreenLive.Components do
 
   use BotchiniWeb, :html
 
+  import Phoenix.LiveView, only: [push_event: 3]
+
   alias Botchini.Screens
 
   attr :room, :map, required: true
@@ -175,6 +177,20 @@ defmodule BotchiniWeb.ScreenLive.Components do
     </.notice>
     """
   end
+
+  @doc """
+  Has the browser chime when viewers come and go, with a different sound for each.
+  Only meant for the page of whoever is sharing the screen
+  """
+  @spec push_viewer_chime(Phoenix.LiveView.Socket.t(), non_neg_integer(), non_neg_integer()) ::
+          Phoenix.LiveView.Socket.t()
+  def push_viewer_chime(socket, before, now) when now > before,
+    do: push_event(socket, "screen:viewer_joined", %{})
+
+  def push_viewer_chime(socket, before, now) when now < before,
+    do: push_event(socket, "screen:viewer_left", %{})
+
+  def push_viewer_chime(socket, _before, _now), do: socket
 
   @spec viewers(non_neg_integer()) :: String.t()
   def viewers(1), do: "1 viewer"

@@ -10,6 +10,8 @@ const NOTE_S = 0.12
 const ATTACK_S = 0.01
 // Chimes are a hint and shouldn't cover the stream's own sound, so they stay quieter than sounds
 const GAIN = 0.3
+// The broadcaster's other tabs are told about the same viewer at about the same time
+const SAME_CHIME_MS = 1_000
 
 let context = null
 
@@ -24,28 +26,48 @@ function soundboardVolume() {
   }
 }
 
-export function playNotification(kind) {
-  const volume = soundboardVolume()
-  if (volume === 0) return
-
+// Browsers keep audio suspended until the page was clicked, and a chime that
+// plays long after the viewer came in would only confuse
+function runningContext() {
   try {
     context ??= new (window.AudioContext || window.webkitAudioContext)()
   } catch {
-    return
+    return null
   }
 
-  // Browsers keep audio suspended until the page was clicked, and a chime that
-  // plays long after the viewer came in would only confuse
-  if (context.state !== "running") {
-    context.resume().catch(() => {})
-    return
-  }
+  if (context.state === "running") return context
 
-  const start = context.currentTime
+  context.resume().catch(() => {})
+  return null
+}
+
+export function playNotification(kind) {
+  const volume = soundboardVolume()
+  const audio = volume > 0 && runningContext()
+  if (!audio) return
+
+  // Only the first tab that can play it chimes, as the broadcaster usually has
+  // their own page and the server's page open. Tabs that can't play sound don't
+  // take the lock, so they never silence the others
+  if (!navigator.locks) return chime(audio, kind, volume)
+
+  navigator.locks
+    .request(`botchini:chime:${kind}`, {ifAvailable: true}, async lock => {
+      if (!lock) return
+
+      chime(audio, kind, volume)
+      await new Promise(resolve => setTimeout(resolve, SAME_CHIME_MS))
+    })
+    .catch(() => {})
+}
+
+function chime(audio, kind, volume) {
+  const start = audio.currentTime
+
   NOTES[kind].forEach((frequency, index) => {
     const at = start + index * NOTE_S
-    const oscillator = context.createOscillator()
-    const gain = context.createGain()
+    const oscillator = audio.createOscillator()
+    const gain = audio.createGain()
 
     oscillator.type = "sine"
     oscillator.frequency.value = frequency
@@ -53,7 +75,7 @@ export function playNotification(kind) {
     gain.gain.linearRampToValueAtTime(GAIN * volume, at + ATTACK_S)
     gain.gain.exponentialRampToValueAtTime(0.0001, at + NOTE_S * 1.5)
 
-    oscillator.connect(gain).connect(context.destination)
+    oscillator.connect(gain).connect(audio.destination)
     oscillator.start(at)
     oscillator.stop(at + NOTE_S * 1.5)
   })

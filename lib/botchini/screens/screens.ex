@@ -20,7 +20,9 @@ defmodule Botchini.Screens do
     start_timeout_ms: :timer.minutes(10),
     # How long the room waits for the broadcaster to come back after disconnecting
     reconnect_timeout_ms: :timer.minutes(2),
-    max_duration_ms: :timer.hours(12)
+    max_duration_ms: :timer.hours(12),
+    # How long a member has to come back before leaving is shown in the activity
+    activity_leave_grace_ms: :timer.seconds(5)
   ]
 
   @spec config() :: Keyword.t()
@@ -196,7 +198,7 @@ defmodule Botchini.Screens do
   @spec list_online(String.t()) :: [%{id: String.t(), name: String.t(), admin?: boolean()}]
   def list_online(guild_id) do
     guild_id
-    |> online_topic()
+    |> Presence.topic()
     |> Presence.list()
     |> Enum.map(fn {user_id, %{metas: [meta | _] = metas}} ->
       %{id: user_id, name: meta.name, admin?: Enum.any?(metas, & &1.admin?)}
@@ -206,7 +208,7 @@ defmodule Botchini.Screens do
 
   @spec subscribe_online(String.t()) :: :ok | {:error, term()}
   def subscribe_online(guild_id),
-    do: Phoenix.PubSub.subscribe(Botchini.PubSub, online_topic(guild_id))
+    do: Phoenix.PubSub.subscribe(Botchini.PubSub, Presence.topic(guild_id))
 
   @doc """
   Marks the member as online in the guild for as long as the calling process lives.
@@ -215,7 +217,7 @@ defmodule Botchini.Screens do
   @spec track_online(String.t(), %{id: String.t(), name: String.t()}, boolean()) :: :ok
   def track_online(guild_id, %{id: user_id, name: name}, admin?) do
     {:ok, _ref} =
-      Presence.track(self(), online_topic(guild_id), user_id, %{name: name, admin?: admin?})
+      Presence.track(self(), Presence.topic(guild_id), user_id, %{name: name, admin?: admin?})
 
     :ok
   end
@@ -244,7 +246,6 @@ defmodule Botchini.Screens do
 
   defp room_topic(room_id), do: "#{@topic}:#{room_id}"
   defp guild_topic(guild_id), do: "#{@topic}:guild:#{guild_id}"
-  defp online_topic(guild_id), do: "#{@topic}:online:#{guild_id}"
 
   # 128 bits of randomness, so links can't be guessed or enumerated
   defp random_id, do: 16 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)

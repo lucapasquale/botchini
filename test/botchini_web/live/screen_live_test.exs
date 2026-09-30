@@ -7,7 +7,8 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
   alias Botchini.Discord
   alias Botchini.Screens
-  alias BotchiniWeb.ScreenLive.Guild
+  alias Botchini.Screens.Activity
+  alias BotchiniWeb.ScreenLive.{ActivityFeed, Guild}
 
   setup %{conn: conn} do
     {:ok, room} =
@@ -21,6 +22,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
     on_exit(fn -> Screens.stop_room(room) end)
 
+    Activity.clear("1")
     patch_function(Discord, :check_member, :member)
 
     %{room: room, conn: log_in(conn)}
@@ -140,6 +142,166 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       assert render(view) =~ "Online · 1"
       refute has_element?(view, "#online-11")
       refute has_element?(view, "#online-12")
+    end
+  end
+
+  describe "activity" do
+    # Pages closed by earlier tests leave the guild's activity shortly after, and a
+    # member coming back right away doesn't count as joining. So each test has members
+    # nobody else uses, and only looks at what they did
+    setup %{conn: conn} do
+      n = System.unique_integer([:positive])
+
+      %{conn: log_in_as(conn, "me-#{n}", "Ana#{n}"), me: "Ana#{n}", n: n}
+    end
+
+    defp log_in_other(conn, n, label),
+      do: log_in_as(conn, "#{label}-#{n}", "#{label}#{n}")
+
+    defp broadcast_view(conn, room) do
+      {:ok, view, _html} =
+        conn
+        |> put_connect_params(%{"key" => room.broadcast_key})
+        |> live(~p"/screens/#{room.id}/broadcast")
+
+      view
+    end
+
+    test "is a single collapsed line until opened", %{conn: conn, me: me} do
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      assert has_element?(view, "#activity-toggle[aria-expanded=false]")
+      assert has_element?(view, "#activity-list[hidden]")
+      eventually(fn -> assert has_element?(view, "#activity-list", "#{me} joined") end)
+    end
+
+    test "shows the latest event on the line" do
+      events = [
+        %{id: 2, at: DateTime.utc_now(), kind: :sound, actor: "Bia", detail: "🐻 Volibero"},
+        %{id: 1, at: DateTime.utc_now(), kind: :joined, actor: "Ana", detail: nil}
+      ]
+
+      html = render_component(&ActivityFeed.feed/1, events: events)
+
+      assert html =~ ~r/id="activity-latest"[^>]*>\s*Bia played 🐻 Volibero\s*</
+    end
+
+    test "shows what happened before the page opened, newest first", %{conn: conn, n: n} do
+      Activity.record("1", :stream_started, "Luca#{n}")
+      Activity.record("1", :sound, "Bia#{n}", "🐻 Volibero")
+      Activity.record("9", :sound, "Caio#{n}", "🐻 Volibero")
+
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      assert has_element?(view, "#activity-list", "Luca#{n} started streaming")
+      assert has_element?(view, "#activity-list", "Bia#{n} played 🐻 Volibero")
+      refute has_element?(view, "#activity-list", "Caio#{n}")
+
+      html = render(view)
+
+      assert :binary.match(html, "Bia#{n} played") < :binary.match(html, "Luca#{n} started")
+    end
+
+    test "says when nothing happened" do
+      html = render_component(&ActivityFeed.feed/1, events: [])
+
+      assert html =~ "Nothing yet"
+      assert html =~ "Nothing happened yet."
+    end
+
+    test "gets new events as they happen, on every page", %{conn: conn, room: room, n: n} do
+      {:ok, guild_page, _html} = live_guild(conn, "1")
+      {:ok, watch_page, _html} = live(conn, ~p"/screens/#{room.id}")
+      broadcast_page = broadcast_view(conn, room)
+
+      Activity.record("1", :stream_ended, "Luca#{n}", "closed by an admin")
+
+      eventually(fn ->
+        for view <- [guild_page, watch_page, broadcast_page] do
+          assert has_element?(
+                   view,
+                   "#activity-list",
+                   "Luca#{n} stopped streaming (closed by an admin)"
+                 )
+        end
+      end)
+    end
+
+    test "shows who joined", %{conn: conn, n: n} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      {:ok, _other, _html} = conn |> log_in_other(n, "Bia") |> live_guild("1")
+
+      eventually(fn -> assert has_element?(view, "#activity-list", "Bia#{n} joined") end)
+    end
+
+    test "doesn't show more tabs of someone who is online as joining", %{conn: conn, n: n} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      bia = log_in_other(conn, n, "Bia")
+      {:ok, _tab, _html} = live_guild(bia, "1")
+      eventually(fn -> assert has_element?(view, "#activity-list", "Bia#{n} joined") end)
+
+      {:ok, _other_tab, _html} = live_guild(bia, "1")
+      Process.sleep(100)
+
+      # Rendering an element that matches more than once raises
+      assert view |> element("#activity-list li", "Bia#{n} joined") |> render() =~
+               "Bia#{n} joined"
+    end
+
+    test "shows who left, but not who just went to another page",
+         %{conn: conn, room: room, n: n} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      {:ok, bia, _html} = conn |> log_in_other(n, "Bia") |> live_guild("1")
+      eventually(fn -> assert has_element?(view, "#activity-list", "Bia#{n} joined") end)
+
+      # Moving to a stream's page closes the page and opens the other right away
+      GenServer.stop(bia.pid)
+      {:ok, _bia_again, _html} = conn |> log_in_other(n, "Bia") |> live(~p"/screens/#{room.id}")
+      Process.sleep(300)
+      refute has_element?(view, "#activity-list", "Bia#{n} left")
+
+      {:ok, caio, _html} = conn |> log_in_other(n, "Caio") |> live_guild("1")
+      eventually(fn -> assert has_element?(view, "#activity-list", "Caio#{n} joined") end)
+
+      GenServer.stop(caio.pid)
+      eventually(fn -> assert has_element?(view, "#activity-list", "Caio#{n} left") end)
+    end
+
+    test "shows the sounds members play and stop", %{conn: conn, room: room, n: n} do
+      {:ok, watcher, _html} = live_guild(conn, "1")
+      {:ok, player, _html} = conn |> log_in_other(n, "Bia") |> live(~p"/screens/#{room.id}")
+
+      render_hook(player, "sound:play", %{"sound" => "volibero"})
+
+      eventually(fn ->
+        assert has_element?(watcher, "#activity-list", "Bia#{n} played 🐻 Volibero")
+      end)
+
+      render_hook(player, "sound:stop", %{})
+
+      eventually(fn ->
+        assert has_element?(watcher, "#activity-list", "Bia#{n} stopped the sounds")
+      end)
+    end
+
+    test "names the broadcaster when they play sounds", %{conn: conn, room: room} do
+      {:ok, watcher, _html} = live_guild(conn, "1")
+      broadcast_page = broadcast_view(conn, room)
+
+      render_hook(broadcast_page, "sound:play", %{"sound" => "volibero"})
+
+      eventually(fn ->
+        assert has_element?(watcher, "#activity-list", "Luca played 🐻 Volibero")
+      end)
+    end
+
+    test "leaves out sounds that don't exist", %{conn: conn, n: n} do
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      render_hook(view, "sound:play", %{"sound" => "unknown"})
+      Process.sleep(50)
+
+      refute has_element?(view, "#activity-list", "Ana#{n} played")
     end
   end
 
@@ -577,11 +739,10 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
       # Once the others had time to show up, if they were going to
       Process.sleep(50)
-      html = render(view)
 
-      assert html =~ "Online · 1"
-      refute html =~ "Bia"
-      refute html =~ "Caio"
+      assert has_element?(view, "#online-list", "Online · 1")
+      refute has_element?(view, "#online-11")
+      refute has_element?(view, "#online-12")
     end
 
     test "shows admins in their own color", %{conn: conn} do
@@ -607,6 +768,41 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       {:ok, _tab, _html} = live_guild(conn, "1")
 
       eventually(fn -> assert has_element?(view, "#online-10.text-amber-300") end)
+    end
+
+    test "chimes for the streamer when viewers join and leave", %{conn: conn, room: room} do
+      view = conn |> log_in_as(room.owner_id, room.owner_name) |> live_guild_with_room(room)
+
+      Screens.broadcast(%{room | live?: true, viewer_count: 1}, :updated)
+      assert_push_event(view, "screen:viewer_joined", %{})
+
+      Screens.broadcast(%{room | live?: true, viewer_count: 0}, :updated)
+      assert_push_event(view, "screen:viewer_left", %{})
+
+      Screens.broadcast(%{room | live?: true, viewer_count: 0, title: "Hades"}, :updated)
+      assert render(view) =~ "Hades"
+      refute_push_event(view, "screen:viewer_joined", %{}, 50)
+      refute_push_event(view, "screen:viewer_left", %{}, 50)
+    end
+
+    test "doesn't chime for other members", %{conn: conn, room: room} do
+      view = live_guild_with_room(conn, room)
+
+      Screens.broadcast(%{room | live?: true, viewer_count: 1}, :updated)
+      assert render(view) =~ "1 viewer"
+
+      refute_push_event(view, "screen:viewer_joined", %{}, 50)
+    end
+
+    test "only chimes for the streamer's own room", %{conn: conn, room: room} do
+      other = %{room | id: "other", owner_id: "4", started_at: DateTime.utc_now()}
+      view = conn |> log_in_as(room.owner_id, room.owner_name) |> live_guild_with_room(room)
+      Screens.broadcast(%{other | live?: true}, :live)
+
+      Screens.broadcast(%{other | live?: true, viewer_count: 1}, :updated)
+      render(view)
+
+      refute_push_event(view, "screen:viewer_joined", %{}, 50)
     end
 
     test "doesn't show other guilds' rooms", %{conn: conn, room: room} do

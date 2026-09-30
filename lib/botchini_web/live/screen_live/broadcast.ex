@@ -10,7 +10,7 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
 
   alias Botchini.Screens
   alias Botchini.Screens.Room
-  alias BotchiniWeb.ScreenLive.{Guild, Soundboard}
+  alias BotchiniWeb.ScreenLive.{ActivityFeed, Guild, Soundboard}
 
   @impl true
   def mount(%{"id" => room_id}, _session, socket) do
@@ -34,7 +34,8 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
              page_title: room.title,
              watch_url: nil
            )
-           |> Soundboard.mount(room.guild_id)}
+           |> ActivityFeed.mount(room.guild_id)
+           |> Soundboard.mount(room.guild_id, room.owner_name)}
       end
     else
       {:ok, assign(socket, status: :connecting)}
@@ -148,6 +149,8 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
       picker. Firefox can't share sound.
     </p>
 
+    <ActivityFeed.feed events={@activity} />
+
     <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
     """
   end
@@ -187,6 +190,9 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
   def handle_info({:soundboard, message}, socket),
     do: {:noreply, Soundboard.handle_info(message, socket)}
 
+  def handle_info({:screen_activity, _event} = message, socket),
+    do: {:noreply, ActivityFeed.handle_info(message, socket)}
+
   def handle_info({:screens, _room_id, {:ice_candidate, candidate}}, socket) do
     {:noreply, push_event(socket, "screen:ice_candidate", candidate)}
   end
@@ -202,22 +208,8 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
   def handle_info({:screen_room, _event, room}, socket) do
     {:noreply,
      socket
-     |> notify_viewer_change(room)
+     |> push_viewer_chime(socket.assigns.room.viewer_count, room.viewer_count)
      |> assign(room: room, page_title: room.title)}
-  end
-
-  # The browser plays a different sound for viewers coming and going
-  defp notify_viewer_change(socket, room) do
-    cond do
-      room.viewer_count > socket.assigns.room.viewer_count ->
-        push_event(socket, "screen:viewer_joined", %{})
-
-      room.viewer_count < socket.assigns.room.viewer_count ->
-        push_event(socket, "screen:viewer_left", %{})
-
-      true ->
-        socket
-    end
   end
 
   defp source("browser"), do: :tab

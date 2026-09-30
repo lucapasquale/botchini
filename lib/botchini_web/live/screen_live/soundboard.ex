@@ -8,7 +8,7 @@ defmodule BotchiniWeb.ScreenLive.Soundboard do
 
   import Phoenix.LiveView, only: [connected?: 1, push_event: 3]
 
-  alias Botchini.Screens.Sounds
+  alias Botchini.Screens.{Activity, Sounds}
 
   # Shown while a member waits after playing too many sounds too fast
   @cooldown_messages [
@@ -25,14 +25,16 @@ defmodule BotchiniWeb.ScreenLive.Soundboard do
   ]
 
   @doc """
-  Starts listening to the guild's sounds. Each page counts its own sounds in a row
+  Starts listening to the guild's sounds. Each page counts its own sounds in a row,
+  and the guild's activity says the sounds it plays were played by `actor`
   """
-  @spec mount(Phoenix.LiveView.Socket.t(), String.t()) :: Phoenix.LiveView.Socket.t()
-  def mount(socket, guild_id) do
+  @spec mount(Phoenix.LiveView.Socket.t(), String.t(), String.t()) :: Phoenix.LiveView.Socket.t()
+  def mount(socket, guild_id, actor) do
     if connected?(socket), do: Sounds.subscribe(guild_id)
 
     assign(socket,
       sounds_guild_id: guild_id,
+      sounds_actor: actor,
       sounds_limiter: Sounds.new_limiter(),
       sounds_cooldown?: false,
       sounds_cooldown_message: nil
@@ -45,6 +47,14 @@ defmodule BotchiniWeb.ScreenLive.Soundboard do
     with %{} = sound <- Sounds.get(sound_id),
          {:ok, limiter} <- Sounds.hit(socket.assigns.sounds_limiter, now()) do
       Sounds.play(socket.assigns.sounds_guild_id, sound)
+
+      Activity.record(
+        socket.assigns.sounds_guild_id,
+        :sound,
+        socket.assigns.sounds_actor,
+        "#{sound.emoji} #{sound.name}"
+      )
+
       socket = assign(socket, sounds_limiter: limiter)
 
       # Playing too fast starts the cooldown right away, not on the next click
@@ -60,6 +70,7 @@ defmodule BotchiniWeb.ScreenLive.Soundboard do
 
   def handle_event("sound:stop", _params, socket) do
     Sounds.stop(socket.assigns.sounds_guild_id)
+    Activity.record(socket.assigns.sounds_guild_id, :sound_stopped, socket.assigns.sounds_actor)
     socket
   end
 

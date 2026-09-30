@@ -26,7 +26,7 @@ config :botchini, Botchini.Mailer, adapter: Swoosh.Adapters.Test
 config :botchini, :metrics_port, nil
 
 # Screen sharing tests only connect peers over localhost
-config :botchini, Botchini.Screens, ice_servers: []
+config :botchini, Botchini.Screens, ice_servers: [], activity_leave_grace_ms: 100
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false

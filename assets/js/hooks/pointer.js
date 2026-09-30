@@ -1,7 +1,7 @@
 // Pointers members show each other on the screen sharing pages. With the pointer
 // on, the mouse cursor becomes a dot with a short tail that everyone on the
 // server's pages sees, and holding the mouse button draws. Drawings stay while
-// the button is held, and vanish 3 seconds after it's let go, unless the member
+// the button is held, and vanish 2 seconds after it's let go, unless the member
 // starts drawing again before that. Shapes drawn in one stroke can set off special
 // effects, and a circle with a click in its middle is a target.
 //
@@ -23,7 +23,7 @@ const PLAYBACK_DELAY_MS = 120
 // How much of its path a pointer's tail shows
 const TAIL_MS = 140
 // Drawings stay this long after the button is let go, fading out at the end
-const DRAWING_STAYS_MS = 3_000
+const DRAWING_STAYS_MS = 2_000
 const DRAWING_FADE_MS = 500
 // Moving less than this while holding the button is still a click
 const DRAW_THRESHOLD_PX = 4

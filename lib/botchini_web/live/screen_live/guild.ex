@@ -44,6 +44,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         page_title: "Screen shares",
         rooms: [],
         pinned: MapSet.new(),
+        admin?: false,
         full_width?: true
       )
 
@@ -51,12 +52,12 @@ defmodule BotchiniWeb.ScreenLive.Guild do
          {:ok, {guild_id, signed_at}} <- verify_token(get_connect_params(socket)["key"]),
          rooms = Screens.list_rooms(guild_id),
          false <- expired?(signed_at, rooms),
-         :member <- Auth.member_status(socket, guild_id) do
+         access when access in [:member, :admin] <- Auth.member_status(socket, guild_id) do
       Screens.subscribe_guild(guild_id)
 
       {:ok,
        socket
-       |> assign(status: :open, rooms: Enum.filter(rooms, & &1.live?))
+       |> assign(status: :open, admin?: access == :admin, rooms: Enum.filter(rooms, & &1.live?))
        |> Soundboard.mount(guild_id)}
     else
       false -> {:ok, assign(socket, status: :connecting)}
@@ -136,6 +137,12 @@ defmodule BotchiniWeb.ScreenLive.Guild do
             </div>
 
             <div class="pointer-events-auto flex shrink-0 items-center gap-1">
+              <.close_button
+                :if={@admin?}
+                room_id={room.id}
+                class="text-gray-200 hover:bg-red-600 hover:text-white"
+              />
+
               <button
                 type="button"
                 phx-click="pin"
@@ -231,6 +238,18 @@ defmodule BotchiniWeb.ScreenLive.Guild do
       end
 
     {:noreply, assign(socket, pinned: pinned)}
+  end
+
+  # Admins' rights are checked again, as they can lose them while the page is open
+  def handle_event("close", %{"room_id" => room_id}, socket) do
+    with %Room{} = room <- Enum.find(socket.assigns.rooms, &(&1.id == room_id)),
+         :admin <- Auth.member_status(socket, room.guild_id) do
+      Screens.stop_room(room, :closed_by_admin)
+      {:noreply, socket}
+    else
+      status when status in [:member, :not_member] -> {:noreply, assign(socket, admin?: false)}
+      _unknown_room_or_error -> {:noreply, socket}
+    end
   end
 
   def handle_event("offer", %{"room_id" => room_id} = offer, socket) do

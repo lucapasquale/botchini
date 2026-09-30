@@ -8,6 +8,7 @@ defmodule BotchiniWeb.ScreenLive.Components do
   alias Botchini.Screens
 
   attr :room, :map, required: true
+  slot :inner_block, doc: "Actions shown next to the room's status"
 
   def room_header(assigns) do
     ~H"""
@@ -27,6 +28,7 @@ defmodule BotchiniWeb.ScreenLive.Components do
         <span class="text-gray-400">
           {viewers(@room.viewer_count)}
         </span>
+        {render_slot(@inner_block)}
       </div>
     </div>
     """
@@ -82,6 +84,38 @@ defmodule BotchiniWeb.ScreenLive.Components do
       <h1 class="text-2xl font-semibold mb-2">{@title}</h1>
       <p class="text-gray-400">{render_slot(@inner_block)}</p>
     </div>
+    """
+  end
+
+  attr :room_id, :string, required: true
+  attr :class, :any, default: nil
+
+  @doc """
+  Ends the screen share for everyone. Only shown to admins, and checked again when clicked
+  """
+  def close_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      phx-click="close"
+      phx-value-room_id={@room_id}
+      data-confirm="Close this screen share for everyone?"
+      title="Close for everyone"
+      class={["rounded p-1.5", @class]}
+    >
+      <span class="sr-only">Close for everyone</span>
+      <svg
+        class="h-4 w-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
     """
   end
 

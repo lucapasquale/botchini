@@ -15,7 +15,7 @@ defmodule BotchiniWeb.ScreenLive.Watch do
 
   @impl true
   def mount(%{"id" => room_id}, _session, socket) do
-    socket = assign(socket, room: nil, page_title: "Screen share")
+    socket = assign(socket, room: nil, admin?: false, page_title: "Screen share")
 
     case Screens.get_room(room_id) do
       nil -> {:ok, assign(socket, status: :not_found)}
@@ -25,11 +25,11 @@ defmodule BotchiniWeb.ScreenLive.Watch do
 
   defp open_room(socket, room) do
     case Auth.member_status(socket, room.guild_id) do
-      :member ->
+      access when access in [:member, :admin] ->
         if connected?(socket), do: Screens.subscribe(room.id)
 
         socket
-        |> assign(room: room, status: :open, page_title: room.title)
+        |> assign(room: room, admin?: access == :admin, status: :open, page_title: room.title)
         |> Soundboard.mount(room.guild_id)
 
       :not_member ->
@@ -67,7 +67,13 @@ defmodule BotchiniWeb.ScreenLive.Watch do
 
   def render(assigns) do
     ~H"""
-    <.room_header room={@room} />
+    <.room_header room={@room}>
+      <.close_button
+        :if={@admin?}
+        room_id={@room.id}
+        class="bg-red-600 text-white hover:bg-red-500"
+      />
+    </.room_header>
 
     <.viewer room={@room} />
 
@@ -86,6 +92,17 @@ defmodule BotchiniWeb.ScreenLive.Watch do
       {:error, :full} -> {:reply, %{error: "This screen share is full"}, socket}
       {:error, _reason} -> {:reply, %{error: "Couldn't connect to the screen share"}, socket}
     end
+  end
+
+  def handle_event("close", _params, socket) do
+    room = socket.assigns.room
+
+    case Auth.member_status(socket, room.guild_id) do
+      :admin -> Screens.stop_room(room, :closed_by_admin)
+      _not_admin -> nil
+    end
+
+    {:noreply, socket}
   end
 
   def handle_event("ice_candidate", candidate, socket) do

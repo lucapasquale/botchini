@@ -3,11 +3,11 @@ defmodule BotchiniDiscord.Helpers do
   Helpers for handling the interaction and options
   """
 
-  alias Nostrum.Cache.GuildCache
   alias Nostrum.Struct.{ApplicationCommandInteractionData, Interaction}
   alias Nostrum.Struct.Guild.Member
 
   alias Botchini.Creators.Schema.Creator
+  alias Botchini.Discord
   alias BotchiniDiscord.InteractionBehaviour
 
   @spec parse_interaction_data(ApplicationCommandInteractionData.t()) ::
@@ -110,12 +110,8 @@ defmodule BotchiniDiscord.Helpers do
   don't bring the member's permissions, so they're worked out from the cached guild
   """
   @spec manage_guild?(Interaction.t()) :: boolean()
-  def manage_guild?(%Interaction{guild_id: guild_id, member: %Member{} = member}) do
-    case GuildCache.get(guild_id) do
-      {:ok, guild} -> :manage_guild in Member.guild_permissions(member, guild)
-      {:error, _reason} -> false
-    end
-  end
+  def manage_guild?(%Interaction{guild_id: guild_id, member: %Member{} = member}),
+    do: Discord.manage_guild?(guild_id, member)
 
   def manage_guild?(_interaction), do: false
 

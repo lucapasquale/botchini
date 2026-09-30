@@ -138,6 +138,100 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     end
   end
 
+  describe "closing a screen share" do
+    defp live_guild_with_room(conn, room) do
+      {:ok, view, _html} = live_guild(conn, room.guild_id)
+      Screens.broadcast(%{room | live?: true}, :live)
+      render(view)
+
+      view
+    end
+
+    test "is offered to admins on both pages", %{conn: conn, room: room} do
+      patch_function(Discord, :check_member, :admin)
+
+      {:ok, _view, html} = live(conn, ~p"/screens/#{room.id}")
+      assert html =~ ~s(phx-click="close")
+
+      view = live_guild_with_room(conn, room)
+      assert has_element?(view, ~s(button[phx-click="close"]))
+    end
+
+    test "isn't offered to other members", %{conn: conn, room: room} do
+      {:ok, _view, html} = live(conn, ~p"/screens/#{room.id}")
+      refute html =~ ~s(phx-click="close")
+
+      view = live_guild_with_room(conn, room)
+      refute has_element?(view, ~s(button[phx-click="close"]))
+    end
+
+    test "ends the room from its page", %{conn: conn, room: room} do
+      patch_function(Discord, :check_member, :admin)
+      {:ok, view, _html} = live(conn, ~p"/screens/#{room.id}")
+
+      view |> element(~s(button[phx-click="close"])) |> render_click()
+
+      assert render(view) =~ "Screen share ended"
+      assert Screens.get_room(room.id) == nil
+    end
+
+    test "ends the room from the guild page", %{conn: conn, room: room} do
+      patch_function(Discord, :check_member, :admin)
+      view = live_guild_with_room(conn, room)
+
+      view |> element(~s(button[phx-click="close"])) |> render_click()
+
+      refute has_element?(view, "#screen-#{room.id}")
+      assert Screens.get_room(room.id) == nil
+    end
+
+    test "checks the user is still an admin when closing", %{conn: conn, room: room} do
+      patch_function(Discord, :check_member, :admin)
+      {:ok, page, _html} = live(conn, ~p"/screens/#{room.id}")
+      guild_page = live_guild_with_room(conn, room)
+
+      patch_function(Discord, :check_member, :member)
+
+      render_hook(page, "close", %{})
+      render_hook(guild_page, "close", %{"room_id" => room.id})
+
+      assert %{live?: _live} = Screens.get_room(room.id)
+      refute has_element?(guild_page, ~s(button[phx-click="close"]))
+    end
+
+    test "can't be forged by members", %{conn: conn, room: room} do
+      {:ok, page, _html} = live(conn, ~p"/screens/#{room.id}")
+      guild_page = live_guild_with_room(conn, room)
+
+      render_hook(page, "close", %{})
+      render_hook(guild_page, "close", %{"room_id" => room.id})
+
+      assert Screens.get_room(room.id)
+    end
+
+    test "only closes rooms on the guild page", %{conn: conn, room: room} do
+      {:ok, other} =
+        Screens.start_room(%{
+          title: "Other server",
+          guild_id: "9",
+          channel_id: "2",
+          owner_id: "4",
+          owner_name: "Bia"
+        })
+
+      on_exit(fn -> Screens.stop_room(other) end)
+
+      patch_function(Discord, :check_member, :admin)
+      view = live_guild_with_room(conn, room)
+
+      render_hook(view, "close", %{"room_id" => other.id})
+      render_hook(view, "close", %{"room_id" => "unknown"})
+
+      assert Screens.get_room(other.id)
+      assert Screens.get_room(room.id)
+    end
+  end
+
   describe "broadcast page" do
     test "requires the broadcast key", %{conn: conn, room: room} do
       {:ok, _view, html} =

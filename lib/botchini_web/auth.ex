@@ -32,9 +32,11 @@ defmodule BotchiniWeb.Auth do
   end
 
   @doc """
-  Whether the logged in user belongs to the guild whose screens they're opening
+  Whether the logged in user belongs to the guild whose screens they're opening,
+  and whether they're an admin there
   """
-  @spec member_status(Phoenix.LiveView.Socket.t(), String.t()) :: :member | :not_member | :error
+  @spec member_status(Phoenix.LiveView.Socket.t(), String.t()) ::
+          :admin | :member | :not_member | :error
   def member_status(socket, guild_id),
     do: Botchini.Discord.check_member(guild_id, socket.assigns.current_user.id)
 

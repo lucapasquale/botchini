@@ -85,6 +85,24 @@ defmodule BotchiniWeb.ScreenLive.Components do
     """
   end
 
+  attr :status, :atom, values: [:not_member, :unavailable], required: true
+
+  def denied(%{status: :not_member} = assigns) do
+    ~H"""
+    <.notice title="Not in this server">
+      Screen shares are only for members of the server. Log in with the Discord account you use there.
+    </.notice>
+    """
+  end
+
+  def denied(%{status: :unavailable} = assigns) do
+    ~H"""
+    <.notice title="Couldn't check your access">
+      Discord isn't answering right now, try again in a moment.
+    </.notice>
+    """
+  end
+
   @spec viewers(non_neg_integer()) :: String.t()
   def viewers(1), do: "1 viewer"
   def viewers(count), do: "#{count} viewers"

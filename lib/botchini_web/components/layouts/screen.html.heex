@@ -2,6 +2,7 @@
   <a href={~p"/"}>
     <h2 class="text-lg font-semibold leading-6 my-0 hover:underline">Botchini</h2>
   </a>
+  <span :if={assigns[:current_user]} class="text-gray-400">{@current_user.name}</span>
 </header>
 
 <main class="px-4 py-6 sm:px-8">

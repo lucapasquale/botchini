@@ -10,21 +10,33 @@ defmodule BotchiniWeb.ScreenLive.Watch do
 
   alias Botchini.Screens
   alias Botchini.Screens.Room
+  alias BotchiniWeb.Auth
   alias BotchiniWeb.ScreenLive.Soundboard
 
   @impl true
   def mount(%{"id" => room_id}, _session, socket) do
-    case Screens.get_room(room_id) do
-      nil ->
-        {:ok, assign(socket, room: nil, status: :not_found, page_title: "Screen share")}
+    socket = assign(socket, room: nil, page_title: "Screen share")
 
-      room ->
+    case Screens.get_room(room_id) do
+      nil -> {:ok, assign(socket, status: :not_found)}
+      room -> {:ok, open_room(socket, room)}
+    end
+  end
+
+  defp open_room(socket, room) do
+    case Auth.member_status(socket, room.guild_id) do
+      :member ->
         if connected?(socket), do: Screens.subscribe(room.id)
 
-        {:ok,
-         socket
-         |> assign(room: room, status: :open, page_title: room.title)
-         |> Soundboard.mount(room.guild_id)}
+        socket
+        |> assign(room: room, status: :open, page_title: room.title)
+        |> Soundboard.mount(room.guild_id)
+
+      :not_member ->
+        assign(socket, status: :not_member)
+
+      :error ->
+        assign(socket, status: :unavailable)
     end
   end
 
@@ -34,6 +46,12 @@ defmodule BotchiniWeb.ScreenLive.Watch do
     <.notice title="Screen share not found">
       It may have ended already. Ask for a new link on Discord!
     </.notice>
+    """
+  end
+
+  def render(%{status: status} = assigns) when status in [:not_member, :unavailable] do
+    ~H"""
+    <.denied status={@status} />
     """
   end
 

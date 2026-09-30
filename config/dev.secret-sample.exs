@@ -5,6 +5,9 @@ config :botchini,
   host: "https://abcd1234.ngrok.io",
   # Discord application id
   discord_app_id: "BOT_APP_ID",
+  # Discord OAuth2 client secret, used to log users in on the screen sharing pages.
+  # Add `<host>/auth/discord/callback` to the OAuth2 redirects of the application
+  discord_client_secret: "BOT_CLIENT_SECRET",
   # YouTube API credentials
   youtube_api_key: "YOUTUBE_API_KEY",
   youtube_webhook_secret: "YOUTUBE_WEBHOOK_SECRET",

@@ -5,10 +5,11 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
   @moduletag :capture_log
 
+  alias Botchini.Discord
   alias Botchini.Screens
   alias BotchiniWeb.ScreenLive.Guild
 
-  setup do
+  setup %{conn: conn} do
     {:ok, room} =
       Screens.start_room(%{
         title: "Elden Ring",
@@ -20,7 +21,40 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
     on_exit(fn -> Screens.stop_room(room) end)
 
-    %{room: room}
+    patch_function(Discord, :check_member, :member)
+
+    %{room: room, conn: log_in(conn)}
+  end
+
+  defp log_in(conn),
+    do: init_test_session(conn, %{"discord_user_id" => "10", "discord_user_name" => "Ana"})
+
+  describe "login" do
+    test "is needed to watch a room", %{room: room} do
+      assert {:error, {:redirect, %{to: to}}} = live(build_conn(), ~p"/screens/#{room.id}")
+      assert to == "/auth/login?return_to=%2Fscreens%2F#{room.id}"
+    end
+
+    test "is needed for the guild page" do
+      conn = get(build_conn(), ~p"/screens")
+
+      assert redirected_to(conn) == "/auth/login?return_to=%2Fscreens"
+    end
+
+    test "isn't needed to broadcast", %{room: room} do
+      {:ok, _view, html} =
+        build_conn()
+        |> put_connect_params(%{"key" => room.broadcast_key})
+        |> live(~p"/screens/#{room.id}/broadcast")
+
+      assert html =~ "Share screen"
+    end
+
+    test "shows who is logged in", %{conn: conn, room: room} do
+      {:ok, _view, html} = live(conn, ~p"/screens/#{room.id}")
+
+      assert html =~ "Ana"
+    end
   end
 
   describe "watch page" do
@@ -52,6 +86,55 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       render_hook(view, "offer", %{"type" => "offer"})
 
       assert_reply(view, %{error: "Couldn't connect to the screen share"})
+    end
+  end
+
+  describe "server membership" do
+    test "lets members watch a room", %{conn: conn, room: room} do
+      {:ok, _view, html} = live(conn, ~p"/screens/#{room.id}")
+
+      assert html =~ "Elden Ring"
+      assert_called(Discord.check_member("1", "10"))
+    end
+
+    test "keeps other people out of a room", %{conn: conn, room: room} do
+      patch_function(Discord, :check_member, :not_member)
+
+      {:ok, view, html} = live(conn, ~p"/screens/#{room.id}")
+
+      assert html =~ "Not in this server"
+      refute html =~ "Elden Ring"
+      refute render(view) =~ "Elden Ring"
+    end
+
+    test "keeps other people out of the guild page", %{conn: conn, room: room} do
+      patch_function(Discord, :check_member, :not_member)
+
+      {:ok, view, _html} = live_guild(conn, room.guild_id)
+
+      assert render(view) =~ "Not in this server"
+      refute render(view) =~ "Elden Ring"
+      assert_called(Discord.check_member("1", "10"))
+    end
+
+    test "asks to try again when Discord can't tell", %{conn: conn, room: room} do
+      patch_function(Discord, :check_member, :error)
+
+      {:ok, _view, html} = live(conn, ~p"/screens/#{room.id}")
+      assert html =~ "check your access"
+
+      {:ok, view, _html} = live_guild(conn, room.guild_id)
+      assert render(view) =~ "check your access"
+    end
+
+    test "doesn't ask Discord for links that don't work", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/screens/unknown")
+      assert html =~ "Screen share not found"
+
+      {:ok, _view, html} = live(conn, ~p"/screens")
+      assert html =~ "Link expired"
+
+      refute_called(Discord.check_member(_guild_id, _user_id))
     end
   end
 

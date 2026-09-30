@@ -10,6 +10,7 @@ defmodule BotchiniWeb.ScreenLive.Watch do
 
   alias Botchini.Screens
   alias Botchini.Screens.Room
+  alias BotchiniWeb.ScreenLive.Soundboard
 
   @impl true
   def mount(%{"id" => room_id}, _session, socket) do
@@ -19,7 +20,11 @@ defmodule BotchiniWeb.ScreenLive.Watch do
 
       room ->
         if connected?(socket), do: Screens.subscribe(room.id)
-        {:ok, assign(socket, room: room, status: :open, page_title: room.title)}
+
+        {:ok,
+         socket
+         |> assign(room: room, status: :open, page_title: room.title)
+         |> Soundboard.mount(room.guild_id)}
     end
   end
 
@@ -37,6 +42,8 @@ defmodule BotchiniWeb.ScreenLive.Watch do
     <.notice title="Screen share ended">
       {@room.owner_name} stopped sharing their screen.
     </.notice>
+
+    <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
     """
   end
 
@@ -49,6 +56,8 @@ defmodule BotchiniWeb.ScreenLive.Watch do
     <p class="mt-2 text-sm text-gray-500">
       The stream starts muted, use the video controls to turn the sound on.
     </p>
+
+    <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
     """
   end
 
@@ -66,7 +75,13 @@ defmodule BotchiniWeb.ScreenLive.Watch do
     {:noreply, socket}
   end
 
+  def handle_event("sound:" <> _action = event, params, socket),
+    do: {:noreply, Soundboard.handle_event(event, params, socket)}
+
   @impl true
+  def handle_info({:soundboard, message}, socket),
+    do: {:noreply, Soundboard.handle_info(message, socket)}
+
   def handle_info({:screens, room_id, {:ice_candidate, candidate}}, socket) do
     {:noreply, push_event(socket, "screen:#{room_id}:ice_candidate", candidate)}
   end

@@ -102,9 +102,58 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     big = big_rooms(assigns.rooms, assigns.pinned)
     main = if length(big) == 1, do: hd(big)
 
-    assigns = assign(assigns, big: big, main: main, layout: layout(length(big)))
+    assigns =
+      assign(assigns,
+        big: big,
+        main: main,
+        layout: layout(length(big)),
+        sharing?: Enum.any?(assigns.rooms, &(&1.owner_id == assigns.current_user.id))
+      )
 
     ~H"""
+    <%!-- Collapsed by default to leave the room to the screens. Hidden instead of removed
+         when collapsed, as the controls keep a connection going while sharing --%>
+    <section
+      id="manage-stream"
+      class="mx-auto mb-3 w-full rounded-xl border border-gray-800 bg-gray-900"
+      style={max_width(@layout)}
+    >
+      <button
+        type="button"
+        id="manage-stream-toggle"
+        aria-controls="manage-stream-body"
+        aria-expanded="false"
+        phx-click={
+          JS.toggle(to: "#manage-stream-body")
+          |> JS.toggle_attribute({"aria-expanded", "true", "false"})
+        }
+        class="group flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm font-semibold"
+      >
+        <span class="flex items-center gap-2">
+          Manage my stream
+          <span
+            :if={@sharing?}
+            class="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-white"
+          >
+            LIVE
+          </span>
+        </span>
+        <span
+          class="text-xs text-gray-400 transition group-aria-expanded:rotate-180"
+          aria-hidden="true"
+        >
+          ▼
+        </span>
+      </button>
+
+      <div id="manage-stream-body" style="display: none" class="border-t border-gray-800 p-3">
+        {live_render(@socket, BotchiniWeb.ScreenLive.ManageStream,
+          id: "manage-stream-live",
+          session: %{"guild_id" => @guild_id, "user" => @current_user}
+        )}
+      </div>
+    </section>
+
     <div
       id="screens"
       phx-hook="Popovers"
@@ -258,9 +307,9 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   end
 
   # Big screens are capped so they fit the window's height, leaving room for the
-  # header, the strip and the note below them
+  # manage bar, the header, the strip and the note below them
   defp max_width(%{per_row: per_row, rows: rows}) do
-    height = "(100dvh - 16rem - #{rows - 1} * 0.75rem) / #{rows}"
+    height = "(100dvh - 19rem - #{rows - 1} * 0.75rem) / #{rows}"
     "max-width: calc(#{height} * 16 / 9 * #{per_row} + #{per_row - 1} * 0.75rem);"
   end
 

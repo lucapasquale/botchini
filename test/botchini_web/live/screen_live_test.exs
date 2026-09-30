@@ -1115,4 +1115,120 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       assert has_element?(broadcast, "#soundboard-tab-pointer[data-page-key='room:#{room.id}']")
     end
   end
+
+  describe "managing your own stream" do
+    defp live_manage(conn) do
+      {:ok, guild, _html} = live(conn, ~p"/screens/1")
+      {guild, find_live_child(guild, "manage-stream-live")}
+    end
+
+    defp my_room, do: Screens.find_owner_room("1", "10")
+
+    setup do
+      on_exit(fn -> if room = my_room(), do: Screens.stop_room(room) end)
+    end
+
+    test "is a collapsed section of the guild page, with the same controls as the broadcast page",
+         %{conn: conn} do
+      {guild, manage} = live_manage(conn)
+
+      assert has_element?(guild, "#manage-stream-toggle[aria-expanded=false]", "Manage my stream")
+      assert has_element?(guild, "#manage-stream-body[style*='display: none']")
+      assert has_element?(manage, "[data-screen-start]", "Share screen")
+      assert has_element?(manage, "[data-screen-switch]")
+      assert has_element?(manage, "[data-screen-stop]")
+      assert has_element?(manage, "#manage-stream-title-input")
+    end
+
+    test "doesn't make a room until something is picked to share", %{conn: conn} do
+      live_manage(conn)
+
+      assert my_room() == nil
+    end
+
+    test "makes the member's room, without a channel to announce in, once they pick a source",
+         %{conn: conn} do
+      {_guild, manage} = live_manage(conn)
+
+      render_hook(manage, "source", %{"surface" => "window"})
+
+      assert %{owner_id: "10", owner_name: "Ana", channel_id: nil, live?: false} = my_room()
+      assert my_room().source == :window
+      assert my_room().title == "Ana's window"
+    end
+
+    test "keeps the title typed before sharing", %{conn: conn} do
+      {_guild, manage} = live_manage(conn)
+
+      manage
+      |> element("#manage-stream-title")
+      |> render_change(%{"title" => "Elden Ring night"})
+
+      render_hook(manage, "source", %{"surface" => "monitor"})
+
+      assert %{title: "Elden Ring night", custom_title?: true} = my_room()
+    end
+
+    test "renames the room while sharing", %{conn: conn} do
+      {_guild, manage} = live_manage(conn)
+      render_hook(manage, "source", %{"surface" => "monitor"})
+
+      manage |> element("#manage-stream-title") |> render_change(%{"title" => "Boss fight"})
+
+      assert my_room().title == "Boss fight"
+    end
+
+    test "stops the room", %{conn: conn} do
+      {_guild, manage} = live_manage(conn)
+      render_hook(manage, "source", %{"surface" => "monitor"})
+      room_id = my_room().id
+
+      render_hook(manage, "stop", %{})
+
+      assert Screens.get_room(room_id) == nil
+      assert_push_event(manage, "screen:ended", %{})
+    end
+
+    test "finds the room again when the page reloads", %{conn: conn} do
+      {_guild, manage} = live_manage(conn)
+      render_hook(manage, "source", %{"surface" => "monitor"})
+      room_id = my_room().id
+
+      {_guild, manage} = live_manage(conn)
+      render_hook(manage, "source", %{"surface" => "window"})
+
+      assert my_room().id == room_id
+      assert my_room().source == :window
+    end
+
+    test "marks the section live while the member is sharing", %{conn: conn} do
+      {guild, manage} = live_manage(conn)
+      render_hook(manage, "source", %{"surface" => "monitor"})
+
+      refute has_element?(guild, "#manage-stream-toggle", "LIVE")
+
+      Screens.broadcast(%{my_room() | live?: true}, :live)
+
+      assert has_element?(guild, "#manage-stream-toggle", "LIVE")
+    end
+
+    test "never touches other members' rooms", %{conn: conn, room: room} do
+      {_guild, manage} = live_manage(conn)
+
+      render_hook(manage, "source", %{"surface" => "monitor"})
+
+      assert my_room().id != room.id
+      assert Screens.find_owner_room("1", "3").id == room.id
+    end
+
+    test "asks to stop OBS before sharing from here", %{conn: conn} do
+      {_guild, manage} = live_manage(conn)
+      render_hook(manage, "source", %{"surface" => "monitor"})
+
+      Screens.broadcast(%{my_room() | live?: true, source: :obs}, :updated)
+
+      assert has_element?(manage, "p", "sharing from OBS")
+      refute has_element?(manage, "[data-screen-start]")
+    end
+  end
 end

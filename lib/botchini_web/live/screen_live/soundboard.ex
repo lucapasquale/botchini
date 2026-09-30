@@ -207,15 +207,6 @@ defmodule BotchiniWeb.ScreenLive.Soundboard do
                 ✨ Pointer
               </button>
             </div>
-
-            <button
-              id="soundboard-stop"
-              type="button"
-              phx-click="sound:stop"
-              class="rounded bg-red-600/80 px-3 py-1 text-sm font-semibold text-white transition hover:bg-red-500"
-            >
-              ⏹ Stop
-            </button>
           </div>
 
           <div data-sounds-scroll class="min-h-0 flex-1 overflow-y-auto p-3 pb-1">
@@ -238,8 +229,15 @@ defmodule BotchiniWeb.ScreenLive.Soundboard do
                     step="0.05"
                     value="0.7"
                     aria-label="Sounds volume"
-                    class="w-full"
+                    class="min-w-0 flex-1"
                   />
+                  <button
+                    type="button"
+                    phx-click="sound:stop"
+                    class="shrink-0 rounded bg-red-600/80 px-3 py-1 text-sm font-semibold text-white transition hover:bg-red-500"
+                  >
+                    ⏹ Stop
+                  </button>
                 </div>
                 <p data-sounds-blocked hidden class="mt-1 text-sm text-amber-400">
                   Click anywhere on the page to hear sounds
@@ -397,11 +395,5 @@ defmodule BotchiniWeb.ScreenLive.Soundboard do
     |> JS.add_class(@tab_inactive, to: "#soundboard-tab-button-#{other}")
     |> JS.set_attribute({"aria-selected", "true"}, to: "#soundboard-tab-button-#{tab}")
     |> JS.set_attribute({"aria-selected", "false"}, to: "#soundboard-tab-button-#{other}")
-    |> then(
-      &if(tab == "sounds",
-        do: JS.show(&1, to: "#soundboard-stop"),
-        else: JS.hide(&1, to: "#soundboard-stop")
-      )
-    )
   end
 end

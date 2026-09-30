@@ -83,7 +83,7 @@ function create(name) {
         y: random(-900, -60),
         vx: random(-40, 40),
         vy: random(0, 150),
-        size: random(30, 56),
+        size: random(40, 100),
         angle: random(0, 2 * Math.PI),
         spin: random(-5, 5),
         bounces: 0

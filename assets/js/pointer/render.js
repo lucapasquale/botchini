@@ -134,7 +134,11 @@ function lighten(color) {
 export function drawStroke(ctx, points, look, alpha, time) {
   if (points.length === 0) return
   const {color, width, style} = look
-  const segments = curves(points.length === 1 ? [points[0], points[0]] : points)
+  if (points.length === 1 || points.every(p => p.x === points[0].x && p.y === points[0].y)) {
+    drawPaintedDot(ctx, points[0], look, alpha, time)
+    return
+  }
+  const segments = curves(points)
 
   ctx.save()
   ctx.lineCap = "round"
@@ -196,6 +200,43 @@ export function drawStroke(ctx, points, look, alpha, time) {
       ctx.lineWidth = width
       tracePath(ctx, segments)
       ctx.stroke()
+  }
+
+  ctx.restore()
+}
+
+// What a click paints: a dot as wide as the line
+function drawPaintedDot(ctx, point, look, alpha, time) {
+  const {color, width, style} = look
+  const radius = width / 2
+
+  ctx.save()
+  ctx.globalAlpha = alpha
+  ctx.fillStyle = style === "rainbow" ? rainbow(0, time) : color
+
+  if (style === "neon" || style === "comet") {
+    ctx.shadowColor = color
+    ctx.shadowBlur = width * 1.6
+  }
+
+  if (style === "pixel") {
+    ctx.fillRect(Math.floor(point.x / width) * width, Math.floor(point.y / width) * width, width, width)
+  } else {
+    ctx.beginPath()
+    ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI)
+    ctx.fill()
+  }
+
+  if (style === "neon") {
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
+    ctx.beginPath()
+    ctx.arc(point.x, point.y, radius * 0.35, 0, 2 * Math.PI)
+    ctx.fill()
+  } else if (style === "glossy") {
+    ctx.fillStyle = lighten(color)
+    ctx.beginPath()
+    ctx.arc(point.x - radius * 0.3, point.y - radius * 0.35, radius * 0.35, 0, 2 * Math.PI)
+    ctx.fill()
   }
 
   ctx.restore()

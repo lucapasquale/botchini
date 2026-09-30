@@ -7,6 +7,12 @@ html.pointer-on *:not(#soundboard, #soundboard *) {
   cursor: none !important;
 }
 
+/* The cursor is inherited, so the menu brings it back itself. Its handles keep
+   their own grab and resize cursors */
+html.pointer-on #soundboard {
+  cursor: auto !important;
+}
+
 html.pointer-on body {
   user-select: none;
 }

@@ -63,11 +63,17 @@ defmodule Botchini.Screens.Sounds do
   def subscribe(guild_id), do: Phoenix.PubSub.subscribe(Botchini.PubSub, topic(guild_id))
 
   @doc """
-  Plays the sound on the guild's pages, cutting off the one playing there
+  Plays the sound on the guild's pages, cutting off the one playing there. Pages
+  are told who played it, so members who muted them don't hear it
   """
-  @spec play(String.t(), sound()) :: :ok
-  def play(guild_id, sound),
-    do: Phoenix.PubSub.broadcast(Botchini.PubSub, topic(guild_id), {:soundboard, {:play, sound}})
+  @spec play(String.t(), sound(), String.t()) :: :ok
+  def play(guild_id, sound, user_id) do
+    Phoenix.PubSub.broadcast(
+      Botchini.PubSub,
+      topic(guild_id),
+      {:soundboard, {:play, sound, user_id}}
+    )
+  end
 
   @doc """
   Stops the sound playing on the guild's pages

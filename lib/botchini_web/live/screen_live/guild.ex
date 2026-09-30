@@ -1,8 +1,9 @@
 defmodule BotchiniWeb.ScreenLive.Guild do
   @moduledoc """
   Page where members watch the screens being shared in a guild. One screen takes
-  most of the page, with the chat floating over it, and the others wait in a strip
-  below it, next to the bar with the soundboard, the pointer and the chat's switch
+  most of the page, or several pinned ones share it, with the chat floating over
+  them. The others wait in a strip below, next to the bar with the soundboard, the
+  pointer and the chat's switch
   """
 
   use BotchiniWeb, :live_view
@@ -27,7 +28,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
       assign(socket,
         page_title: "Screen shares",
         rooms: [],
-        main_id: nil,
+        pinned: [],
         online: [],
         admin?: false,
         full_width?: true
@@ -94,33 +95,40 @@ defmodule BotchiniWeb.ScreenLive.Guild do
 
   # The soundboard and the chat work without anyone sharing, for members hanging
   # out on the page. Screens never move in the DOM, as moving a video would remount
-  # its hook and restart the connection, so a grid places them: the main one takes
-  # the second row, and the others fill the third one's first columns, before the bar
+  # its hook and restart the connection, so a grid places them: the big ones take
+  # the rows after the header, and the others fill the next one's first columns,
+  # before the bar
   def render(assigns) do
-    assigns = assign(assigns, main: main_room(assigns.rooms, assigns.main_id))
+    big = big_rooms(assigns.rooms, assigns.pinned)
+    main = if length(big) == 1, do: hd(big)
+
+    assigns = assign(assigns, big: big, main: main, layout: layout(length(big)))
 
     ~H"""
     <div
       id="screens"
       phx-hook="Popovers"
-      class="mx-auto grid w-full max-w-[calc((100dvh_-_16rem)_*_16_/_9)] gap-3"
-      style={columns(@rooms)}
+      class="mx-auto grid w-full gap-3"
+      style={columns(length(@rooms) - length(@big)) <> rows(@layout) <> max_width(@layout)}
     >
       <div class="col-span-full row-start-1 flex min-w-0 items-center justify-between gap-3">
         <div id="watching" class="flex min-w-0 items-center gap-2.5">
-          <%= if @main do %>
-            <span
-              :if={@main.live?}
-              class="shrink-0 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-white"
-            >
-              LIVE
-            </span>
-            <h1 class="truncate text-base font-semibold">{@main.title}</h1>
-            <span class="hidden shrink-0 text-sm text-gray-400 sm:inline">
-              Shared by {@main.owner_name}
-            </span>
-          <% else %>
-            <h1 class="truncate text-base font-semibold">Screen shares</h1>
+          <%= cond do %>
+            <% @main -> %>
+              <span
+                :if={@main.live?}
+                class="shrink-0 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-white"
+              >
+                LIVE
+              </span>
+              <h1 class="truncate text-base font-semibold">{@main.title}</h1>
+              <span class="hidden shrink-0 text-sm text-gray-400 sm:inline">
+                Shared by {@main.owner_name}
+              </span>
+            <% @big != [] -> %>
+              <h1 class="truncate text-base font-semibold">Watching {length(@big)} screens</h1>
+            <% true -> %>
+              <h1 class="truncate text-base font-semibold">Screen shares</h1>
           <% end %>
         </div>
 
@@ -130,12 +138,20 @@ defmodule BotchiniWeb.ScreenLive.Guild do
       <div
         :for={room <- @rooms}
         id={"screen-#{room.id}"}
-        data-main={to_string(room == @main)}
-        class={["group min-w-0", tile_class(room == @main)]}
+        data-main={to_string(room in @big)}
+        class={["group min-w-0", tile_class(room in @big)]}
+        style={tile_style(room, @big, @layout)}
       >
         <.viewer room={room}>
+          <span
+            :if={@main == nil and room in @big}
+            class="pointer-events-none absolute left-1.5 top-1.5 z-10 max-w-[calc(100%_-_5rem)] truncate rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white"
+          >
+            {room.title} · {room.owner_name}
+          </span>
+
           <button
-            :if={room != @main}
+            :if={room not in @big}
             type="button"
             phx-click="watch"
             phx-value-room_id={room.id}
@@ -148,10 +164,12 @@ defmodule BotchiniWeb.ScreenLive.Guild do
           </button>
 
           <div
-            :if={@admin?}
-            class="absolute right-1.5 top-1.5 z-20 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
+            :if={@admin? or room != @main}
+            class="absolute right-1.5 top-1.5 z-20 flex gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
           >
+            <.pin_button :if={room != @main} room={room} pinned?={room in @big} />
             <.close_button
+              :if={@admin?}
               room_id={room.id}
               class="bg-black/60 text-gray-200 hover:bg-red-600 hover:text-white"
             />
@@ -159,7 +177,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         </.viewer>
       </div>
 
-      <%!-- Takes the main screen's place, looking like a video that didn't start --%>
+      <%!-- Takes the big screen's place, looking like a video that didn't start --%>
       <div
         :if={@rooms == []}
         id="no-screens"
@@ -176,13 +194,13 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         :if={@chat_open?}
         events={@chat_events}
         limited?={@chat_limited?}
-        class="col-span-full row-start-5 sm:row-start-2 sm:mb-14 sm:mr-3 sm:self-end sm:justify-self-end"
+        class="col-span-full row-start-(--chat-row) sm:row-start-2 sm:row-end-(--strip-row) sm:mb-14 sm:mr-3 sm:self-end sm:justify-self-end"
       />
 
       <div
         id="screen-bar"
         data-pointer-menu
-        class="relative col-span-full row-start-4 flex items-center gap-1 self-center justify-self-end rounded-xl border border-gray-800 bg-gray-900 p-1 sm:col-[-2/-1] sm:row-start-3"
+        class="relative col-span-full row-start-(--bar-row) flex items-center gap-1 self-center justify-self-end rounded-xl border border-gray-800 bg-gray-900 p-1 sm:col-[-2/-1] sm:row-start-(--strip-row)"
       >
         <Soundboard.sounds_menu
           cooldown?={@sounds_cooldown?}
@@ -194,40 +212,107 @@ defmodule BotchiniWeb.ScreenLive.Guild do
       </div>
     </div>
 
-    <p
-      :if={@rooms != []}
-      class="mx-auto mt-3 max-w-[calc((100dvh_-_16rem)_*_16_/_9)] text-sm text-gray-500"
-    >
+    <p :if={@rooms != []} class="mx-auto mt-3 text-sm text-gray-500" style={max_width(@layout)}>
       Streams start muted, use the video controls to turn the sound on. Click a stream under the
-      big one to watch it instead.
+      big one to watch it instead, or pin it to keep both big.
     </p>
     """
   end
 
-  # The strip gets a column per screen besides the main one, which shrink to fit
-  # the bar. On phones the bar and the chat get rows of their own, below the strip
-  defp columns(rooms) do
-    case length(rooms) do
-      count when count > 1 ->
-        "grid-template-columns: repeat(#{count - 1}, minmax(0, 9rem)) minmax(0, 1fr) auto"
+  attr :room, :map, required: true
+  attr :pinned?, :boolean, required: true
 
-      _single_or_none ->
-        "grid-template-columns: minmax(0, 1fr) auto"
+  defp pin_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      phx-click="pin"
+      phx-value-room_id={@room.id}
+      aria-pressed={to_string(@pinned?)}
+      title={if @pinned?, do: "Unpin #{@room.title}", else: "Pin #{@room.title} to keep it big"}
+      class="rounded bg-black/60 p-1.5 text-gray-200 hover:bg-white/20 hover:text-white aria-pressed:bg-indigo-600 aria-pressed:text-white aria-pressed:hover:bg-indigo-500"
+    >
+      <span class="sr-only">{if @pinned?, do: "Unpin", else: "Pin"}</span>
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M16 3a1 1 0 0 1 .7 1.7L15 6.4v4.2l2.7 2.7a1 1 0 0 1-.7 1.7h-4v6a1 1 0 0 1-2 0v-6H7a1 1 0 0 1-.7-1.7L9 10.6V6.4L7.3 4.7A1 1 0 0 1 8 3h8Z" />
+      </svg>
+    </button>
+    """
+  end
+
+  # The strip gets a column per screen that isn't big, which shrink to fit the
+  # bar. On phones the bar and the chat get rows of their own, below the strip
+  defp columns(0), do: "grid-template-columns: minmax(0, 1fr) auto;"
+
+  defp columns(strip_count),
+    do: "grid-template-columns: repeat(#{strip_count}, minmax(0, 9rem)) minmax(0, 1fr) auto;"
+
+  # How many big screens go in each row, and how many rows they take
+  defp layout(count) when count <= 1, do: %{per_row: 1, rows: 1, count: 1}
+  defp layout(count) when count <= 4, do: %{per_row: 2, rows: ceil(count / 2), count: count}
+  defp layout(count), do: %{per_row: 3, rows: ceil(count / 3), count: count}
+
+  # Rows of the strip, and of the bar and the chat on phones, after the big screens'
+  defp rows(%{rows: rows}) do
+    "--strip-row: #{rows + 2}; --bar-row: #{rows + 3}; --chat-row: #{rows + 4};"
+  end
+
+  # Big screens are capped so they fit the window's height, leaving room for the
+  # header, the strip and the note below them
+  defp max_width(%{per_row: per_row, rows: rows}) do
+    height = "(100dvh - 16rem - #{rows - 1} * 0.75rem) / #{rows}"
+    "max-width: calc(#{height} * 16 / 9 * #{per_row} + #{per_row - 1} * 0.75rem);"
+  end
+
+  defp tile_class(true), do: "col-span-full justify-self-start"
+  defp tile_class(false), do: "row-start-(--strip-row) self-center"
+
+  # Big screens in the same row share its cell, each moved over by the ones before
+  # it. A row that isn't full is centered
+  defp tile_style(room, big, %{per_row: per_row, count: count}) do
+    case Enum.find_index(big, &(&1 == room)) do
+      nil ->
+        nil
+
+      index ->
+        row = div(index, per_row)
+        in_row = min(per_row, count - row * per_row)
+        offset = rem(index, per_row) + (per_row - in_row) / 2
+
+        "grid-row-start: #{row + 2}; width: calc((100% - #{per_row - 1} * 0.75rem) / #{per_row}); " <>
+          "margin-left: calc(#{offset} * (100% + 0.75rem) / #{per_row});"
     end
   end
 
-  defp tile_class(true), do: "col-span-full row-start-2"
-  defp tile_class(false), do: "row-start-3 self-center"
+  # The screens members pinned, or the one shared first
+  defp big_rooms(rooms, pinned) do
+    case Enum.flat_map(pinned, fn id -> Enum.filter(rooms, &(&1.id == id)) end) do
+      [] -> Enum.take(rooms, 1)
+      big -> big
+    end
+  end
 
-  # The screen members picked, or the one shared first
-  defp main_room(rooms, main_id),
-    do: Enum.find(rooms, List.first(rooms), &(&1.id == main_id))
+  defp big_ids(socket) do
+    socket.assigns.rooms |> big_rooms(socket.assigns.pinned) |> Enum.map(& &1.id)
+  end
 
   @impl true
   def handle_event("watch", %{"room_id" => room_id}, socket) do
     if watching?(socket, room_id),
-      do: {:noreply, assign(socket, main_id: room_id)},
+      do: {:noreply, assign(socket, pinned: [room_id])},
       else: {:noreply, socket}
+  end
+
+  # The last big screen stays, as there's always one
+  def handle_event("pin", %{"room_id" => room_id}, socket) do
+    big_ids = big_ids(socket)
+
+    cond do
+      not watching?(socket, room_id) -> {:noreply, socket}
+      room_id not in big_ids -> {:noreply, assign(socket, pinned: big_ids ++ [room_id])}
+      length(big_ids) > 1 -> {:noreply, assign(socket, pinned: big_ids -- [room_id])}
+      true -> {:noreply, socket}
+    end
   end
 
   # Admins' rights are checked again, as they can lose them while the page is open
@@ -294,7 +379,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     {:noreply,
      socket
      |> update(:rooms, &Enum.reject(&1, fn r -> r.id == room.id end))
-     |> update(:main_id, &if(&1 == room.id, do: nil, else: &1))}
+     |> update(:pinned, &List.delete(&1, room.id))}
   end
 
   def handle_info({:screen_room, _event, room}, socket) do

@@ -21,8 +21,8 @@ html.pointer-on [data-pointer-shield] {
   display: block;
 }
 
-/* Screens in the strip under the main one are previews that a click makes the
-   main one, so their video controls stay hidden */
+/* Screens in the strip under the big ones are previews that a click makes the
+   big one, so their video controls stay hidden */
 [data-main="false"] video::-webkit-media-controls {
   display: none !important;
 }

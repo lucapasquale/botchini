@@ -554,6 +554,76 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       assert has_element?(view, "#screen-#{room.id}[data-main=true]")
     end
 
+    test "pins screens to keep several big", %{conn: conn, room: room} do
+      other = %{
+        room
+        | id: "other",
+          title: "Hades",
+          owner_name: "Bia",
+          started_at: DateTime.utc_now()
+      }
+
+      third = %{room | id: "third", title: "Celeste", started_at: DateTime.utc_now()}
+
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      for r <- [room, other, third], do: Screens.broadcast(%{r | live?: true}, :live)
+
+      # The only big screen can't be unpinned
+      refute has_element?(view, "#screen-#{room.id} button[phx-click=pin]")
+
+      view |> element("#screen-other button[phx-click=pin]") |> render_click()
+
+      assert has_element?(view, "#screen-#{room.id}[data-main=true]")
+      assert has_element?(view, "#screen-other[data-main=true]")
+      assert has_element?(view, "#screen-third[data-main=false]")
+      assert has_element?(view, "#watching", "Watching 2 screens")
+      assert has_element?(view, "#screen-other", "Hades · Bia")
+      assert has_element?(view, "#screen-other button[phx-click=pin][aria-pressed=true]")
+      assert has_element?(view, "#screen-third button[phx-click=pin][aria-pressed=false]")
+
+      view |> element("#screen-#{room.id} button[phx-click=pin]") |> render_click()
+
+      assert has_element?(view, "#screen-#{room.id}[data-main=false]")
+      assert has_element?(view, "#screen-other[data-main=true]")
+      assert has_element?(view, "#watching", "Hades")
+      refute has_element?(view, "#screen-other button[phx-click=pin]")
+
+      # Watching a screen from the strip makes it the only big one again
+      view |> element("#screen-third button[phx-click=pin]") |> render_click()
+      view |> element("#screen-#{room.id} button[phx-click=watch]") |> render_click()
+
+      assert has_element?(view, "#screen-#{room.id}[data-main=true]")
+      assert has_element?(view, "#screen-other[data-main=false]")
+      assert has_element?(view, "#screen-third[data-main=false]")
+    end
+
+    test "forgets pins of rooms that ended", %{conn: conn, room: room} do
+      other = %{room | id: "other", title: "Hades", started_at: DateTime.utc_now()}
+      third = %{room | id: "third", title: "Celeste", started_at: DateTime.utc_now()}
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      for r <- [room, other, third], do: Screens.broadcast(%{r | live?: true}, :live)
+
+      view |> element("#screen-other button[phx-click=pin]") |> render_click()
+      view |> element("#screen-third button[phx-click=pin]") |> render_click()
+      Screens.broadcast(other, :ended)
+
+      assert has_element?(view, "#screen-#{room.id}[data-main=true]")
+      assert has_element?(view, "#screen-third[data-main=true]")
+      assert has_element?(view, "#watching", "Watching 2 screens")
+    end
+
+    test "can't pin rooms that aren't on the page", %{conn: conn, room: room} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      Screens.broadcast(%{room | live?: true}, :live)
+
+      render_click(view, "pin", %{"room_id" => "missing"})
+
+      assert has_element?(view, "#screen-#{room.id}[data-main=true]")
+      assert has_element?(view, "#watching", "Elden Ring")
+    end
+
     test "doesn't show how many are watching", %{conn: conn, room: room} do
       view = live_guild_with_room(conn, room)
 

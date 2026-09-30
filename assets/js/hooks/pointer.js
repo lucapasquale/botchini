@@ -353,6 +353,7 @@ export const Pointer = {
     document.addEventListener("pointermove", this.onMove, {passive: true})
     document.addEventListener("pointerdown", this.onDown, true)
     document.addEventListener("pointerup", this.onUp, true)
+    document.addEventListener("mouseup", this.onUp, true)
     document.addEventListener("pointercancel", this.onUp, true)
     document.addEventListener("click", this.onClick, true)
     document.addEventListener("dragstart", this.onDragStart, true)
@@ -361,9 +362,11 @@ export const Pointer = {
   },
 
   teardownInput() {
+    this.coverControls(false)
     document.removeEventListener("pointermove", this.onMove)
     document.removeEventListener("pointerdown", this.onDown, true)
     document.removeEventListener("pointerup", this.onUp, true)
+    document.removeEventListener("mouseup", this.onUp, true)
     document.removeEventListener("pointercancel", this.onUp, true)
     document.removeEventListener("click", this.onClick, true)
     document.removeEventListener("dragstart", this.onDragStart, true)
@@ -380,6 +383,12 @@ export const Pointer = {
 
   pointerMoved(event) {
     if (!this.settings.on || event.pointerType === "touch") return
+
+    // Letting go over the video's own controls can go unnoticed, as the browser keeps
+    // those events for itself. A move without the button down means it was released
+    if ((this.pressed || this.me.drawing) && event.pointerType === "mouse" && event.buttons === 0) {
+      this.pointerUp(event)
+    }
 
     if (this.overMenu(event) && !this.me.drawing && !this.pressed) {
       this.me.head = null
@@ -421,6 +430,7 @@ export const Pointer = {
 
     this.me.drawing = true
     this.me.releasedAt = null
+    this.coverControls(true)
     // The line keeps what it's over at its start, so it stays in one piece
     this.strokeAnchor = this.anchorAt(this.pressed.x, this.pressed.y)
     this.strokeScreen = [{x: this.pressed.x, y: this.pressed.y}]
@@ -442,6 +452,7 @@ export const Pointer = {
 
     this.addPoint(event.clientX, event.clientY, true)
     this.me.drawing = false
+    this.coverControls(false)
     this.me.releasedAt = performance.now()
     // The last position goes out with the button up, which ends the line for everyone
     this.queuePoint(this.strokeAnchor, event.clientX, event.clientY, 0)
@@ -452,6 +463,14 @@ export const Pointer = {
     // Browsers send the click right after the button goes up, when they send one
     // at all, so a later click is a real one
     setTimeout(() => (this.swallowClick = false))
+  },
+
+  // The video's own controls keep the mouse events over them, so letting go there
+  // goes unnoticed. While drawing, the shields cover the controls too
+  coverControls(on) {
+    for (const shield of document.querySelectorAll("[data-pointer-shield]")) {
+      shield.style.bottom = on ? "0" : ""
+    }
   },
 
   pointerLeft() {

@@ -1,1 +1,12 @@
 @import "tailwindcss";
+
+/* With the pointer on, its dot replaces the mouse cursor, except over the floating
+   menu, and dragging draws instead of selecting text */
+html.pointer-on,
+html.pointer-on *:not(#soundboard, #soundboard *) {
+  cursor: none !important;
+}
+
+html.pointer-on body {
+  user-select: none;
+}

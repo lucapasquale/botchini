@@ -51,6 +51,7 @@ defmodule BotchiniWeb.ScreenLive.Components do
       <video
         id={"screen-viewer-video-#{@room.id}"}
         phx-update="ignore"
+        data-pointer-stream={@room.id}
         class="h-full w-full"
         autoplay
         muted
@@ -129,11 +130,12 @@ defmodule BotchiniWeb.ScreenLive.Components do
 
   @doc """
   Members that have one of the server's screen sharing pages open right now.
-  Admins get their own color
+  Admins get their own color. Anyone can mute the others' pointers and sounds,
+  just for themselves, which the OnlineMutes hook keeps in the browser
   """
   def online_list(assigns) do
     ~H"""
-    <section id="online-list" aria-label="Online" class="mt-6">
+    <section id="online-list" aria-label="Online" phx-hook="OnlineMutes" class="mt-6">
       <h2 class="mb-2 text-sm font-semibold text-gray-400">Online · {length(@users)}</h2>
 
       <ul class="flex flex-wrap gap-2">
@@ -154,6 +156,17 @@ defmodule BotchiniWeb.ScreenLive.Components do
             :if={user.id == @current_user_id}
             class="text-gray-500"
           >(you)</span>
+          <button
+            :if={user.id != @current_user_id}
+            type="button"
+            data-mute-user={user.id}
+            data-name={user.name}
+            aria-pressed="false"
+            title={"Mute #{user.name}'s pointer and sounds"}
+            class="-mr-1 rounded-full px-1 text-xs opacity-70 transition hover:bg-white/10 hover:opacity-100"
+          >
+            🔈
+          </button>
         </li>
       </ul>
     </section>

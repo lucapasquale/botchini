@@ -6,6 +6,8 @@
 // The soundboard floats over the page as a button members drag anywhere on the
 // screen, which opens the sounds next to it. Its place is remembered too.
 
+import {Mutes} from "../pointer/mutes"
+
 const FLASH_MS = 600
 const THROW_MS = 2_000
 // Indigo like the flash on a played sound, see-through so the name stays readable
@@ -19,6 +21,7 @@ const DRAG_THRESHOLD_PX = 5
 // Matches the panel's max-h-[70dvh]
 const MAX_HEIGHT_RATIO = 0.7
 const MIN_VISIBLE_SOUNDS = 4
+const MIN_HEIGHT_PX = 200
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max))
 
@@ -150,7 +153,8 @@ export const Soundboard = {
 
   minHeight() {
     const fourth = this.el.querySelectorAll("[data-sound]")[MIN_VISIBLE_SOUNDS - 1]
-    if (!fourth) return 0
+    // On the pointer tab the sounds are hidden, so there's nothing to measure
+    if (!fourth || fourth.offsetParent === null) return MIN_HEIGHT_PX
 
     const panel = this.panel.getBoundingClientRect()
     const scroll = this.scroll.getBoundingClientRect()
@@ -276,7 +280,10 @@ export const Soundboard = {
     if (this.audio) this.audio.volume = this.volume()
   },
 
-  play({id, emoji, url}) {
+  play({id, emoji, url, by}) {
+    // Sounds from members this person muted don't play, or show, for them
+    if (Mutes.has(by)) return
+
     this.flash(id)
     this.throwEmoji(emoji)
 

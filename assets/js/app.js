@@ -25,6 +25,8 @@ import {ScreenBroadcast, ScreenViewer} from "./hooks/screen_share"
 import {LocalTime} from "./hooks/local_time"
 import {playNotification} from "./hooks/notification_sounds"
 import {Soundboard} from "./hooks/soundboard"
+import {Pointer} from "./hooks/pointer"
+import {OnlineMutes} from "./pointer/mutes"
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
@@ -36,7 +38,7 @@ let liveSocket = new LiveSocket("/live", Socket, {
     if (location.hash.length > 1) params.key = location.hash.slice(1)
     return params
   },
-  hooks: {LocalTime, ScreenBroadcast, ScreenViewer, Soundboard}
+  hooks: {LocalTime, OnlineMutes, Pointer, ScreenBroadcast, ScreenViewer, Soundboard}
 })
 
 // Show progress bar on live navigation and form submits

@@ -783,4 +783,144 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       refute_push_event(view, "sound:play", %{})
     end
   end
+
+  describe "pointers" do
+    @move %{
+      "a" => %{"k" => "p", "i" => "guild:1"},
+      "p" => [[0.5, 0.25, 1_000, 0], [0.52, 0.3, 1_016, 1]],
+      "c" => 3,
+      "st" => "sparkle",
+      "w" => 12
+    }
+
+    defp live_guild(conn, guild_id), do: live(conn, ~p"/screens/#{guild_id}")
+
+    defp log_in_as(id, name),
+      do: init_test_session(build_conn(), %{"discord_user_id" => id, "discord_user_name" => name})
+
+    test "relays pointers to the guild's other pages, saying whose they are",
+         %{conn: conn} do
+      {:ok, watch, _html} = live_guild(conn, "1")
+      {:ok, guild, _html} = live_guild(log_in_as("11", "Bia"), "1")
+
+      render_hook(watch, "pointer:move", @move)
+
+      assert_push_event(guild, "pointer:move", %{
+        u: "10",
+        n: "Ana",
+        s: sender,
+        a: %{k: "p", i: "guild:1"},
+        p: [[0.5, 0.25, 1_000, 0], [0.52, 0.3, 1_016, 1]],
+        c: 3,
+        st: "sparkle",
+        w: 12
+      })
+
+      assert is_binary(sender)
+      # The page drawing it already shows its own pointer
+      refute_push_event(watch, "pointer:move", %{})
+    end
+
+    test "tells pages apart when a member has several open", %{conn: conn} do
+      {:ok, first, _html} = live_guild(conn, "1")
+      {:ok, second, _html} = live_guild(conn, "1")
+      {:ok, other, _html} = live_guild(log_in_as("11", "Bia"), "1")
+
+      render_hook(first, "pointer:move", @move)
+      render_hook(second, "pointer:move", @move)
+
+      assert_push_event(other, "pointer:move", %{u: "10", s: first_sender})
+      assert_push_event(other, "pointer:move", %{u: "10", s: second_sender})
+      assert first_sender != second_sender
+    end
+
+    test "doesn't relay pointers to other guilds", %{conn: conn} do
+      {:ok, watch, _html} = live_guild(conn, "1")
+      {:ok, other_guild, _html} = live_guild(log_in_as("11", "Bia"), "9")
+
+      render_hook(watch, "pointer:move", @move)
+
+      refute_push_event(other_guild, "pointer:move", %{})
+    end
+
+    test "ignores invalid pointers", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      {:ok, other, _html} = live_guild(log_in_as("11", "Bia"), "1")
+
+      render_hook(view, "pointer:move", %{@move | "st" => "blink"})
+      render_hook(view, "pointer:move", %{@move | "p" => [[99, 0.5, 1_000, 0]]})
+
+      render_hook(view, "pointer:effect", %{
+        "e" => "nuke",
+        "a" => @move["a"],
+        "x" => 0.5,
+        "y" => 0.5
+      })
+
+      refute_push_event(other, "pointer:move", %{})
+      refute_push_event(other, "pointer:effect", %{})
+    end
+
+    test "relays pointers being turned off", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      {:ok, other, _html} = live_guild(log_in_as("11", "Bia"), "1")
+
+      render_hook(view, "pointer:off", %{})
+
+      assert_push_event(other, "pointer:off", %{u: "10", s: _sender})
+    end
+
+    test "relays special effects, a few seconds apart", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      {:ok, other, _html} = live_guild(log_in_as("11", "Bia"), "1")
+      effect = %{"e" => "heart", "a" => @move["a"], "x" => 0.5, "y" => 1.5}
+
+      render_hook(view, "pointer:effect", effect)
+      render_hook(view, "pointer:effect", %{effect | "e" => "star"})
+
+      assert_push_event(other, "pointer:effect", %{e: "heart", u: "10", x: 0.5, y: 1.5})
+      refute_push_event(other, "pointer:effect", %{e: "star"})
+    end
+
+    test "the broadcaster's pointer is theirs", %{room: room} do
+      {:ok, broadcast, _html} =
+        build_conn()
+        |> put_connect_params(%{"key" => room.broadcast_key})
+        |> live(~p"/screens/#{room.id}/broadcast")
+
+      {:ok, other, _html} = live_guild(log_in_as("11", "Bia"), "1")
+
+      render_hook(broadcast, "pointer:move", %{@move | "a" => %{"k" => "s", "i" => room.id}})
+
+      assert_push_event(other, "pointer:move", %{u: "3", n: "Luca"})
+    end
+
+    test "sounds say who played them, so they can be muted", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      view |> element("#soundboard button[phx-value-sound=mj]") |> render_click()
+
+      assert_push_event(view, "sound:play", %{id: "mj", by: "10"})
+    end
+
+    test "the online list can mute the others, but not yourself", %{conn: conn} do
+      {:ok, _other, _html} = live_guild(log_in_as("11", "Bia"), "1")
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      assert has_element?(view, "#online-11 button[data-mute-user='11']")
+      refute has_element?(view, "#online-10 button[data-mute-user]")
+    end
+
+    test "each page has its own drawing area", %{conn: conn, room: room} do
+      {:ok, guild, _html} = live_guild(conn, "1")
+
+      {:ok, broadcast, _html} =
+        build_conn()
+        |> put_connect_params(%{"key" => room.broadcast_key})
+        |> live(~p"/screens/#{room.id}/broadcast")
+
+      assert has_element?(guild, "#soundboard-tab-pointer[data-page-key='guild:1']")
+      assert has_element?(broadcast, "#soundboard-tab-pointer[data-page-key='room:#{room.id}']")
+    end
+  end
 end

@@ -10,7 +10,7 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
 
   alias Botchini.Screens
   alias Botchini.Screens.Room
-  alias BotchiniWeb.ScreenLive.{ActivityFeed, Guild, Soundboard}
+  alias BotchiniWeb.ScreenLive.{ActivityFeed, Guild, Pointers, Soundboard}
 
   @impl true
   def mount(%{"id" => room_id}, _session, socket) do
@@ -25,6 +25,8 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
 
         room ->
           Screens.subscribe(room.id)
+          # The broadcaster isn't logged in, their link says who they are
+          owner = %{id: room.owner_id, name: room.owner_name}
 
           {:ok,
            socket
@@ -35,7 +37,8 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
              watch_url: nil
            )
            |> ActivityFeed.mount(room.guild_id)
-           |> Soundboard.mount(room.guild_id, room.owner_name)}
+           |> Soundboard.mount(room.guild_id, owner)
+           |> Pointers.mount(room.guild_id, owner)}
       end
     else
       {:ok, assign(socket, status: :connecting)}
@@ -136,6 +139,7 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
       <video
         id="screen-broadcast-preview"
         phx-update="ignore"
+        data-pointer-stream={@room.id}
         class="aspect-video w-full rounded-lg bg-black"
         autoplay
         muted
@@ -151,7 +155,11 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
 
     <ActivityFeed.feed events={@activity} />
 
-    <Soundboard.soundboard cooldown?={@sounds_cooldown?} cooldown_message={@sounds_cooldown_message} />
+    <Soundboard.soundboard
+      cooldown?={@sounds_cooldown?}
+      cooldown_message={@sounds_cooldown_message}
+      page_key={"room:#{@room.id}"}
+    />
     """
   end
 
@@ -186,9 +194,15 @@ defmodule BotchiniWeb.ScreenLive.Broadcast do
   def handle_event("sound:" <> _action = event, params, socket),
     do: {:noreply, Soundboard.handle_event(event, params, socket)}
 
+  def handle_event("pointer:" <> _action = event, params, socket),
+    do: {:noreply, Pointers.handle_event(event, params, socket)}
+
   @impl true
   def handle_info({:soundboard, message}, socket),
     do: {:noreply, Soundboard.handle_info(message, socket)}
+
+  def handle_info({:pointers, message}, socket),
+    do: {:noreply, Pointers.handle_info(message, socket)}
 
   def handle_info({:screen_activity, _event} = message, socket),
     do: {:noreply, ActivityFeed.handle_info(message, socket)}

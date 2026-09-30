@@ -236,7 +236,7 @@ defmodule BotchiniWeb.ScreenLive.Soundboard do
                     phx-click="sound:stop"
                     class="shrink-0 rounded bg-red-600/80 px-3 py-1 text-sm font-semibold text-white transition hover:bg-red-500"
                   >
-                    ⏹ Stop
+                    Stop
                   </button>
                 </div>
                 <p data-sounds-blocked hidden class="mt-1 text-sm text-amber-400">

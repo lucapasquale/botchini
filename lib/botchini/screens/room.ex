@@ -24,7 +24,7 @@ defmodule Botchini.Screens.Room do
           broadcast_key: String.t(),
           title: String.t(),
           guild_id: String.t(),
-          channel_id: String.t(),
+          channel_id: String.t() | nil,
           owner_id: String.t(),
           owner_name: String.t(),
           started_at: DateTime.t(),

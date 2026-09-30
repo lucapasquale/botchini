@@ -89,7 +89,10 @@ defmodule BotchiniDiscord.Screens.Announcer do
 
       {:noreply, state}
     else
-      case post(room.channel_id, live_message(room)) do
+      case post_live(room) do
+        :skip ->
+          {:noreply, state}
+
         {:ok, message} ->
           Screens.subscribe(room.id)
 
@@ -366,6 +369,11 @@ defmodule BotchiniDiscord.Screens.Announcer do
   end
 
   # The requests never raise out of here, as a crash would lose every message being tracked
+
+  # Rooms started from the website have no channel, as everyone who'd see the post is
+  # already on the page. The streams channel still lists them
+  defp post_live(%Room{channel_id: nil}), do: :skip
+  defp post_live(room), do: post(room.channel_id, live_message(room))
 
   defp post(channel_id, message) do
     case Message.create(to_id(channel_id), message) do

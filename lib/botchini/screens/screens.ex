@@ -37,7 +37,7 @@ defmodule Botchini.Screens do
   @type start_attrs :: %{
           title: String.t(),
           guild_id: String.t(),
-          channel_id: String.t(),
+          channel_id: String.t() | nil,
           owner_id: String.t(),
           owner_name: String.t()
         }

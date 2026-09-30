@@ -11,8 +11,8 @@ defmodule BotchiniDiscord.Interactions do
   alias Nostrum.Struct.Interaction
 
   alias BotchiniDiscord.Common.Interactions.About
-  alias BotchiniDiscord.Helpers
   alias BotchiniDiscord.Creators.Interactions.{ConfirmUnfollow, Follow, Info, List, Unfollow}
+  alias BotchiniDiscord.Helpers
   alias BotchiniDiscord.Music.Interactions.Music
   alias BotchiniDiscord.Screens.Interactions.Screen
   alias BotchiniDiscord.Squads.Interactions.Squad

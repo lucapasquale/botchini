@@ -6,8 +6,8 @@ defmodule Botchini.Creators.Schema.Follower do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Botchini.Discord.Schema.Guild
   alias Botchini.Creators.Schema.{Creator, Follower}
+  alias Botchini.Discord.Schema.Guild
 
   @type t :: %__MODULE__{
           creator_id: String.t(),

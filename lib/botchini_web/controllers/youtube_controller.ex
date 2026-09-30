@@ -5,6 +5,7 @@ defmodule BotchiniWeb.YoutubeController do
 
   alias Botchini.{Cache, Creators, Services}
   alias BotchiniDiscord.Creators.Responses.{Components, Embeds}
+  alias Nostrum.Api.Message
 
   # 30 days
   @event_ttl 1_000 * 60 * 60 * 24 * 30
@@ -88,17 +89,21 @@ defmodule BotchiniWeb.YoutubeController do
         follower_count: length(followers)
       )
 
-      Enum.each(followers, fn follower ->
-        Task.start(fn -> notify_followers(creator, follower, {yt_channel, yt_video}) end)
-      end)
+      notify_all(creator, followers, {yt_channel, yt_video})
     end
+  end
+
+  defp notify_all(creator, followers, content) do
+    Enum.each(followers, fn follower ->
+      Task.start(fn -> notify_followers(creator, follower, content) end)
+    end)
   end
 
   defp notify_followers(creator, follower, {channel, video}) do
     channel_id = follower.discord_channel_id
 
     msg_response =
-      Nostrum.Api.Message.create(
+      Message.create(
         String.to_integer(channel_id),
         embed: Embeds.youtube_video_posted(channel, video),
         components: [Components.unfollow_creator(creator.service, creator.service_id)]

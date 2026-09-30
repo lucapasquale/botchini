@@ -6,9 +6,9 @@ defmodule Botchini.DataCase do
   use ExUnit.CaseTemplate
   alias Ecto.Adapters.SQL.Sandbox
 
+  alias Botchini.Creators.Schema.{Creator, Follower}
   alias Botchini.Discord.Schema.Guild
   alias Botchini.Repo
-  alias Botchini.Creators.Schema.{Creator, Follower}
   alias Botchini.Squads.Schema.{Squad, SquadMember}
 
   using do

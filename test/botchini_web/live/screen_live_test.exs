@@ -175,6 +175,21 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       eventually(fn -> assert has_element?(view, "#activity-list", "#{me} joined") end)
     end
 
+    # Tailwind keeps [hidden] elements hidden whatever their inline display is
+    test "opens by removing the list's hidden attribute", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      [click] =
+        view
+        |> element("#activity-toggle")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.attribute("phx-click")
+
+      assert [["toggle_attr", %{"to" => "#activity-list", "attr" => ["hidden", "hidden"]}] | _] =
+               Jason.decode!(click)
+    end
+
     test "shows the latest event on the line" do
       events = [
         %{id: 2, at: DateTime.utc_now(), kind: :sound, actor: "Bia", detail: "🐻 Volibero"},

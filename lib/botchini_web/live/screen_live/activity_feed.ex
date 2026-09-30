@@ -87,9 +87,11 @@ defmodule BotchiniWeb.ScreenLive.ActivityFeed do
     """
   end
 
+  # Tailwind hides [hidden] with !important, which beats the inline display
+  # JS.toggle/1 sets, so the attribute itself has to go
   defp toggle do
     %JS{}
-    |> JS.toggle(to: "#activity-list")
+    |> JS.toggle_attribute({"hidden", "hidden"}, to: "#activity-list")
     |> JS.toggle_attribute({"aria-expanded", "true", "false"}, to: "#activity-toggle")
   end
 

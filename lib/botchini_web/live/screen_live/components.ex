@@ -10,8 +10,14 @@ defmodule BotchiniWeb.ScreenLive.Components do
   alias Botchini.Screens
 
   attr :room, :map, required: true
+  attr :controls?, :boolean, default: true, doc: "Whether the video's controls are shown"
   slot :inner_block, doc: "Overlays shown on top of the video"
 
+  @doc """
+  Screen being watched. Its controls only pause, change the volume and go full
+  screen, as clicking the picture is for drawing and a live stream has no timeline.
+  The ScreenViewer hook runs them
+  """
   def viewer(assigns) do
     ~H"""
     <div
@@ -19,7 +25,7 @@ defmodule BotchiniWeb.ScreenLive.Components do
       phx-hook="ScreenViewer"
       data-room-id={@room.id}
       data-ice-servers={ice_servers_json()}
-      class="relative aspect-video w-full overflow-hidden rounded-lg bg-black"
+      class="group/viewer relative aspect-video w-full overflow-hidden rounded-lg bg-black"
     >
       <video
         id={"screen-viewer-video-#{@room.id}"}
@@ -29,11 +35,66 @@ defmodule BotchiniWeb.ScreenLive.Components do
         autoplay
         muted
         playsinline
-        controls
       ></video>
 
-      <%!-- With the pointer on, clicks and drags over the picture are for drawing, and
-        would otherwise pause the stream. The video's controls stay reachable below --%>
+      <%!-- Shown while hovered or paused. The hook keeps their state, so LiveView leaves
+        them alone. The normal cursor comes back over them, like over the menus --%>
+      <div class={!@controls? && "hidden"}>
+        <div
+          id={"screen-viewer-controls-#{@room.id}"}
+          phx-update="ignore"
+          data-video-controls
+          data-muted
+          data-pointer-menu
+          class="group/controls absolute inset-x-0 bottom-0 flex h-12 items-center gap-1 bg-linear-to-t from-black/80 to-transparent px-2 text-white opacity-0 transition group-hover/viewer:opacity-100 focus-within:opacity-100 data-paused:opacity-100"
+        >
+          <button
+            type="button"
+            data-video-play
+            title="Pause"
+            class="grid h-8 w-8 place-items-center rounded hover:bg-white/20"
+          >
+            <span class="sr-only">Pause or play</span>
+            <.bar_icon name={:pause} class="group-data-paused/controls:hidden" />
+            <.bar_icon name={:play} class="hidden group-data-paused/controls:block" />
+          </button>
+
+          <button
+            type="button"
+            data-video-mute
+            title="Unmute"
+            class="grid h-8 w-8 place-items-center rounded hover:bg-white/20"
+          >
+            <span class="sr-only">Mute or unmute</span>
+            <.bar_icon name={:sound} class="group-data-muted/controls:hidden" />
+            <.bar_icon name={:muted} class="hidden group-data-muted/controls:block" />
+          </button>
+          <input
+            type="range"
+            data-video-volume
+            min="0"
+            max="1"
+            step="0.05"
+            value="0"
+            aria-label="Volume"
+            class="w-20 accent-indigo-400"
+          />
+
+          <button
+            type="button"
+            data-video-fullscreen
+            title="Full screen"
+            class="ml-auto grid h-8 w-8 place-items-center rounded hover:bg-white/20"
+          >
+            <span class="sr-only">Full screen</span>
+            <.bar_icon name={:expand} class="group-data-fullscreen/controls:hidden" />
+            <.bar_icon name={:shrink} class="hidden group-data-fullscreen/controls:block" />
+          </button>
+        </div>
+      </div>
+
+      <%!-- With the pointer on, clicks and drags over the picture are for drawing. The
+        video's controls stay reachable below --%>
       <div data-pointer-shield class="absolute inset-x-0 top-0 bottom-12 hidden" aria-hidden="true">
       </div>
 
@@ -302,6 +363,38 @@ defmodule BotchiniWeb.ScreenLive.Components do
 
     ~H"""
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />
+    """
+  end
+
+  defp icon_paths(:play) do
+    assigns = %{}
+
+    ~H"""
+    <path d="M7 4v16l13-8Z" />
+    """
+  end
+
+  defp icon_paths(:pause) do
+    assigns = %{}
+
+    ~H"""
+    <path d="M8 5v14M16 5v14" />
+    """
+  end
+
+  defp icon_paths(:expand) do
+    assigns = %{}
+
+    ~H"""
+    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+    """
+  end
+
+  defp icon_paths(:shrink) do
+    assigns = %{}
+
+    ~H"""
+    <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
     """
   end
 

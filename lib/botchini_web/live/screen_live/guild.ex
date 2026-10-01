@@ -140,7 +140,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         class={["group min-w-0", tile_class(room in @big)]}
         style={tile_style(room, @big, @layout)}
       >
-        <.viewer room={room}>
+        <.viewer room={room} controls?={room in @big}>
           <span
             :if={@main == nil and room in @big}
             class="pointer-events-none absolute left-1.5 top-1.5 z-10 max-w-[calc(100%_-_5rem)] truncate rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white"
@@ -187,7 +187,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         </div>
       </div>
 
-      <%!-- Above the video's controls, which the browser draws at its bottom --%>
+      <%!-- Above the video's controls, at its bottom --%>
       <Chat.overlay
         :if={@chat_open?}
         events={@chat_events}

@@ -384,8 +384,8 @@ export const Pointer = {
   pointerMoved(event) {
     if (!this.settings.on || event.pointerType === "touch") return
 
-    // Letting go over the video's own controls can go unnoticed, as the browser keeps
-    // those events for itself. A move without the button down means it was released
+    // Letting go can go unnoticed, like outside the window. A move without the
+    // button down means it was released
     if ((this.pressed || this.me.drawing) && event.pointerType === "mouse" && event.buttons === 0) {
       this.pointerUp(event)
     }
@@ -465,8 +465,8 @@ export const Pointer = {
     setTimeout(() => (this.swallowClick = false))
   },
 
-  // The video's own controls keep the mouse events over them, so letting go there
-  // goes unnoticed. While drawing, the shields cover the controls too
+  // While drawing, the shields cover the video's controls too, so letting go over
+  // them doesn't press them
   coverControls(on) {
     for (const shield of document.querySelectorAll("[data-pointer-shield]")) {
       shield.style.bottom = on ? "0" : ""

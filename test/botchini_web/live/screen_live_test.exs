@@ -340,6 +340,29 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       assert has_element?(view, "#watching", "Shared by Bia")
     end
 
+    test "only lets big screens pause, change the volume and go full screen",
+         %{conn: conn, room: room} do
+      other = %{room | id: "other", title: "Hades", started_at: DateTime.utc_now()}
+
+      {:ok, view, _html} = live_guild(conn, "1")
+      Screens.broadcast(%{room | live?: true}, :live)
+      Screens.broadcast(%{other | live?: true}, :live)
+
+      # Without the browser's controls, clicking the picture doesn't pause it
+      refute has_element?(view, "video[controls]")
+
+      controls = "#screen-viewer-controls-#{room.id}"
+      assert has_element?(view, "#{controls}[data-muted][data-pointer-menu]")
+      assert has_element?(view, "#{controls} [data-video-play]")
+      assert has_element?(view, "#{controls} [data-video-mute]")
+      assert has_element?(view, "#{controls} input[type=range][data-video-volume]")
+      assert has_element?(view, "#{controls} [data-video-fullscreen]")
+
+      # Clicking a small screen watches it instead
+      assert has_element?(view, "#screen-other .hidden > #screen-viewer-controls-other")
+      refute has_element?(view, ".hidden > #{controls}")
+    end
+
     test "goes back to the first screen when the watched one ends", %{conn: conn, room: room} do
       other = %{room | id: "other", title: "Hades", started_at: DateTime.utc_now()}
       {:ok, view, _html} = live_guild(conn, "1")

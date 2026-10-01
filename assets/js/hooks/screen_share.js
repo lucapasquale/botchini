@@ -260,7 +260,70 @@ export const ScreenViewer = {
     this.handleEvent(`screen:${this.roomId}:ice_candidate`, candidate => this.connection?.addRemoteCandidate(candidate))
     this.handleEvent(`screen:${this.roomId}:ended`, () => this.teardown())
     this.handleEvent(`screen:${this.roomId}:reconnect`, () => this.connect())
+    this.mountControls()
     this.connect()
+  },
+
+  // Streams start muted, as browsers only autoplay those. The slider brings back
+  // the last volume when unmuting
+  mountControls() {
+    this.controls = this.el.querySelector("[data-video-controls]")
+    this.playButton = this.controls.querySelector("[data-video-play]")
+    this.muteButton = this.controls.querySelector("[data-video-mute]")
+    this.volumeInput = this.controls.querySelector("[data-video-volume]")
+    this.fullscreenButton = this.controls.querySelector("[data-video-fullscreen]")
+    this.lastVolume = 1
+
+    this.playButton.addEventListener("click", () => {
+      if (this.video.paused) this.video.play().catch(() => {})
+      else this.video.pause()
+    })
+
+    this.muteButton.addEventListener("click", () => {
+      if (this.isMuted()) {
+        this.video.volume = this.lastVolume
+        this.video.muted = false
+      } else {
+        this.video.muted = true
+      }
+    })
+
+    this.volumeInput.addEventListener("input", () => {
+      const volume = Number(this.volumeInput.value)
+      this.video.volume = volume
+      this.video.muted = volume === 0
+      if (volume > 0) this.lastVolume = volume
+    })
+
+    // Phones without full screen for elements can still show the video alone
+    this.fullscreenButton.addEventListener("click", () => {
+      if (document.fullscreenElement) document.exitFullscreen()
+      else if (this.el.requestFullscreen) this.el.requestFullscreen().catch(() => {})
+      else this.video.webkitEnterFullscreen?.()
+    })
+
+    this.renderControls = this.renderControls.bind(this)
+    for (const event of ["play", "pause", "volumechange"]) this.video.addEventListener(event, this.renderControls)
+    this.el.addEventListener("fullscreenchange", this.renderControls)
+    this.renderControls()
+  },
+
+  isMuted() {
+    return this.video.muted || this.video.volume === 0
+  },
+
+  renderControls() {
+    const paused = this.video.paused
+    const muted = this.isMuted()
+    const fullscreen = document.fullscreenElement === this.el
+
+    this.controls.toggleAttribute("data-paused", paused)
+    this.controls.toggleAttribute("data-muted", muted)
+    this.controls.toggleAttribute("data-fullscreen", fullscreen)
+    this.playButton.title = paused ? "Play" : "Pause"
+    this.muteButton.title = muted ? "Unmute" : "Mute"
+    this.fullscreenButton.title = fullscreen ? "Exit full screen" : "Full screen"
+    this.volumeInput.value = muted ? 0 : this.video.volume
   },
 
   reconnected() {

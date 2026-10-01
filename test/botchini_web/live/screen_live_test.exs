@@ -624,6 +624,63 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     end
   end
 
+  describe "ads" do
+    defp live_ads(conn) do
+      {:ok, view, _html} = live(conn, ~p"/screens/1")
+      view
+    end
+
+    test "are shown in the strip's row until admins hide them", %{conn: conn} do
+      view = live_ads(conn)
+
+      assert has_element?(
+               view,
+               "#ad.row-start-\\(--strip-row\\) img[src='/images/ads/dopamine-course.png']"
+             )
+
+      refute has_element?(view, "#ads-toggle")
+    end
+
+    test "can be hidden and shown again by admins, for everyone", %{conn: conn} do
+      patch_function(Discord, :check_member, :admin)
+      admin = live_ads(conn)
+      {:ok, member, _html} = live(log_in_as(build_conn(), "11", "Bia"), ~p"/screens/1")
+
+      assert has_element?(admin, "#ads-toggle[aria-pressed=true]")
+
+      admin |> element("#ads-toggle") |> render_click()
+
+      assert Screens.ads_hidden?("1")
+      refute has_element?(admin, "#ad")
+      assert has_element?(admin, "#ads-toggle[aria-pressed=false]")
+      eventually(fn -> refute has_element?(member, "#ad") end)
+
+      # New pages remember it
+      refute has_element?(live_ads(conn), "#ad")
+
+      admin |> element("#ads-toggle") |> render_click()
+
+      refute Screens.ads_hidden?("1")
+      eventually(fn -> assert has_element?(member, "#ad") end)
+    end
+
+    test "can't be hidden by members", %{conn: conn} do
+      view = live_ads(conn)
+
+      render_hook(view, "ads:toggle", %{})
+
+      refute Screens.ads_hidden?("1")
+      assert has_element?(view, "#ad")
+    end
+
+    test "are only hidden in the guild they were hidden in" do
+      {:ok, _settings} = Screens.set_ads_hidden("1", true)
+
+      assert Screens.ads_hidden?("1")
+      refute Screens.ads_hidden?("2")
+    end
+  end
+
   describe "soundboard" do
     defp play(view, sound_id),
       do: view |> element("#soundboard button[phx-value-sound=#{sound_id}]") |> render_click()

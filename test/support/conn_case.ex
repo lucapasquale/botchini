@@ -5,6 +5,8 @@ defmodule BotchiniWeb.ConnCase do
 
   use ExUnit.CaseTemplate
 
+  alias Ecto.Adapters.SQL.Sandbox
+
   using do
     quote do
       @endpoint BotchiniWeb.Endpoint
@@ -17,7 +19,15 @@ defmodule BotchiniWeb.ConnCase do
     end
   end
 
-  setup _tags do
+  # Pages reach the database from their own processes, so tests that aren't
+  # async share their connection
+  setup tags do
+    :ok = Sandbox.checkout(Botchini.Repo)
+
+    unless tags[:async] do
+      Sandbox.mode(Botchini.Repo, {:shared, self()})
+    end
+
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

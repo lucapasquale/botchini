@@ -13,7 +13,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   alias Botchini.Screens
   alias Botchini.Screens.Room
   alias BotchiniWeb.Auth
-  alias BotchiniWeb.ScreenLive.{Chat, Pointers, Soundboard}
+  alias BotchiniWeb.ScreenLive.{Ads, Chat, Pointers, Soundboard}
 
   @doc """
   Link to this page for a guild. Anyone can know it, as only the guild's
@@ -51,6 +51,8 @@ defmodule BotchiniWeb.ScreenLive.Guild do
          share_path: ~p"/screens/#{guild_id}/share",
          online: Screens.list_online(guild_id),
          admin?: access == :admin,
+         ad: Ads.pick(),
+         ads_hidden?: Screens.ads_hidden?(guild_id),
          rooms: guild_id |> Screens.list_rooms() |> Enum.filter(& &1.live?)
        )
        |> assign_sharing()
@@ -193,6 +195,13 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         class="col-span-full row-start-(--chat-row) sm:row-start-2 sm:row-end-(--strip-row) sm:mb-14 sm:mr-3 sm:self-end sm:justify-self-end"
       />
 
+      <%!-- In the strip's row, between the small screens and the bar --%>
+      <Ads.ad
+        :if={!@ads_hidden?}
+        ad={@ad}
+        class="col-[-3/-2] row-start-(--strip-row) self-center justify-self-center"
+      />
+
       <div
         id="screen-bar"
         data-pointer-menu
@@ -203,6 +212,15 @@ defmodule BotchiniWeb.ScreenLive.Guild do
           cooldown_message={@sounds_cooldown_message}
         />
         <Soundboard.pointer_menu page_key={"guild:#{@guild_id}"} />
+        <.bar_button
+          :if={@admin?}
+          id="ads-toggle"
+          title={if @ads_hidden?, do: "Show the ads to everyone", else: "Hide the ads for everyone"}
+          phx-click="ads:toggle"
+          aria-pressed={to_string(!@ads_hidden?)}
+        >
+          <.bar_icon name={:megaphone} />
+        </.bar_button>
         <span class="mx-0.5 h-6 w-px bg-gray-700" aria-hidden="true"></span>
         <Chat.toggle_button open?={@chat_open?} unread={@chat_unread} />
       </div>
@@ -323,6 +341,21 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     end
   end
 
+  # Checked again like closing, so members can't hide the ads
+  def handle_event("ads:toggle", _params, socket) do
+    case Auth.member_status(socket, socket.assigns.guild_id) do
+      :admin ->
+        Screens.set_ads_hidden(socket.assigns.guild_id, !socket.assigns.ads_hidden?)
+        {:noreply, socket}
+
+      status when status in [:member, :not_member] ->
+        {:noreply, assign(socket, admin?: false)}
+
+      :error ->
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("offer", %{"room_id" => room_id} = offer, socket) do
     with true <- watching?(socket, room_id),
          {:ok, answer} <- Room.watch(room_id, Map.delete(offer, "room_id")) do
@@ -358,6 +391,9 @@ defmodule BotchiniWeb.ScreenLive.Guild do
 
   def handle_info({:screen_activity, _event} = message, socket),
     do: {:noreply, Chat.handle_info(message, socket)}
+
+  def handle_info({:screen_ads, hidden?}, socket),
+    do: {:noreply, assign(socket, ads_hidden?: hidden?)}
 
   def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, socket) do
     {:noreply, assign(socket, online: Screens.list_online(socket.assigns.guild_id))}

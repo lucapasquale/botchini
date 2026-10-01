@@ -3,17 +3,14 @@ defmodule BotchiniWebTest.WhipControllerTest do
 
   @moduletag :capture_log
 
-  alias Ecto.Adapters.SQL.Sandbox
   alias ExWebRTC.{MediaStreamTrack, PeerConnection, SessionDescription}
 
-  alias Botchini.{Repo, Screens}
+  alias Botchini.Screens
   alias Botchini.Screens.Room
 
   @connect_timeout 5_000
 
   setup do
-    :ok = Sandbox.checkout(Repo)
-
     on_exit(fn ->
       for {_id, pid, _type, _modules} <- DynamicSupervisor.which_children(Screens.RoomSupervisor) do
         DynamicSupervisor.terminate_child(Screens.RoomSupervisor, pid)

@@ -7,7 +7,7 @@ defmodule Botchini.Screens do
 
   alias Botchini.Repo
   alias Botchini.Screens.{Presence, Room, RoomSupervisor}
-  alias Botchini.Screens.Schema.{StreamChannel, StreamKey}
+  alias Botchini.Screens.Schema.{ScreenSettings, StreamChannel, StreamKey}
 
   @topic "screens"
 
@@ -157,6 +157,39 @@ defmodule Botchini.Screens do
       conflict_target: :discord_guild_id,
       returning: true
     )
+  end
+
+  @doc """
+  Whether the guild's admins hid the ads of its page. They're shown until then
+  """
+  @spec ads_hidden?(String.t()) :: boolean()
+  def ads_hidden?(guild_id) do
+    case Repo.get_by(ScreenSettings, discord_guild_id: guild_id) do
+      nil -> false
+      settings -> settings.ads_hidden
+    end
+  end
+
+  @doc """
+  Shows or hides the ads of the guild's page, for everyone on it right away
+  """
+  @spec set_ads_hidden(String.t(), boolean()) ::
+          {:ok, ScreenSettings.t()} | {:error, Ecto.Changeset.t()}
+  def set_ads_hidden(guild_id, hidden?) when is_boolean(hidden?) do
+    %ScreenSettings{}
+    |> ScreenSettings.changeset(%{discord_guild_id: guild_id, ads_hidden: hidden?})
+    |> Repo.insert(
+      on_conflict: {:replace, [:ads_hidden, :updated_at]},
+      conflict_target: :discord_guild_id,
+      returning: true
+    )
+    |> tap(fn
+      {:ok, _settings} ->
+        Phoenix.PubSub.broadcast(Botchini.PubSub, guild_topic(guild_id), {:screen_ads, hidden?})
+
+      {:error, _changeset} ->
+        :ok
+    end)
   end
 
   @spec stop_room(Room.t(), atom()) :: :ok | {:error, :not_found}

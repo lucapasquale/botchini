@@ -311,6 +311,15 @@ defmodule BotchiniWeb.ScreenLive.Components do
     """
   end
 
+  @doc """
+  Classes of the popovers of the bar, which open above it, lined up with its
+  right edge
+  """
+  @spec bar_panel_class() :: String.t()
+  def bar_panel_class,
+    do:
+      "absolute bottom-full right-0 z-50 mb-2 flex max-h-[70dvh] w-80 max-w-[calc(100vw_-_2rem)] flex-col rounded-lg border border-gray-700 bg-gray-900/95 shadow-2xl"
+
   attr :name, :atom, required: true
   attr :class, :any, default: nil
 

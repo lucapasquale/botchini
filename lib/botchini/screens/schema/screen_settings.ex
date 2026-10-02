@@ -9,14 +9,22 @@ defmodule Botchini.Screens.Schema.ScreenSettings do
 
   alias Botchini.Screens.Schema.ScreenSettings
 
+  @typedoc """
+  Which ads the page shows: one picked by each page when it opens, the next one
+  every minute, always the one in `ad_id`, or none
+  """
+  @type ads_mode :: :random | :rotating | :fixed | :hidden
+
   @type t :: %__MODULE__{
           discord_guild_id: String.t(),
-          ads_hidden: boolean()
+          ads_mode: ads_mode(),
+          ad_id: String.t() | nil
         }
 
   schema "screen_settings" do
     field(:discord_guild_id, :string)
-    field(:ads_hidden, :boolean, default: false)
+    field(:ads_mode, Ecto.Enum, values: [:random, :rotating, :fixed, :hidden], default: :random)
+    field(:ad_id, :string)
 
     timestamps()
   end
@@ -24,8 +32,17 @@ defmodule Botchini.Screens.Schema.ScreenSettings do
   @spec changeset(ScreenSettings.t(), map()) :: Ecto.Changeset.t()
   def changeset(%ScreenSettings{} = settings, attrs) do
     settings
-    |> cast(attrs, [:discord_guild_id, :ads_hidden])
-    |> validate_required([:discord_guild_id, :ads_hidden])
+    |> cast(attrs, [:discord_guild_id, :ads_mode, :ad_id])
+    |> validate_required([:discord_guild_id, :ads_mode])
+    |> validate_ad_id()
     |> unique_constraint(:discord_guild_id)
+  end
+
+  # Only showing a single ad needs to know which
+  defp validate_ad_id(changeset) do
+    case get_field(changeset, :ads_mode) do
+      :fixed -> validate_required(changeset, [:ad_id])
+      _mode -> put_change(changeset, :ad_id, nil)
+    end
   end
 end

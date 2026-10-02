@@ -160,32 +160,31 @@ defmodule Botchini.Screens do
   end
 
   @doc """
-  Whether the guild's admins hid the ads of its page. They're shown until then
+  How the guild's admins set up its page, or the defaults if they never did
   """
-  @spec ads_hidden?(String.t()) :: boolean()
-  def ads_hidden?(guild_id) do
-    case Repo.get_by(ScreenSettings, discord_guild_id: guild_id) do
-      nil -> false
-      settings -> settings.ads_hidden
-    end
+  @spec get_settings(String.t()) :: ScreenSettings.t()
+  def get_settings(guild_id) do
+    Repo.get_by(ScreenSettings, discord_guild_id: guild_id) ||
+      %ScreenSettings{discord_guild_id: guild_id}
   end
 
   @doc """
-  Shows or hides the ads of the guild's page, for everyone on it right away
+  Changes which ads the guild's page shows, for everyone on it right away.
+  `ad_id` is only kept for the `:fixed` mode
   """
-  @spec set_ads_hidden(String.t(), boolean()) ::
+  @spec set_ads(String.t(), ScreenSettings.ads_mode(), String.t() | nil) ::
           {:ok, ScreenSettings.t()} | {:error, Ecto.Changeset.t()}
-  def set_ads_hidden(guild_id, hidden?) when is_boolean(hidden?) do
+  def set_ads(guild_id, mode, ad_id \\ nil) do
     %ScreenSettings{}
-    |> ScreenSettings.changeset(%{discord_guild_id: guild_id, ads_hidden: hidden?})
+    |> ScreenSettings.changeset(%{discord_guild_id: guild_id, ads_mode: mode, ad_id: ad_id})
     |> Repo.insert(
-      on_conflict: {:replace, [:ads_hidden, :updated_at]},
+      on_conflict: {:replace, [:ads_mode, :ad_id, :updated_at]},
       conflict_target: :discord_guild_id,
       returning: true
     )
     |> tap(fn
-      {:ok, _settings} ->
-        Phoenix.PubSub.broadcast(Botchini.PubSub, guild_topic(guild_id), {:screen_ads, hidden?})
+      {:ok, settings} ->
+        Phoenix.PubSub.broadcast(Botchini.PubSub, guild_topic(guild_id), {:screen_ads, settings})
 
       {:error, _changeset} ->
         :ok

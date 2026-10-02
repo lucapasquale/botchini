@@ -7,7 +7,7 @@ defmodule BotchiniWeb.ScreenLive.Soundboard do
   use BotchiniWeb, :html
 
   import Phoenix.LiveView, only: [connected?: 1, push_event: 3]
-  import BotchiniWeb.ScreenLive.Components, only: [bar_button: 1, bar_icon: 1]
+  import BotchiniWeb.ScreenLive.Components, only: [bar_button: 1, bar_icon: 1, bar_panel_class: 0]
 
   alias Botchini.Screens.{Activity, Sounds}
 
@@ -131,9 +131,6 @@ defmodule BotchiniWeb.ScreenLive.Soundboard do
     {"comet", "☄️ Comet"}
   ]
 
-  # Popovers of the bar open above it, lined up with its right edge
-  @bar_panel "absolute bottom-full right-0 z-50 mb-2 flex max-h-[70dvh] w-80 max-w-[calc(100vw_-_2rem)] flex-col rounded-lg border border-gray-700 bg-gray-900/95 shadow-2xl"
-
   attr :cooldown?, :boolean, required: true
   attr :cooldown_message, :string, default: nil
 
@@ -143,7 +140,7 @@ defmodule BotchiniWeb.ScreenLive.Soundboard do
   Soundboard hook keeps up to date as the member mutes them
   """
   def sounds_menu(assigns) do
-    assigns = assign(assigns, bar_panel_class: @bar_panel)
+    assigns = assign(assigns, bar_panel_class: bar_panel_class())
 
     ~H"""
     <div id="soundboard" phx-hook="Soundboard">
@@ -177,7 +174,7 @@ defmodule BotchiniWeb.ScreenLive.Soundboard do
   filled while the member's pointer is on, which the Pointer hook keeps up to date
   """
   def pointer_menu(assigns) do
-    assigns = assign(assigns, bar_panel_class: @bar_panel)
+    assigns = assign(assigns, bar_panel_class: bar_panel_class())
 
     ~H"""
     <div id="pointer-menu" phx-hook="Pointer" phx-update="ignore" data-page-key={@page_key}>

@@ -8,7 +8,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
   alias Botchini.Discord
   alias Botchini.Screens
   alias Botchini.Screens.Activity
-  alias BotchiniWeb.ScreenLive.Guild
+  alias BotchiniWeb.ScreenLive.{Ads, Guild}
 
   setup %{conn: conn} do
     {:ok, room} =
@@ -653,14 +653,17 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       view
     end
 
-    test "are shown in the strip's row until admins hide them", %{conn: conn} do
+    defp shown_ad(view) do
+      [_match, id] = Regex.run(~r/id="ad" data-ad="([^"]+)"/, render(view))
+      id
+    end
+
+    defp choose(view, selector), do: view |> element(selector) |> render_click()
+
+    test "are shown in the strip's row, without the admins' menu", %{conn: conn} do
       view = live_ads(conn)
 
-      assert has_element?(
-               view,
-               "#ad.row-start-\\(--strip-row\\) img[src='/images/ads/dopamine-course.png']"
-             )
-
+      assert has_element?(view, "#ad.row-start-\\(--strip-row\\) img[src^='/images/ads/']")
       refute has_element?(view, "#ads-toggle")
     end
 
@@ -670,10 +673,11 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       {:ok, member, _html} = live(log_in_as(build_conn(), "11", "Bia"), ~p"/screens/1")
 
       assert has_element?(admin, "#ads-toggle[aria-pressed=true]")
+      assert has_element?(admin, "[data-ads-mode=random][aria-pressed=true]")
 
-      admin |> element("#ads-toggle") |> render_click()
+      choose(admin, "[data-ads-mode=hidden]")
 
-      assert Screens.ads_hidden?("1")
+      assert Screens.get_settings("1").ads_mode == :hidden
       refute has_element?(admin, "#ad")
       assert has_element?(admin, "#ads-toggle[aria-pressed=false]")
       eventually(fn -> refute has_element?(member, "#ad") end)
@@ -681,26 +685,77 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       # New pages remember it
       refute has_element?(live_ads(conn), "#ad")
 
-      admin |> element("#ads-toggle") |> render_click()
+      choose(admin, "[data-ads-mode=random]")
 
-      refute Screens.ads_hidden?("1")
+      assert Screens.get_settings("1").ads_mode == :random
       eventually(fn -> assert has_element?(member, "#ad") end)
     end
 
-    test "can't be hidden by members", %{conn: conn} do
+    test "can be set to one ad by admins, for everyone", %{conn: conn} do
+      patch_function(Discord, :check_member, :admin)
+      admin = live_ads(conn)
+      {:ok, member, _html} = live(log_in_as(build_conn(), "11", "Bia"), ~p"/screens/1")
+
+      for id <- ["riftbound-cards", "dopamine-course"] do
+        choose(admin, "[data-ads-pick=#{id}]")
+
+        assert has_element?(admin, "[data-ads-pick=#{id}][aria-pressed=true]")
+        assert shown_ad(admin) == id
+        eventually(fn -> assert shown_ad(member) == id end)
+        assert shown_ad(live_ads(conn)) == id
+      end
+
+      assert %{ads_mode: :fixed, ad_id: "dopamine-course"} = Screens.get_settings("1")
+    end
+
+    test "change every minute when admins choose so", %{conn: conn} do
+      patch_function(Discord, :check_member, :admin)
       view = live_ads(conn)
 
-      render_hook(view, "ads:toggle", %{})
+      choose(view, "[data-ads-mode=rotating]")
+      first = shown_ad(view)
 
-      refute Screens.ads_hidden?("1")
+      send(view.pid, {:ads, :rotate})
+      second = shown_ad(view)
+      assert second != first
+      assert second in Enum.map(Ads.all(), & &1.id)
+
+      # Stops once they choose something else
+      choose(view, "[data-ads-pick=#{first}]")
+      send(view.pid, {:ads, :rotate})
+      assert shown_ad(view) == first
+    end
+
+    test "start from the same ad on every page while changing", %{conn: conn} do
+      {:ok, _settings} = Screens.set_ads("1", :rotating)
+
+      assert shown_ad(live_ads(conn)) == shown_ad(live_ads(conn))
+    end
+
+    test "can't be changed by members", %{conn: conn} do
+      view = live_ads(conn)
+
+      render_hook(view, "ads:set", %{"mode" => "hidden"})
+
+      assert Screens.get_settings("1").ads_mode == :random
       assert has_element?(view, "#ad")
     end
 
-    test "are only hidden in the guild they were hidden in" do
-      {:ok, _settings} = Screens.set_ads_hidden("1", true)
+    test "ignore choices that aren't in the menu", %{conn: conn} do
+      patch_function(Discord, :check_member, :admin)
+      view = live_ads(conn)
 
-      assert Screens.ads_hidden?("1")
-      refute Screens.ads_hidden?("2")
+      render_hook(view, "ads:set", %{"mode" => "fixed", "ad" => "nope"})
+      render_hook(view, "ads:set", %{"mode" => "loud"})
+
+      assert Screens.get_settings("1").ads_mode == :random
+    end
+
+    test "are only changed in the guild they were changed in" do
+      {:ok, _settings} = Screens.set_ads("1", :hidden)
+
+      assert Screens.get_settings("1").ads_mode == :hidden
+      assert Screens.get_settings("2").ads_mode == :random
     end
   end
 

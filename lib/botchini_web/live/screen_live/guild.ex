@@ -51,11 +51,10 @@ defmodule BotchiniWeb.ScreenLive.Guild do
          share_path: ~p"/screens/#{guild_id}/share",
          online: Screens.list_online(guild_id),
          admin?: access == :admin,
-         ad: Ads.pick(),
-         ads_hidden?: Screens.ads_hidden?(guild_id),
          rooms: guild_id |> Screens.list_rooms() |> Enum.filter(& &1.live?)
        )
        |> assign_sharing()
+       |> Ads.mount(guild_id)
        |> Chat.mount(guild_id, socket.assigns.current_user)
        |> Soundboard.mount(guild_id, socket.assigns.current_user)
        |> Pointers.mount(guild_id, socket.assigns.current_user)}
@@ -197,7 +196,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
 
       <%!-- In the strip's row, between the small screens and the bar --%>
       <Ads.ad
-        :if={!@ads_hidden?}
+        :if={@ad}
         ad={@ad}
         class="col-[-3/-2] row-start-(--strip-row) self-center justify-self-center"
       />
@@ -212,15 +211,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
           cooldown_message={@sounds_cooldown_message}
         />
         <Soundboard.pointer_menu page_key={"guild:#{@guild_id}"} />
-        <.bar_button
-          :if={@admin?}
-          id="ads-toggle"
-          title={if @ads_hidden?, do: "Show the ads to everyone", else: "Hide the ads for everyone"}
-          phx-click="ads:toggle"
-          aria-pressed={to_string(!@ads_hidden?)}
-        >
-          <.bar_icon name={:megaphone} />
-        </.bar_button>
+        <Ads.admin_menu :if={@admin?} mode={@ads_mode} ad_id={@ads_ad_id} />
         <span class="mx-0.5 h-6 w-px bg-gray-700" aria-hidden="true"></span>
         <Chat.toggle_button open?={@chat_open?} unread={@chat_unread} />
       </div>
@@ -259,7 +250,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   defp columns(0), do: "grid-template-columns: minmax(0, 1fr) auto;"
 
   defp columns(strip_count),
-    do: "grid-template-columns: repeat(#{strip_count}, minmax(0, 9rem)) minmax(0, 1fr) auto;"
+    do: "grid-template-columns: repeat(#{strip_count}, minmax(0, 13.5rem)) minmax(0, 1fr) auto;"
 
   # How many big screens go in each row, and how many rows they take
   defp layout(count) when count <= 1, do: %{per_row: 1, rows: 1, count: 1}
@@ -274,7 +265,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   # Big screens are capped so they fit the window's height, leaving room for the
   # header, the strip and the note below them
   defp max_width(%{per_row: per_row, rows: rows}) do
-    height = "(100dvh - 16rem - #{rows - 1} * 0.75rem) / #{rows}"
+    height = "(100dvh - 18.5rem - #{rows - 1} * 0.75rem) / #{rows}"
     "max-width: calc(#{height} * 16 / 9 * #{per_row} + #{per_row - 1} * 0.75rem);"
   end
 
@@ -341,11 +332,13 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     end
   end
 
-  # Checked again like closing, so members can't hide the ads
-  def handle_event("ads:toggle", _params, socket) do
+  # Checked again like closing, so members can't change the ads
+  def handle_event("ads:set", params, socket) do
     case Auth.member_status(socket, socket.assigns.guild_id) do
       :admin ->
-        Screens.set_ads_hidden(socket.assigns.guild_id, !socket.assigns.ads_hidden?)
+        with {:ok, mode, ad_id} <- Ads.parse_choice(params),
+             do: Screens.set_ads(socket.assigns.guild_id, mode, ad_id)
+
         {:noreply, socket}
 
       status when status in [:member, :not_member] ->
@@ -392,8 +385,11 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   def handle_info({:screen_activity, _event} = message, socket),
     do: {:noreply, Chat.handle_info(message, socket)}
 
-  def handle_info({:screen_ads, hidden?}, socket),
-    do: {:noreply, assign(socket, ads_hidden?: hidden?)}
+  def handle_info({:screen_ads, _settings} = message, socket),
+    do: {:noreply, Ads.handle_info(message, socket)}
+
+  def handle_info({:ads, message}, socket),
+    do: {:noreply, Ads.handle_info(message, socket)}
 
   def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, socket) do
     {:noreply, assign(socket, online: Screens.list_online(socket.assigns.guild_id))}

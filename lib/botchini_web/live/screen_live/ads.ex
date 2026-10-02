@@ -183,23 +183,26 @@ defmodule BotchiniWeb.ScreenLive.Ads do
 
   @doc """
   The admins' button of the bar, which opens the ads' settings above it. It's
-  filled while the ads are shown
+  filled while the ads are shown.
+
+  Its ids and data attributes steer clear of "ad"/"ads", which ad blockers'
+  generic filters hide by pattern, taking the button down with the ads it controls
   """
   def admin_menu(assigns) do
     assigns = assign(assigns, ads: @ads, modes: @modes, bar_panel_class: bar_panel_class())
 
     ~H"""
-    <div id="ads-menu">
+    <div id="billboard-menu">
       <.bar_button
-        id="ads-toggle"
+        id="billboard-toggle"
         title="Ads"
-        panel="ads-panel"
+        panel="billboard-panel"
         aria-pressed={to_string(@mode != :hidden)}
       >
         <.bar_icon name={:megaphone} />
       </.bar_button>
 
-      <div id="ads-panel" data-popover hidden class={@bar_panel_class}>
+      <div id="billboard-panel" data-popover hidden class={@bar_panel_class}>
         <h2 class="border-b border-gray-700 px-3 py-2 text-sm font-semibold">Ads</h2>
         <div class="min-h-0 flex-1 space-y-4 overflow-y-auto p-3 text-sm">
           <div>
@@ -209,7 +212,7 @@ defmodule BotchiniWeb.ScreenLive.Ads do
                 type="button"
                 phx-click="ads:set"
                 phx-value-mode={mode}
-                data-ads-mode={mode}
+                data-billboard-mode={mode}
                 aria-pressed={to_string(@mode == mode)}
                 class="block w-full rounded-lg bg-gray-700 px-3 py-1.5 text-left transition hover:bg-gray-600 aria-pressed:bg-indigo-600"
               >
@@ -231,7 +234,7 @@ defmodule BotchiniWeb.ScreenLive.Ads do
                 phx-click="ads:set"
                 phx-value-mode="fixed"
                 phx-value-ad={ad.id}
-                data-ads-pick={ad.id}
+                data-billboard-pick={ad.id}
                 title={ad.name}
                 aria-pressed={to_string(@mode == :fixed and @ad_id == ad.id)}
                 class="block w-full overflow-hidden rounded-lg ring-indigo-400 transition hover:opacity-90 aria-pressed:ring-2"

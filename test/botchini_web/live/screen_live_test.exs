@@ -664,7 +664,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       view = live_ads(conn)
 
       assert has_element?(view, "#ad.row-start-\\(--strip-row\\) img[src^='/images/ads/']")
-      refute has_element?(view, "#ads-toggle")
+      refute has_element?(view, "#billboard-toggle")
     end
 
     test "can be hidden and shown again by admins, for everyone", %{conn: conn} do
@@ -672,20 +672,20 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       admin = live_ads(conn)
       {:ok, member, _html} = live(log_in_as(build_conn(), "11", "Bia"), ~p"/screens/1")
 
-      assert has_element?(admin, "#ads-toggle[aria-pressed=true]")
-      assert has_element?(admin, "[data-ads-mode=random][aria-pressed=true]")
+      assert has_element?(admin, "#billboard-toggle[aria-pressed=true]")
+      assert has_element?(admin, "[data-billboard-mode=random][aria-pressed=true]")
 
-      choose(admin, "[data-ads-mode=hidden]")
+      choose(admin, "[data-billboard-mode=hidden]")
 
       assert Screens.get_settings("1").ads_mode == :hidden
       refute has_element?(admin, "#ad")
-      assert has_element?(admin, "#ads-toggle[aria-pressed=false]")
+      assert has_element?(admin, "#billboard-toggle[aria-pressed=false]")
       eventually(fn -> refute has_element?(member, "#ad") end)
 
       # New pages remember it
       refute has_element?(live_ads(conn), "#ad")
 
-      choose(admin, "[data-ads-mode=random]")
+      choose(admin, "[data-billboard-mode=random]")
 
       assert Screens.get_settings("1").ads_mode == :random
       eventually(fn -> assert has_element?(member, "#ad") end)
@@ -697,9 +697,9 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       {:ok, member, _html} = live(log_in_as(build_conn(), "11", "Bia"), ~p"/screens/1")
 
       for id <- ["riftbound-cards", "dopamine-course"] do
-        choose(admin, "[data-ads-pick=#{id}]")
+        choose(admin, "[data-billboard-pick=#{id}]")
 
-        assert has_element?(admin, "[data-ads-pick=#{id}][aria-pressed=true]")
+        assert has_element?(admin, "[data-billboard-pick=#{id}][aria-pressed=true]")
         assert shown_ad(admin) == id
         eventually(fn -> assert shown_ad(member) == id end)
         assert shown_ad(live_ads(conn)) == id
@@ -712,7 +712,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       patch_function(Discord, :check_member, :admin)
       view = live_ads(conn)
 
-      choose(view, "[data-ads-mode=rotating]")
+      choose(view, "[data-billboard-mode=rotating]")
       first = shown_ad(view)
 
       send(view.pid, {:ads, :rotate})
@@ -721,7 +721,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       assert second in Enum.map(Ads.all(), & &1.id)
 
       # Stops once they choose something else
-      choose(view, "[data-ads-pick=#{first}]")
+      choose(view, "[data-billboard-pick=#{first}]")
       send(view.pid, {:ads, :rotate})
       assert shown_ad(view) == first
     end

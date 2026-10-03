@@ -6,8 +6,9 @@ defmodule BotchiniWebTest.ScreenLiveTest do
   @moduletag :capture_log
 
   alias Botchini.Discord
+  alias Botchini.Music.YtDlp
   alias Botchini.Screens
-  alias Botchini.Screens.Activity
+  alias Botchini.Screens.{Activity, Jukebox}
   alias BotchiniWeb.ScreenLive.{Ads, Guild}
 
   setup %{conn: conn} do
@@ -895,6 +896,162 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       view |> element("#chat-toggle") |> render_click()
       assert has_element?(view, "#chat-lines", "two")
       refute has_element?(view, "#chat-unread")
+    end
+  end
+
+  describe "music" do
+    # yt-dlp finds a song titled like the search, and "downloads" a tiny file
+    setup do
+      Jukebox.stop("1")
+      on_exit(fn -> Jukebox.stop("1") end)
+
+      patch_function(YtDlp, :lookup, fn
+        "nothing" ->
+          {:error, :not_found}
+
+        term ->
+          {:ok,
+           %{
+             id: "abcdefghijk",
+             title: term,
+             url: "https://www.youtube.com/watch?v=abcdefghijk",
+             thumbnail: "https://i.ytimg.com/vi/abcdefghijk/mqdefault.jpg",
+             duration_ms: 187_000,
+             channel: nil
+           }}
+      end)
+
+      patch_function(YtDlp, :download, fn _url, dir, name ->
+        path = Path.join(dir, "#{name}.m4a")
+        File.write!(path, "audio")
+        {:ok, path}
+      end)
+
+      :ok
+    end
+
+    defp add_song(view, term),
+      do: view |> element("#music-form") |> render_submit(%{"term" => term})
+
+    defp song_playing(view, title) do
+      eventually(fn ->
+        assert has_element?(view, "#music-title", title)
+        assert has_element?(view, "#music-toggle[aria-pressed=true]")
+      end)
+    end
+
+    test "is a button in the bar, with nothing playing", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      assert has_element?(view, "#screen-bar #music-toggle[aria-controls=music-panel]")
+      assert has_element?(view, "#screen-bar #music-panel[hidden]")
+      assert has_element?(view, "#music-now", "Nothing playing")
+      assert has_element?(view, "#music-play[disabled]")
+      assert has_element?(view, "#music-queue", "The queue is empty")
+    end
+
+    test "plays the songs anyone adds for everyone on the page", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      {:ok, other, _html} = live_guild(log_in_as("11", "Bia"), "1")
+
+      add_song(view, "never gonna give you up")
+      add_song(other, "careless whisper")
+
+      for page <- [view, other] do
+        song_playing(page, "never gonna give you up")
+        assert has_element?(page, "#music-now", "Added by Ana")
+        assert has_element?(page, "#music-now", "3:07")
+
+        assert has_element?(
+                 page,
+                 "#music-now img[src='https://i.ytimg.com/vi/abcdefghijk/mqdefault.jpg']"
+               )
+
+        eventually(fn -> assert has_element?(page, "#music-queue li", "careless whisper") end)
+        assert has_element?(page, "#music-queue", "Bia")
+      end
+
+      %{current: %{id: id}} = Jukebox.state("1")
+      src = "/screens/1/music/#{id}"
+
+      assert_push_event(other, "music:sync", %{
+        track: ^id,
+        src: ^src,
+        playing: true,
+        duration: 187_000
+      })
+
+      eventually(fn -> assert has_element?(view, "#chat-lines", "Bia added careless whisper") end)
+    end
+
+    test "shows the page that added a song when nothing was found", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      {:ok, other, _html} = live_guild(log_in_as("11", "Bia"), "1")
+
+      add_song(view, "nothing")
+
+      eventually(fn -> assert has_element?(view, "#music-error", "Nothing found on YouTube") end)
+      refute has_element?(other, "#music-error")
+      refute has_element?(view, "#music-queue li")
+    end
+
+    test "can be paused and skipped by anyone", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      add_song(view, "one")
+      add_song(view, "two")
+      song_playing(view, "one")
+
+      view |> element("#music-play") |> render_click()
+
+      eventually(fn -> assert has_element?(view, "#music-toggle[aria-pressed=false]") end)
+      assert has_element?(view, "#music-play[title=Play]")
+      assert_push_event(view, "music:sync", %{playing: false})
+
+      view |> element("button[phx-click='music:next']") |> render_click()
+
+      song_playing(view, "two")
+      eventually(fn -> assert has_element?(view, "#chat-lines", "Ana skipped one") end)
+
+      view |> element("button[phx-click='music:previous']") |> render_click()
+
+      song_playing(view, "one")
+    end
+
+    test "lets admins remove songs from the queue", %{conn: conn} do
+      patch_function(Discord, :check_member, :admin)
+      {:ok, view, _html} = live_guild(conn, "1")
+      add_song(view, "one")
+      add_song(view, "two")
+      song_playing(view, "one")
+      %{queue: [two]} = Jukebox.state("1")
+
+      view |> element("#music-track-#{two.id} button[phx-click='music:remove']") |> render_click()
+
+      eventually(fn -> refute has_element?(view, "#music-track-#{two.id}") end)
+    end
+
+    test "doesn't let members remove songs", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      add_song(view, "one")
+      add_song(view, "two")
+      song_playing(view, "one")
+      %{queue: [two]} = Jukebox.state("1")
+
+      refute has_element?(view, "button[phx-click='music:remove']")
+
+      render_click(view, "music:remove", %{"track" => two.id})
+
+      assert [%{title: "two"}] = Jukebox.state("1").queue
+    end
+
+    test "is only heard in its own guild", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+      {:ok, other, _html} = live_guild(conn, "9")
+
+      add_song(view, "one")
+
+      song_playing(view, "one")
+      assert has_element?(other, "#music-now", "Nothing playing")
     end
   end
 

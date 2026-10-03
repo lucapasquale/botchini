@@ -13,7 +13,7 @@ const THROW_MS = 2_000
 // Indigo like the flash on a played sound, see-through so the name stays readable
 const PROGRESS_COLOR = "rgb(99 102 241 / 0.6)"
 
-function load(key, fallback) {
+export function load(key, fallback) {
   try {
     return localStorage.getItem(key) ?? fallback
   } catch {
@@ -21,7 +21,7 @@ function load(key, fallback) {
   }
 }
 
-function save(key, value) {
+export function save(key, value) {
   try {
     localStorage.setItem(key, value)
   } catch {

@@ -2,7 +2,8 @@ defmodule Botchini.Screens.Activity do
   @moduledoc """
   What happened lately on a guild's screen sharing pages, for the members to check
   what they missed: who came and went, which sounds were played, who started or
-  stopped streaming, and what members said in the chat. Only the last few events
+  stopped streaming, which songs were added or skipped, and what members said in
+  the chat. Only the last few events
   of each guild are kept, in memory.
 
   Pages get `{:screen_activity, event}` messages once they subscribe.
@@ -20,7 +21,16 @@ defmodule Botchini.Screens.Activity do
   @burst_window_ms 10_000
 
   @type kind ::
-          :joined | :left | :sound | :sound_stopped | :stream_started | :stream_ended | :message
+          :joined
+          | :left
+          | :sound
+          | :sound_stopped
+          | :stream_started
+          | :stream_ended
+          | :song_added
+          | :song_skipped
+          | :song_failed
+          | :message
 
   @typedoc """
   `actor_id` is only known for messages, for the pages to tell who wrote them

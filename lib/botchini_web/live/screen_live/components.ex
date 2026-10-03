@@ -415,6 +415,38 @@ defmodule BotchiniWeb.ScreenLive.Components do
     """
   end
 
+  defp icon_paths(:music) do
+    assigns = %{}
+
+    ~H"""
+    <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
+    """
+  end
+
+  defp icon_paths(:previous) do
+    assigns = %{}
+
+    ~H"""
+    <path d="M19 20 9 12l10-8v16ZM5 19V5" />
+    """
+  end
+
+  defp icon_paths(:next) do
+    assigns = %{}
+
+    ~H"""
+    <path d="m5 4 10 8-10 8V4ZM19 5v14" />
+    """
+  end
+
+  defp icon_paths(:close) do
+    assigns = %{}
+
+    ~H"""
+    <path d="M6 6l12 12M18 6L6 18" />
+    """
+  end
+
   defp icon_paths(:send) do
     assigns = %{}
 

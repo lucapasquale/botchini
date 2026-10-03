@@ -24,6 +24,7 @@ import topbar from "../vendor/topbar"
 import {ScreenBroadcast, ScreenViewer} from "./hooks/screen_share"
 import {playNotification} from "./hooks/notification_sounds"
 import {Soundboard} from "./hooks/soundboard"
+import {Music} from "./hooks/music"
 import {Pointer} from "./hooks/pointer"
 import {OnlineMutes} from "./pointer/mutes"
 import {ChatForm, Popovers} from "./hooks/popovers"
@@ -32,7 +33,7 @@ let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {ChatForm, OnlineMutes, Pointer, Popovers, ScreenBroadcast, ScreenViewer, Soundboard}
+  hooks: {ChatForm, Music, OnlineMutes, Pointer, Popovers, ScreenBroadcast, ScreenViewer, Soundboard}
 })
 
 // Show progress bar on live navigation and form submits

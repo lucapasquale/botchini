@@ -14,6 +14,9 @@ defmodule BotchiniWeb.ScreenLive.ActivityFeed do
   def describe(%{kind: :sound, actor: actor, detail: sound}), do: "#{actor} played #{sound}"
   def describe(%{kind: :sound_stopped, actor: actor}), do: "#{actor} stopped the sounds"
   def describe(%{kind: :stream_started, actor: actor}), do: "#{actor} started streaming"
+  def describe(%{kind: :song_added, actor: actor, detail: song}), do: "#{actor} added #{song}"
+  def describe(%{kind: :song_skipped, actor: actor, detail: song}), do: "#{actor} skipped #{song}"
+  def describe(%{kind: :song_failed, detail: song}), do: "Couldn't play #{song}, skipping it"
   def describe(%{kind: :message, actor: actor, detail: text}), do: "#{actor}: #{text}"
 
   def describe(%{kind: :stream_ended, actor: actor, detail: nil}),
@@ -32,5 +35,8 @@ defmodule BotchiniWeb.ScreenLive.ActivityFeed do
   def icon(:sound_stopped), do: "🔇"
   def icon(:stream_started), do: "🔴"
   def icon(:stream_ended), do: "⏹️"
+  def icon(:song_added), do: "🎵"
+  def icon(:song_skipped), do: "⏭️"
+  def icon(:song_failed), do: "⚠️"
   def icon(:message), do: "💬"
 end

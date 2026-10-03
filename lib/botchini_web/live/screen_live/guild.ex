@@ -3,7 +3,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   Page where members watch the screens being shared in a guild. One screen takes
   most of the page, or several pinned ones share it, with the chat floating over
   them. The others wait in a strip below, next to the bar with the soundboard, the
-  pointer and the chat's switch
+  music, the pointer and the chat's switch
   """
 
   use BotchiniWeb, :live_view
@@ -13,7 +13,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   alias Botchini.Screens
   alias Botchini.Screens.Room
   alias BotchiniWeb.Auth
-  alias BotchiniWeb.ScreenLive.{Ads, Chat, Pointers, Soundboard}
+  alias BotchiniWeb.ScreenLive.{Ads, Chat, Music, Pointers, Soundboard}
 
   @doc """
   Link to this page for a guild. Anyone can know it, as only the guild's
@@ -57,6 +57,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
        |> Ads.mount(guild_id)
        |> Chat.mount(guild_id, socket.assigns.current_user)
        |> Soundboard.mount(guild_id, socket.assigns.current_user)
+       |> Music.mount(guild_id, socket.assigns.current_user)
        |> Pointers.mount(guild_id, socket.assigns.current_user)}
     else
       false -> {:ok, assign(socket, status: :connecting)}
@@ -85,7 +86,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     """
   end
 
-  # The soundboard and the chat work without anyone sharing, for members hanging
+  # The soundboard, the music and the chat work without anyone sharing, for members hanging
   # out on the page. Screens never move in the DOM, as moving a video would remount
   # its hook and restart the connection, so a grid places them: the big ones take
   # the rows after the header, and the others fill the next one's first columns,
@@ -210,6 +211,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
           cooldown?={@sounds_cooldown?}
           cooldown_message={@sounds_cooldown_message}
         />
+        <Music.menu state={@music} error={@music_error} admin?={@admin?} />
         <Soundboard.pointer_menu page_key={"guild:#{@guild_id}"} />
         <Ads.admin_menu :if={@admin?} mode={@ads_mode} ad_id={@ads_ad_id} />
         <span class="mx-0.5 h-6 w-px bg-gray-700" aria-hidden="true"></span>
@@ -334,20 +336,17 @@ defmodule BotchiniWeb.ScreenLive.Guild do
 
   # Checked again like closing, so members can't change the ads
   def handle_event("ads:set", params, socket) do
-    case Auth.member_status(socket, socket.assigns.guild_id) do
-      :admin ->
-        with {:ok, mode, ad_id} <- Ads.parse_choice(params),
-             do: Screens.set_ads(socket.assigns.guild_id, mode, ad_id)
+    as_admin(socket, fn socket ->
+      with {:ok, mode, ad_id} <- Ads.parse_choice(params),
+           do: Screens.set_ads(socket.assigns.guild_id, mode, ad_id)
 
-        {:noreply, socket}
-
-      status when status in [:member, :not_member] ->
-        {:noreply, assign(socket, admin?: false)}
-
-      :error ->
-        {:noreply, socket}
-    end
+      socket
+    end)
   end
+
+  # Anyone can add songs, but only admins remove them
+  def handle_event("music:remove", params, socket),
+    do: as_admin(socket, &Music.remove(&1, params))
 
   def handle_event("offer", %{"room_id" => room_id} = offer, socket) do
     with true <- watching?(socket, room_id),
@@ -375,6 +374,9 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   def handle_event("chat:" <> _action = event, params, socket),
     do: {:noreply, Chat.handle_event(event, params, socket)}
 
+  def handle_event("music:" <> _action = event, params, socket),
+    do: {:noreply, Music.handle_event(event, params, socket)}
+
   @impl true
   def handle_info({:soundboard, message}, socket),
     do: {:noreply, Soundboard.handle_info(message, socket)}
@@ -390,6 +392,9 @@ defmodule BotchiniWeb.ScreenLive.Guild do
 
   def handle_info({:ads, message}, socket),
     do: {:noreply, Ads.handle_info(message, socket)}
+
+  def handle_info({:music, message}, socket),
+    do: {:noreply, Music.handle_info(message, socket)}
 
   def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, socket) do
     {:noreply, assign(socket, online: Screens.list_online(socket.assigns.guild_id))}
@@ -417,6 +422,15 @@ defmodule BotchiniWeb.ScreenLive.Guild do
      |> chime_for_owner(room)
      |> update(:rooms, &put_room(&1, room))
      |> assign_sharing()}
+  end
+
+  # Checked again like closing a screen share
+  defp as_admin(socket, fun) do
+    case Auth.member_status(socket, socket.assigns.guild_id) do
+      :admin -> {:noreply, fun.(socket)}
+      status when status in [:member, :not_member] -> {:noreply, assign(socket, admin?: false)}
+      :error -> {:noreply, socket}
+    end
   end
 
   # Marks the header's share link live, for the layout to show

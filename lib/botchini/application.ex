@@ -30,6 +30,10 @@ defmodule Botchini.Application do
         {DynamicSupervisor, name: Botchini.Screens.RoomSupervisor, strategy: :one_for_one},
         Botchini.Screens.Presence,
         Botchini.Screens.Activity,
+        # Music of the screen sharing pages, a player for each guild
+        {Registry, keys: :unique, name: Botchini.Screens.JukeboxRegistry},
+        {DynamicSupervisor, name: Botchini.Screens.JukeboxSupervisor, strategy: :one_for_one},
+        {Task.Supervisor, name: Botchini.Screens.JukeboxTasks},
         # Start a worker by calling: Botchini.Worker.start_link(arg)
         # {Botchini.Worker, arg},
         # Start to serve requests, typically the last entry

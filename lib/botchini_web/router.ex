@@ -16,6 +16,12 @@ defmodule BotchiniWeb.Router do
     plug :require_user
   end
 
+  # Audio for the pages' players, which don't ask for html
+  pipeline :media do
+    plug :fetch_session
+    plug :require_user
+  end
+
   pipeline :api do
     plug :accepts, ["json"]
   end
@@ -44,6 +50,12 @@ defmodule BotchiniWeb.Router do
       live "/screens/:guild_id", ScreenLive.Guild
       live "/screens/:guild_id/share", ScreenLive.ManageStream
     end
+  end
+
+  scope "/", BotchiniWeb do
+    pipe_through :media
+
+    get "/screens/:guild_id/music/:track_id", MusicController, :show
   end
 
   scope "/api", BotchiniWeb do

@@ -317,6 +317,14 @@ defmodule Botchini.Screens.Room do
       %{reason: state.end_reason}
     )
 
+    # The live gauges have to fall back to zero when the room ends, otherwise
+    # their series keep reporting whatever the room last saw
+    :telemetry.execute(
+      [:botchini, :screens, :room, :state],
+      %{viewers: 0, broadcasting: 0},
+      %{screen_owner_name: state.room.owner_name}
+    )
+
     Logger.info("Screen room ended", event: "screen_room_ended", reason: state.end_reason)
   end
 
@@ -368,10 +376,11 @@ defmodule Botchini.Screens.Room do
         %{state | went_live?: true}
         |> cancel_idle_timeout()
         |> update_room(%{live?: true}, event)
+        |> report_state()
 
       :viewer ->
         :telemetry.execute([:botchini, :screens, :viewer, :join], %{count: 1}, %{})
-        state = state |> request_keyframe() |> update_viewer_count()
+        state = state |> request_keyframe() |> update_viewer_count() |> report_state()
 
         Logger.info("Screen viewer started watching",
           event: "screen_viewer_joined",
@@ -588,13 +597,17 @@ defmodule Botchini.Screens.Room do
 
     case peer.role do
       :viewer ->
-        update_viewer_count(state)
+        if peer.connected?,
+          do: :telemetry.execute([:botchini, :screens, :viewer, :leave], %{count: 1}, %{})
+
+        update_viewer_count(state) |> report_state()
 
       :publisher when state.publisher == pc ->
         Logger.info("Screen broadcaster disconnected", event: "screen_broadcaster_disconnected")
 
         %{state | publisher: nil}
         |> update_room(%{live?: false}, :updated)
+        |> report_state()
         |> schedule_idle_timeout(reconnect_timeout(state.config, peer))
 
       :publisher ->
@@ -676,6 +689,20 @@ defmodule Botchini.Screens.Room do
       %{state | peak_viewers: max(state.peak_viewers, count)}
       |> update_room(%{viewer_count: count}, :updated)
     end
+  end
+
+  # Absolute, per streamer: the room reports its own numbers and the dashboard
+  # sums them across rooms. A room that ends reports zero, see terminate/2
+  defp report_state(state) do
+    broadcasting = if state.room.live?, do: 1, else: 0
+
+    :telemetry.execute(
+      [:botchini, :screens, :room, :state],
+      %{viewers: state.room.viewer_count, broadcasting: broadcasting},
+      %{screen_owner_name: state.room.owner_name}
+    )
+
+    state
   end
 
   defp rename(state, changes) do

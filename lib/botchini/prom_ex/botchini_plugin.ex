@@ -82,6 +82,24 @@ defmodule Botchini.PromEx.BotchiniPlugin do
         counter([:botchini, :screens, :viewer, :join, :count],
           event_name: [:botchini, :screens, :viewer, :join],
           description: "Viewers that connected to a screen sharing room"
+        ),
+        counter([:botchini, :screens, :viewer, :leave, :count],
+          event_name: [:botchini, :screens, :viewer, :leave],
+          description: "Viewers that stopped watching a screen sharing room"
+        ),
+        last_value([:botchini, :screens, :room, :viewers],
+          event_name: [:botchini, :screens, :room, :state],
+          measurement: :viewers,
+          description: "Viewers currently watching a screen sharing room",
+          tags: [:screen_owner_name],
+          reporter_options: [keep: :all]
+        ),
+        last_value([:botchini, :screens, :room, :broadcasting],
+          event_name: [:botchini, :screens, :room, :state],
+          measurement: :broadcasting,
+          description: "1 while a screen sharing room is broadcasting, 0 once it ends",
+          tags: [:screen_owner_name],
+          reporter_options: [keep: :all]
         )
       ])
     ]

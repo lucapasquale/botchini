@@ -1075,11 +1075,18 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       Restream.stop("1", %{id: "10", name: "Ana"})
       on_exit(fn -> Restream.stop("1", %{id: "10", name: "Ana"}) end)
 
-      patch_function(YtDlp, :lookup_stream, fn url ->
-        {:ok, %{title: "Zoo", url: url, live?: false, duration_ms: 600_000}}
+      patch_function(YtDlp, :lookup_stream, fn url, _format ->
+        {:ok,
+         %{
+           title: "Zoo",
+           url: url,
+           live?: false,
+           duration_ms: 600_000,
+           media: ["https://media.example/zoo"]
+         }}
       end)
 
-      patch_function(Pipeline, :open, fn _url, _video_port, _audio_port, _start_s ->
+      patch_function(Pipeline, :open, fn _media, _video_port, _audio_port, _start_s ->
         Port.open({:spawn_executable, System.find_executable("cat")}, [:binary, :exit_status])
       end)
 

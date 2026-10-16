@@ -12,7 +12,8 @@ defmodule Botchini.Screens.Restream do
 
   Pausing stops the pipeline, leaving everyone on the last picture. Playing
   again starts another one where the video was, or where a live stream is now,
-  and so does skipping to another moment of a video.
+  and so does skipping to another moment of a video. They all read the media
+  links the lookup found, which are looked up again once if they stopped working.
 
   Pages get `{:restream, {:state, state}}` messages once they subscribe, with
   `nil` once nothing is shown. Who added the link gets a
@@ -152,10 +153,14 @@ defmodule Botchini.Screens.Restream do
         user: user,
         requester: requester,
         status: :looking_up,
-        lookup: Task.async(fn -> YtDlp.lookup_stream(url) end),
+        lookup: lookup(url),
         # Whether the room went live, which it stays while paused
         live?: false,
         duration_ms: nil,
+        media: [],
+        # Whether the links were looked up since a pipeline last played them, so
+        # a pipeline failing with them isn't from them expiring
+        refreshed?: true,
         # Where the running pipeline started, or where the next one will
         offset_ms: 0,
         # When the running pipeline's first packet came, as monotonic milliseconds
@@ -184,9 +189,10 @@ defmodule Botchini.Screens.Restream do
       {:stop, :normal, :ok,
        %{state | end_reason: :video_stopped, end_detail: "stopped by #{user.name}"}}
 
-  # Not before it went live, as there's nothing to pause yet
-  def handle_call({:pause, user}, _from, %{live?: true, port: port} = state)
-      when port != nil do
+  # Not before it went live, as there's nothing to pause yet. Links being looked
+  # up again aren't played once they're found
+  def handle_call({:pause, user}, _from, %{live?: true, port: port, lookup: lookup} = state)
+      when port != nil or lookup != nil do
     Logger.info("Restream paused", event: "restream_paused")
 
     state =
@@ -211,11 +217,11 @@ defmodule Botchini.Screens.Restream do
       when duration != nil do
     offset_ms = position_ms |> max(0) |> min(duration - 1_000) |> max(0)
 
+    # Links being looked up again start there once they're found
     state =
-      case state.status do
-        :paused -> broadcast(%{state | offset_ms: offset_ms})
-        _playing -> start_pipeline(%{close_pipeline(state) | offset_ms: offset_ms})
-      end
+      if state.status == :paused or state.lookup != nil,
+        do: broadcast(%{state | offset_ms: offset_ms}),
+        else: start_pipeline(%{close_pipeline(state) | offset_ms: offset_ms})
 
     {:reply, :ok, state}
   end
@@ -223,7 +229,7 @@ defmodule Botchini.Screens.Restream do
   def handle_call(_pause_resume_or_seek, _from, state), do: {:reply, :ok, state}
 
   @impl true
-  def handle_info({ref, result}, %{lookup: %Task{ref: ref}} = state) do
+  def handle_info({ref, result}, %{lookup: %Task{ref: ref}, room_id: nil} = state) do
     Process.demonitor(ref, [:flush])
     state = %{state | lookup: nil}
 
@@ -235,9 +241,31 @@ defmodule Botchini.Screens.Restream do
     end
   end
 
+  # The links looked up again, unless it was paused meanwhile
+  def handle_info({ref, result}, %{lookup: %Task{ref: ref}} = state) do
+    Process.demonitor(ref, [:flush])
+    state = %{state | lookup: nil}
+
+    case result do
+      {:ok, %{media: media}} when state.status == :paused ->
+        {:noreply, %{state | media: media}}
+
+      {:ok, %{media: media}} ->
+        {:noreply, start_pipeline(%{state | media: media})}
+
+      {:error, reason} ->
+        Logger.warning("Restream couldn't find its media again", reason: inspect(reason))
+        {:stop, :normal, %{state | end_reason: :link_failed}}
+    end
+  end
+
   def handle_info({:DOWN, ref, :process, _pid, reason}, %{lookup: %Task{ref: ref}} = state) do
     Logger.error("Restream lookup crashed", reason: inspect(reason))
-    fail(%{state | lookup: nil}, :unknown)
+    state = %{state | lookup: nil}
+
+    if state.live?,
+      do: {:stop, :normal, %{state | end_reason: :link_failed}},
+      else: fail(state, :unknown)
   end
 
   # The room ended on its own, like after streaming for too long
@@ -273,6 +301,15 @@ defmodule Botchini.Screens.Restream do
       not state.live? ->
         Logger.warning("Restream couldn't start", exit_status: status, output: state.output)
         fail(state, state.output |> PlaybackFailure.classify() |> elem(0))
+
+      # The links may have expired since they last played
+      state.playing_since == nil and not state.refreshed? ->
+        Logger.info("Restream looking up its media again",
+          exit_status: status,
+          output: state.output
+        )
+
+        {:noreply, %{close_pipeline(state) | lookup: lookup(state.url), refreshed?: true}}
 
       state.playing_since == nil ->
         Logger.warning("Restream couldn't start again", exit_status: status, output: state.output)
@@ -316,6 +353,8 @@ defmodule Botchini.Screens.Restream do
 
   ## Steps
 
+  defp lookup(url), do: Task.async(fn -> YtDlp.lookup_stream(url, Pipeline.format()) end)
+
   defp start_room(state, stream) do
     attrs = %{
       title: String.slice(stream.title, 0, @max_title_length),
@@ -336,6 +375,7 @@ defmodule Botchini.Screens.Restream do
          | title: room.title,
            url: stream.url,
            duration_ms: stream.duration_ms,
+           media: stream.media,
            room_id: room.id,
            room_ref: Process.monitor(pid)
        }}
@@ -360,7 +400,7 @@ defmodule Botchini.Screens.Restream do
         offset_ms: start_s * 1_000,
         playing_since: nil,
         sockets: %{video => :video, audio => :audio},
-        port: Pipeline.open(state.url, video_port, audio_port, start_s),
+        port: Pipeline.open(state.media, video_port, audio_port, start_s),
         output: "",
         start_timer: timer
     }
@@ -392,6 +432,7 @@ defmodule Botchini.Screens.Restream do
         broadcast(%{
           state
           | live?: true,
+            refreshed?: false,
             status: :live,
             playing_since: System.monotonic_time(:millisecond),
             start_timer: nil

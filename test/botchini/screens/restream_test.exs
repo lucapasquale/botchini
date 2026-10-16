@@ -16,8 +16,9 @@ defmodule BotchiniTest.Screens.RestreamTest do
   @connect_timeout 5_000
 
   # Every test gets a guild of its own. yt-dlp finds a 10 minute video titled
-  # "Zoo", or a live stream, and the pipeline is a script that waits for the test
-  # to say how it ends, while the test sends the packets ffmpeg would
+  # "Zoo", or a live stream, with new media links each time, and the pipeline is
+  # a script that waits for the test to say how it ends, while the test sends the
+  # packets ffmpeg would
   setup do
     guild_id = "restream-#{System.unique_integer([:positive])}"
     dir = Path.join(System.tmp_dir!(), guild_id)
@@ -29,19 +30,25 @@ defmodule BotchiniTest.Screens.RestreamTest do
       File.rm_rf!(dir)
     end)
 
-    patch(YtDlp, :lookup_stream, fn
-      "https://www.twitch.tv/offline" ->
-        {:error, :stream_offline}
+    patch(YtDlp, :lookup_stream, fn url, format ->
+      media = ["https://media.example/#{System.unique_integer([:positive])}"]
+      send(test, {:lookup, url, format, media})
 
-      "https://www.twitch.tv/" <> _ = url ->
-        {:ok, %{title: "Zoo", url: url, live?: true, duration_ms: nil}}
+      case url do
+        "https://www.twitch.tv/offline" ->
+          {:error, :stream_offline}
 
-      url ->
-        {:ok, %{title: "Zoo", url: url, live?: false, duration_ms: 600_000}}
+        "https://www.twitch.tv/" <> _ ->
+          {:ok, %{title: "Zoo", url: url, live?: true, duration_ms: nil, media: media}}
+
+        _video ->
+          {:ok, %{title: "Zoo", url: url, live?: false, duration_ms: 600_000, media: media}}
+      end
     end)
 
-    patch(Pipeline, :open, fn _url, video_port, audio_port, start_s ->
+    patch(Pipeline, :open, fn media, video_port, audio_port, start_s ->
       send(test, {:pipeline, video_port, audio_port, start_s})
+      send(test, {:pipeline_media, media})
       fake_pipeline(Path.join(dir, "end"))
     end)
 
@@ -49,7 +56,8 @@ defmodule BotchiniTest.Screens.RestreamTest do
   end
 
   # Prints what's in the file once it shows up, exiting with the code on its first
-  # line. Like the real one, it kills its session once the port closes
+  # line, and removes it for the next pipeline. Like the real one, it kills its
+  # session once the port closes
   defp fake_pipeline(end_file) do
     script = ~S"""
     exec 3<&0
@@ -58,7 +66,9 @@ defmodule BotchiniTest.Screens.RestreamTest do
     trap '' TERM
     kill -TERM 0
     tail -n +2 "$1"
-    exit "$(head -n 1 "$1")"
+    status=$(head -n 1 "$1")
+    rm -f "$1"
+    exit "$status"
     """
 
     Port.open({:spawn_executable, System.find_executable("sh")}, [
@@ -311,14 +321,52 @@ defmodule BotchiniTest.Screens.RestreamTest do
       refute_receive {:pipeline, _video_port, _audio_port, _start_s}
     end
 
-    test "ends when it can't play again", %{guild_id: guild_id, end_file: end_file} do
+    test "plays the media the lookup found, without looking it up again",
+         %{guild_id: guild_id} do
+      start_live(guild_id)
+      assert_receive {:lookup, @url, format, media}
+      assert format == Pipeline.format()
+      assert_receive {:pipeline_media, ^media}
+
+      Restream.pause(guild_id, @bia)
+      Restream.resume(guild_id)
+      Restream.seek(guild_id, 30_000)
+
+      assert_receive {:pipeline_media, ^media}
+      assert_receive {:pipeline_media, ^media}
+      refute_receive {:lookup, _url, _format, _media}
+    end
+
+    test "looks the media up again once when it stops working",
+         %{guild_id: guild_id, end_file: end_file} do
+      start_live(guild_id)
+      assert_receive {:lookup, _url, _format, expired}
+      Restream.pause(guild_id, @bia)
+      Restream.resume(guild_id)
+      assert_receive {:pipeline, _video_port, _audio_port, _start_s}
+      assert_receive {:pipeline_media, ^expired}
+
+      end_pipeline(end_file, 1, "HTTP error 403 Forbidden")
+
+      assert_receive {:lookup, @url, _format, media}
+      assert_receive {:pipeline, video_port, _audio_port, _start_s}
+      assert_receive {:pipeline_media, ^media}
+
+      send_rtp(video_port, 1)
+      assert_receive {:restream, {:state, %{status: :live}}}
+    end
+
+    test "ends when it can't play again, even with its media looked up again",
+         %{guild_id: guild_id, end_file: end_file} do
       Activity.subscribe(guild_id)
       start_live(guild_id)
       Restream.pause(guild_id, @bia)
       Restream.resume(guild_id)
       assert_receive {:pipeline, _video_port, _audio_port, _start_s}
 
-      end_pipeline(end_file, 1, "ERROR: [youtube] abcdefghijk: Video unavailable")
+      end_pipeline(end_file, 1, "HTTP error 403 Forbidden")
+      assert_receive {:pipeline, _video_port, _audio_port, _start_s}
+      end_pipeline(end_file, 1, "HTTP error 403 Forbidden")
 
       assert_receive {:screen_activity,
                       %{kind: :stream_ended, detail: "the video stopped loading"}}

@@ -1,19 +1,22 @@
 defmodule Botchini.Screens.Restream.Pipeline do
   @moduledoc """
-  yt-dlp downloading a video or live stream as it plays, piped into ffmpeg,
-  which turns it into H.264 and Opus in real time and sends them as RTP to two
-  local UDP ports. Videos started partway through are read by ffmpeg itself from
-  the media yt-dlp finds instead, which skips there exactly and right away.
+  ffmpeg reading a video or live stream from the media links yt-dlp found, and
+  turning it into H.264 and Opus in real time, sent as RTP to two local UDP ports.
+  Videos can start partway through, which ffmpeg skips to exactly and right away.
 
-  Both run under a small shell script, which like every port's program is the
+  It runs under a small shell script, which like every port's program is the
   leader of a session of its own. When the port closes, even with the BEAM going
   down, the script kills its session, as ffmpeg sending to UDP would never notice
   on its own
   """
 
-  # Formats ffmpeg decodes cheaply come first. Live streams on YouTube have
-  # separate video and audio too, while Twitch's are always together
-  @format "bv*[height<=720][vcodec^=avc1]+ba/bv*[height<=720]+ba/b[height<=720]/b"
+  @doc """
+  The format whose links to look up: ones ffmpeg decodes cheaply first. Live
+  streams on YouTube have separate video and audio too, while Twitch's are always
+  together
+  """
+  @spec format() :: String.t()
+  def format, do: "bv*[height<=720][vcodec^=avc1]+ba/bv*[height<=720]+ba/b[height<=720]/b"
 
   # Viewers decode H.264 Constrained Baseline at level 3.1, up to 1280x720 at
   # 30 fps. Keyframes every 2 seconds stand in for asking the broadcaster for one,
@@ -21,49 +24,32 @@ defmodule Botchini.Screens.Restream.Pipeline do
   # RTCP goes to the same ports, as ffmpeg would otherwise send it to the next
   # ones, which could be anything's.
   #
-  # yt-dlp can start partway through too, but it cuts the video at its next
-  # keyframe, seconds after the audio, which ffmpeg then races through. Separate
-  # video and audio come as two links, and the audio is in the last one
+  # Separate video and audio come as two links, and the audio is in the last one.
+  # Live streams can't start partway through
   @script ~S"""
   exec 3<&0
   { cat >/dev/null; kill -TERM 0; } <&3 &
-  url=$1 video_port=$2 audio_port=$3 youtubedl=$4 ffmpeg=$5 format=$6 start_s=$7
+  video_port=$1 audio_port=$2 ffmpeg=$3 start_s=$4
+  shift 4
+  audio_input=$(($# - 1))
 
-  encode() {
-    "$ffmpeg" -hide_banner -loglevel error -nostats -nostdin "$@" \
-      -map 0:v:0 -c:v libx264 -preset veryfast -tune zerolatency \
-      -profile:v baseline -level:v 3.1 -pix_fmt yuv420p \
-      -vf "scale='min(1280,iw)':'min(720,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2,fps=30" \
-      -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
-      -f rtp "rtp://127.0.0.1:$video_port?pkt_size=1200&rtcpport=$video_port" \
-      -map "$audio_input:a:0?" -c:a libopus -ar 48000 -ac 2 -b:a 128k \
-      -f rtp "rtp://127.0.0.1:$audio_port?pkt_size=1200&rtcpport=$audio_port" >/dev/null
-  }
-
-  if [ "$start_s" = 0 ]; then
-    audio_input=0
-    { "$youtubedl" --no-warnings --quiet --no-playlist --socket-timeout 15 --format "$format" \
-        --output - -- "$url" </dev/null | encode -re -i pipe:0; } &
-  else
-    media=$("$youtubedl" --no-warnings --quiet --no-playlist --socket-timeout 15 \
-      --format "$format" --print urls -- "$url" </dev/null) || {
-      # The watcher would keep the port from seeing the exit
-      status=$?
-      trap '' TERM
-      kill -TERM 0
-      exit "$status"
-    }
-    # Links have a ? in them, which mustn't match files
-    set -f
-    set --
-    audio_input=-1
-    for link in $media; do
+  for link do
+    if [ "$start_s" = 0 ]; then
+      set -- "$@" -re -reconnect 1 -reconnect_delay_max 5 -i "$link"
+    else
       set -- "$@" -ss "$start_s" -re -reconnect 1 -reconnect_delay_max 5 -i "$link"
-      audio_input=$((audio_input + 1))
-    done
-    set +f
-    encode "$@" </dev/null &
-  fi
+    fi
+    shift
+  done
+
+  "$ffmpeg" -hide_banner -loglevel error -nostats -nostdin "$@" \
+    -map 0:v:0 -c:v libx264 -preset veryfast -tune zerolatency \
+    -profile:v baseline -level:v 3.1 -pix_fmt yuv420p \
+    -vf "scale='min(1280,iw)':'min(720,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2,fps=30" \
+    -g 60 -b:v 2500k -maxrate 2500k -bufsize 5000k \
+    -f rtp "rtp://127.0.0.1:$video_port?pkt_size=1200&rtcpport=$video_port" \
+    -map "$audio_input:a:0?" -c:a libopus -ar 48000 -ac 2 -b:a 128k \
+    -f rtp "rtp://127.0.0.1:$audio_port?pkt_size=1200&rtcpport=$audio_port" </dev/null >/dev/null &
   pipeline=$!
   trap '' TERM
   wait "$pipeline"
@@ -73,37 +59,35 @@ defmodule Botchini.Screens.Restream.Pipeline do
   """
 
   @doc """
-  Starts showing `url`, sending video to `video_port` and audio to `audio_port`.
-  Videos start `start_s` seconds in. The calling process gets the port's
-  messages: what yt-dlp and ffmpeg print, and the exit status once the video ends
-  or something fails
+  Starts showing the media, links from `format/0`, sending video to `video_port`
+  and audio to `audio_port`. Videos start `start_s` seconds in. The calling
+  process gets the port's messages: what ffmpeg prints, and the exit status once
+  the video ends or something fails
   """
-  @spec open(String.t(), :inet.port_number(), :inet.port_number(), non_neg_integer()) :: port()
-  def open(url, video_port, audio_port, start_s \\ 0) do
-    youtubedl = Application.get_env(:nostrum, :youtubedl, "yt-dlp")
+  @spec open([String.t()], :inet.port_number(), :inet.port_number(), non_neg_integer()) ::
+          port()
+  def open([_ | _] = media, video_port, audio_port, start_s \\ 0) do
     ffmpeg = Application.get_env(:nostrum, :ffmpeg, "ffmpeg")
 
     Port.open({:spawn_executable, System.find_executable("sh")}, [
       :binary,
       :exit_status,
       :stderr_to_stdout,
-      args: [
-        "-c",
-        @script,
-        "restream",
-        url,
-        Integer.to_string(video_port),
-        Integer.to_string(audio_port),
-        youtubedl,
-        ffmpeg,
-        @format,
-        Integer.to_string(start_s)
-      ]
+      args:
+        [
+          "-c",
+          @script,
+          "restream",
+          Integer.to_string(video_port),
+          Integer.to_string(audio_port),
+          ffmpeg,
+          Integer.to_string(start_s)
+        ] ++ media
     ])
   end
 
   @doc """
-  Stops yt-dlp and ffmpeg, unless they already exited. The script kills them once
+  Stops ffmpeg, unless it already exited. The script kills it once
   it notices the port closed, this doesn't wait for that
   """
   @spec close(port()) :: :ok

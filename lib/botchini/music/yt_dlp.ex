@@ -29,13 +29,16 @@ defmodule Botchini.Music.YtDlp do
         }
 
   @typedoc """
-  A video or live stream to show on a guild's page. Live streams have no duration
+  A video or live stream to show on a guild's page. Live streams have no duration.
+  The media are the links of the format asked for, one with both video and audio
+  or the video's and then the audio's, which stay valid for a few hours
   """
   @type stream :: %{
           title: String.t(),
           url: String.t(),
           live?: boolean(),
-          duration_ms: pos_integer() | nil
+          duration_ms: pos_integer() | nil,
+          media: [String.t()]
         }
 
   @type reason :: PlaybackFailure.reason() | :not_found | :too_big
@@ -96,25 +99,32 @@ defmodule Botchini.Music.YtDlp do
 
   @doc """
   Finds the video or live stream a YouTube or Twitch link points to, to show it
-  on a guild's page. Twitch channels are only found while they're live
+  on a guild's page, with the links of its media in `format`. Twitch channels are
+  only found while they're live
   """
-  @spec lookup_stream(String.t()) :: {:ok, stream()} | {:error, reason()}
-  def lookup_stream(url) do
+  @spec lookup_stream(String.t(), String.t()) :: {:ok, stream()} | {:error, reason()}
+  def lookup_stream(url, format) do
     with true <- stream_url?(url) || {:error, :unsupported_url},
          {:ok, output} <-
            run([
              "--no-playlist",
              "--playlist-items",
              "1",
+             "--format",
+             format,
              "--print",
              "%(.{title,is_live,webpage_url,duration})j",
+             "--print",
+             "urls",
              "--",
              url
            ]) do
-      output
-      |> String.split("\n", trim: true)
+      lines = String.split(output, "\n", trim: true)
+      media = Enum.filter(lines, &String.starts_with?(&1, ["https://", "http://"]))
+
+      lines
       |> Enum.find(&String.starts_with?(&1, "{"))
-      |> parse_stream(url)
+      |> parse_stream(url, media)
     end
   end
 
@@ -158,9 +168,10 @@ defmodule Botchini.Music.YtDlp do
     end
   end
 
-  defp parse_stream(nil, _url), do: {:error, :not_found}
+  defp parse_stream(nil, _url, _media), do: {:error, :not_found}
+  defp parse_stream(_line, _url, []), do: {:error, :not_found}
 
-  defp parse_stream(line, url) do
+  defp parse_stream(line, url, media) do
     case Jason.decode(line) do
       {:ok, %{"title" => title} = stream} when is_binary(title) ->
         {:ok,
@@ -168,7 +179,8 @@ defmodule Botchini.Music.YtDlp do
            title: title,
            url: if(is_binary(stream["webpage_url"]), do: stream["webpage_url"], else: url),
            live?: stream["is_live"] == true,
-           duration_ms: if(stream["is_live"] != true, do: duration_ms(stream["duration"]))
+           duration_ms: if(stream["is_live"] != true, do: duration_ms(stream["duration"])),
+           media: media
          }}
 
       _not_a_video ->

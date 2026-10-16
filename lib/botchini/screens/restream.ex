@@ -23,7 +23,7 @@ defmodule Botchini.Screens.Restream do
 
   require Logger
 
-  alias Botchini.Music.YtDlp
+  alias Botchini.Music.{PlaybackFailure, YtDlp}
   alias Botchini.Screens
   alias Botchini.Screens.Restream.Pipeline
   alias Botchini.Screens.Room
@@ -272,7 +272,7 @@ defmodule Botchini.Screens.Restream do
     cond do
       not state.live? ->
         Logger.warning("Restream couldn't start", exit_status: status, output: state.output)
-        fail(state, state.output |> Botchini.Music.PlaybackFailure.classify() |> elem(0))
+        fail(state, state.output |> PlaybackFailure.classify() |> elem(0))
 
       state.playing_since == nil ->
         Logger.warning("Restream couldn't start again", exit_status: status, output: state.output)

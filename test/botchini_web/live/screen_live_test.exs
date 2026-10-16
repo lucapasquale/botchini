@@ -1079,10 +1079,10 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       on_exit(fn -> Restream.stop("1") end)
 
       patch_function(YtDlp, :lookup_stream, fn url ->
-        {:ok, %{title: "Zoo", url: url, live?: false}}
+        {:ok, %{title: "Zoo", url: url, live?: false, duration_ms: 600_000}}
       end)
 
-      patch_function(Pipeline, :open, fn _url, _video_port, _audio_port ->
+      patch_function(Pipeline, :open, fn _url, _video_port, _audio_port, _start_s ->
         Port.open({:spawn_executable, System.find_executable("cat")}, [:binary, :exit_status])
       end)
 
@@ -1092,17 +1092,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     defp show_link(view, url),
       do: view |> element("#video-form") |> render_submit(%{"url" => url})
 
-    test "are only for admins", %{conn: conn} do
-      {:ok, view, _html} = live_guild(conn, "1")
-
-      refute has_element?(view, "#video-toggle")
-
-      render_click(view, "video:start", %{"url" => "https://www.youtube.com/watch?v=abcdefghijk"})
-      assert Restream.state("1") == nil
-    end
-
-    test "lets admins show a link and stop it", %{conn: conn} do
-      patch_function(Discord, :check_member, :admin)
+    test "lets anyone show a link, but only admins stop it", %{conn: conn} do
       {:ok, view, _html} = live_guild(conn, "1")
       assert has_element?(view, "#video-toggle[aria-pressed=false]")
 
@@ -1114,6 +1104,18 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       end)
 
       assert has_element?(view, "#video-toggle[aria-pressed=true]")
+      refute has_element?(view, "#video-stop")
+
+      render_click(view, "video:stop", %{})
+      assert Restream.state("1")
+    end
+
+    test "lets admins stop it", %{conn: conn} do
+      patch_function(Discord, :check_member, :admin)
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      show_link(view, "https://www.youtube.com/watch?v=abcdefghijk")
+      eventually(fn -> assert has_element?(view, "#video-stop") end)
 
       view |> element("#video-stop") |> render_click()
 
@@ -1121,8 +1123,58 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       assert Restream.state("1") == nil
     end
 
-    test "tells admins which links can't be shown", %{conn: conn} do
-      patch_function(Discord, :check_member, :admin)
+    test "lets anyone pause it and skip through it", %{conn: conn} do
+      patch_function(Restream, :pause, :ok)
+      patch_function(Restream, :resume, :ok)
+      patch_function(Restream, :seek, :ok)
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      render_hook(view, "video:pause", %{})
+      render_hook(view, "video:resume", %{})
+      render_hook(view, "video:seek", %{"position_ms" => 65_000})
+      render_hook(view, "video:seek", %{"position_ms" => "soon"})
+
+      assert_called(Restream.pause("1", %{id: "10", name: "Ana"}))
+      assert_called(Restream.resume("1"))
+      assert_called_once(Restream.seek("1", 65_000))
+    end
+
+    test "shows where the video is, and who paused it", %{conn: conn, room: room} do
+      link = %{room | id: "link", title: "Zoo", source: :link, started_at: DateTime.utc_now()}
+
+      video = %{
+        status: :live,
+        title: "Zoo",
+        url: "https://www.youtube.com/watch?v=abcdefghijk",
+        added_by: "Ana",
+        paused_by: nil,
+        room_id: "link",
+        duration_ms: 600_000,
+        position_ms: 65_000
+      }
+
+      {:ok, view, _html} = live_guild(conn, "1")
+      Screens.broadcast(%{link | live?: true}, :live)
+      send(view.pid, {:restream, {:state, video}})
+
+      viewer = "#screen-viewer-link"
+
+      assert has_element?(
+               view,
+               ~s(#{viewer}[data-video-status=live][data-video-position="65000"][data-video-duration="600000"])
+             )
+
+      assert has_element?(view, "#{viewer} input[type=range][data-video-seek]")
+      assert has_element?(view, "#{viewer} [data-video-time]")
+      refute has_element?(view, "#screen-viewer-video-status-link")
+
+      send(view.pid, {:restream, {:state, %{video | status: :paused, paused_by: "Bia"}}})
+      assert has_element?(view, "#screen-viewer-video-status-link", "Paused by Bia")
+      assert has_element?(view, "#{viewer}[data-video-status=paused]")
+      assert has_element?(view, "#video-status", "Paused")
+    end
+
+    test "tells which links can't be shown", %{conn: conn} do
       {:ok, view, _html} = live_guild(conn, "1")
 
       show_link(view, "https://example.com/video.mp4")

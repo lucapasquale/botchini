@@ -65,7 +65,10 @@ defmodule Botchini.Screens.Room do
   Connects the calling process as the broadcaster, which sends its packets with
   `send_rtp/3`. The room goes live right away, so it's called once packets are
   coming. Video must be H.264 with its SPS and PPS before every keyframe, as the
-  room can't ask this broadcaster for a keyframe when viewers join
+  room can't ask this broadcaster for a keyframe when viewers join.
+
+  The broadcaster calls it again when its packets start over, like after a
+  pause, for viewers to keep playing them
   """
   @spec publish_rtp(String.t()) :: :ok | {:error, :not_found}
   def publish_rtp(room_id), do: call(room_id, {:publish_rtp, self()})
@@ -237,6 +240,10 @@ defmodule Botchini.Screens.Room do
         {:reply, {:error, reason}, state}
     end
   end
+
+  # Its new packets take on where the last ones left off
+  def handle_call({:publish_rtp, pid}, _from, %{publisher: pid} = state),
+    do: {:reply, :ok, use_codec(state, :h264)}
 
   # The broadcaster is linked, standing in for its PeerConnection
   def handle_call({:publish_rtp, pid}, _from, state) do

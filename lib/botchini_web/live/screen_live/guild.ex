@@ -3,7 +3,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   Page where members watch the screens being shared in a guild. One screen takes
   most of the page, or several pinned ones share it, with the chat floating over
   them. The others wait in a strip below, next to the bar with the soundboard, the
-  music, the pointer and the chat's switch. Admins can show a video from a link
+  music, the pointer and the chat's switch. Anyone can show a video from a link
   there too, which everyone watches like a screen share
   """
 
@@ -142,7 +142,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         class={["group min-w-0", tile_class(room in @big)]}
         style={tile_style(room, @big, @layout)}
       >
-        <.viewer room={room} controls?={room in @big}>
+        <.viewer room={room} controls?={room in @big} video={@video}>
           <span
             :if={@main == nil and room in @big}
             class="pointer-events-none absolute left-1.5 top-1.5 z-10 max-w-[calc(100%_-_5rem)] truncate rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white"
@@ -215,7 +215,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         />
         <Music.menu state={@music} error={@music_error} admin?={@admin?} />
         <Soundboard.pointer_menu page_key={"guild:#{@guild_id}"} />
-        <Video.menu :if={@admin?} video={@video} error={@video_error} />
+        <Video.menu video={@video} error={@video_error} admin?={@admin?} />
         <Ads.admin_menu :if={@admin?} mode={@ads_mode} ad_id={@ads_ad_id} />
         <span class="mx-0.5 h-6 w-px bg-gray-700" aria-hidden="true"></span>
         <Chat.toggle_button open?={@chat_open?} unread={@chat_unread} />
@@ -351,8 +351,12 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   def handle_event("music:remove", params, socket),
     do: as_admin(socket, &Music.remove(&1, params))
 
-  def handle_event("video:" <> _action = event, params, socket),
+  # Anyone can show, pause and skip through a video, but only admins stop it
+  def handle_event("video:stop" = event, params, socket),
     do: as_admin(socket, &Video.handle_event(event, params, &1))
+
+  def handle_event("video:" <> _action = event, params, socket),
+    do: {:noreply, Video.handle_event(event, params, socket)}
 
   def handle_event("offer", %{"room_id" => room_id} = offer, socket) do
     with true <- watching?(socket, room_id),

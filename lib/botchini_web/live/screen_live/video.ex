@@ -1,9 +1,10 @@
 defmodule BotchiniWeb.ScreenLive.Video do
   @moduledoc """
-  The admins' menu of the guild page for showing a YouTube video, or a YouTube or
-  Twitch live stream, as one of its screens. Everyone watches it together, like
-  a screen share. The guild page calls `mount/3`, passes its `video:` events here
-  once it checked an admin sent them, and its `{:restream, message}` messages
+  The guild page's menu for showing a YouTube video, or a YouTube or Twitch live
+  stream, as one of its screens. Everyone watches it together, like a screen
+  share, and anyone adds one, pauses it or skips through a video, while only
+  admins stop it. The guild page calls `mount/3`, passes its `video:` events here,
+  once it checked an admin sent `video:stop`, and its `{:restream, message}` messages
   """
 
   use BotchiniWeb, :html
@@ -54,6 +55,22 @@ defmodule BotchiniWeb.ScreenLive.Video do
     socket
   end
 
+  def handle_event("video:pause", _params, socket) do
+    Restream.pause(socket.assigns.video_guild_id, socket.assigns.video_user)
+    socket
+  end
+
+  def handle_event("video:resume", _params, socket) do
+    Restream.resume(socket.assigns.video_guild_id)
+    socket
+  end
+
+  def handle_event("video:seek", %{"position_ms" => position_ms}, socket)
+      when is_integer(position_ms) do
+    Restream.seek(socket.assigns.video_guild_id, position_ms)
+    socket
+  end
+
   def handle_event(_event, _params, socket), do: socket
 
   @spec handle_info(term(), Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
@@ -66,6 +83,7 @@ defmodule BotchiniWeb.ScreenLive.Video do
 
   attr :video, :map, default: nil
   attr :error, :string, default: nil
+  attr :admin?, :boolean, default: false
 
   @doc """
   The menu as a button of the bar, which opens it above the bar. The button is
@@ -108,6 +126,7 @@ defmodule BotchiniWeb.ScreenLive.Video do
               </p>
             </div>
             <button
+              :if={@admin?}
               type="button"
               id="video-stop"
               phx-click="video:stop"
@@ -139,8 +158,8 @@ defmodule BotchiniWeb.ScreenLive.Video do
 
           <p class="text-xs text-gray-500">
             Shows a YouTube video or a YouTube or Twitch live stream as a screen, at the same
-            moment for everyone on the page. One can be shown at a time, and it stops when the
-            video ends.
+            moment for everyone on the page. Anyone can pause it or skip through a video from
+            its controls. One can be shown at a time, and it stops when the video ends.
           </p>
         </div>
       </div>
@@ -151,4 +170,5 @@ defmodule BotchiniWeb.ScreenLive.Video do
   defp status(:looking_up), do: "Looking it up..."
   defp status(:starting), do: "Starting..."
   defp status(:live), do: "Showing"
+  defp status(:paused), do: "Paused"
 end

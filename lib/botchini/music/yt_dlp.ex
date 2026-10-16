@@ -29,9 +29,14 @@ defmodule Botchini.Music.YtDlp do
         }
 
   @typedoc """
-  A video or live stream to show on a guild's page
+  A video or live stream to show on a guild's page. Live streams have no duration
   """
-  @type stream :: %{title: String.t(), url: String.t(), live?: boolean()}
+  @type stream :: %{
+          title: String.t(),
+          url: String.t(),
+          live?: boolean(),
+          duration_ms: pos_integer() | nil
+        }
 
   @type reason :: PlaybackFailure.reason() | :not_found | :too_big
 
@@ -102,7 +107,7 @@ defmodule Botchini.Music.YtDlp do
              "--playlist-items",
              "1",
              "--print",
-             "%(.{title,is_live,webpage_url})j",
+             "%(.{title,is_live,webpage_url,duration})j",
              "--",
              url
            ]) do
@@ -162,7 +167,8 @@ defmodule Botchini.Music.YtDlp do
          %{
            title: title,
            url: if(is_binary(stream["webpage_url"]), do: stream["webpage_url"], else: url),
-           live?: stream["is_live"] == true
+           live?: stream["is_live"] == true,
+           duration_ms: if(stream["is_live"] != true, do: duration_ms(stream["duration"]))
          }}
 
       _not_a_video ->

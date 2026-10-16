@@ -8,8 +8,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
   alias Botchini.Discord
   alias Botchini.Music.YtDlp
   alias Botchini.Screens
-  alias Botchini.Screens.{Activity, Jukebox, Restream}
-  alias Botchini.Screens.Restream.Pipeline
+  alias Botchini.Screens.{Activity, Jukebox}
   alias BotchiniWeb.ScreenLive.{Ads, Guild}
 
   setup %{conn: conn} do
@@ -28,6 +27,22 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     patch_function(Discord, :check_member, :member)
 
     %{room: room, conn: log_in(conn)}
+  end
+
+  defp attach_telemetry(event) do
+    test = self()
+    handler_id = "screen-live-test-#{inspect(test)}"
+
+    :telemetry.attach(
+      handler_id,
+      event,
+      fn _event, measurements, metadata, _config ->
+        send(test, {:telemetry, measurements, metadata})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
   end
 
   defp log_in(conn),
@@ -365,16 +380,21 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       refute has_element?(view, ".hidden > #{controls}")
     end
 
-    test "plays videos from links muted on their own, like screen shares",
+    test "reports how screens come through, once every 5 seconds each",
          %{conn: conn, room: room} do
-      link = %{room | id: "link", title: "Zoo", source: :link, started_at: DateTime.utc_now()}
+      attach_telemetry([:botchini, :screens, :viewer, :video])
+      tab = %{room | id: "tab", source: :tab, started_at: DateTime.utc_now()}
 
       {:ok, view, _html} = live_guild(conn, "1")
-      Screens.broadcast(%{room | live?: true}, :live)
-      Screens.broadcast(%{link | live?: true}, :live)
+      Screens.broadcast(%{tab | live?: true}, :live)
 
-      assert has_element?(view, "#screen-viewer-link[data-from-link] video[autoplay][muted]")
-      refute has_element?(view, "#screen-viewer-#{room.id}[data-from-link]")
+      stats = %{"room_id" => "tab", "video" => %{"kbps" => 2_000, "fps" => 30}}
+      render_hook(view, "viewer_stats", stats)
+      render_hook(view, "viewer_stats", stats)
+      render_hook(view, "viewer_stats", %{stats | "room_id" => "not-on-the-page"})
+
+      assert_receive {:telemetry, %{kbps: 2_000, fps: 30}, %{source: "tab"}}
+      refute_receive {:telemetry, _measurements, _metadata}
     end
 
     test "goes back to the first screen when the watched one ends", %{conn: conn, room: room} do
@@ -1068,132 +1088,6 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     end
   end
 
-  describe "videos from links" do
-    # yt-dlp finds a video titled "Zoo", which plays until it's stopped, as the
-    # pipeline is a cat waiting for the port to close
-    setup do
-      Restream.stop("1", %{id: "10", name: "Ana"})
-      on_exit(fn -> Restream.stop("1", %{id: "10", name: "Ana"}) end)
-
-      patch_function(YtDlp, :lookup_stream, fn url, _format ->
-        {:ok,
-         %{
-           title: "Zoo",
-           url: url,
-           live?: false,
-           duration_ms: 600_000,
-           media: ["https://media.example/zoo"]
-         }}
-      end)
-
-      patch_function(Pipeline, :open, fn _media, _video_port, _audio_port, _start_s ->
-        Port.open({:spawn_executable, System.find_executable("cat")}, [:binary, :exit_status])
-      end)
-
-      :ok
-    end
-
-    defp show_link(view, url),
-      do: view |> element("#video-form") |> render_submit(%{"url" => url})
-
-    test "lets anyone show a link and stop it", %{conn: conn} do
-      {:ok, view, _html} = live_guild(conn, "1")
-      assert has_element?(view, "#video-toggle[aria-pressed=false]")
-
-      show_link(view, "https://www.youtube.com/watch?v=abcdefghijk")
-
-      eventually(fn ->
-        assert has_element?(view, "#video-title", "Zoo")
-        assert has_element?(view, "#video-status", "Starting...")
-      end)
-
-      assert has_element?(view, "#video-toggle[aria-pressed=true]")
-
-      view |> element("#video-stop") |> render_click()
-
-      eventually(fn -> assert has_element?(view, "#video-form") end)
-      assert Restream.state("1") == nil
-    end
-
-    test "lets anyone close the video's screen, unlike other screens",
-         %{conn: conn, room: room} do
-      patch_function(Restream, :stop, :ok)
-      link = %{room | id: "link", title: "Zoo", source: :link, started_at: DateTime.utc_now()}
-
-      {:ok, view, _html} = live_guild(conn, "1")
-      Screens.broadcast(%{room | live?: true}, :live)
-      Screens.broadcast(%{link | live?: true}, :live)
-
-      assert has_element?(view, ~s(#screen-link button[phx-click="close"]))
-      refute has_element?(view, ~s(#screen-#{room.id} button[phx-click="close"]))
-
-      view |> element(~s(#screen-link button[phx-click="close"])) |> render_click()
-      render_hook(view, "close", %{"room_id" => room.id})
-
-      assert_called_once(Restream.stop("1", %{id: "10", name: "Ana"}))
-      assert Screens.get_room(room.id)
-    end
-
-    test "lets anyone pause it and skip through it", %{conn: conn} do
-      patch_function(Restream, :pause, :ok)
-      patch_function(Restream, :resume, :ok)
-      patch_function(Restream, :seek, :ok)
-      {:ok, view, _html} = live_guild(conn, "1")
-
-      render_hook(view, "video:pause", %{})
-      render_hook(view, "video:resume", %{})
-      render_hook(view, "video:seek", %{"position_ms" => 65_000})
-      render_hook(view, "video:seek", %{"position_ms" => "soon"})
-
-      assert_called(Restream.pause("1", %{id: "10", name: "Ana"}))
-      assert_called(Restream.resume("1"))
-      assert_called_once(Restream.seek("1", 65_000))
-    end
-
-    test "shows where the video is, and who paused it", %{conn: conn, room: room} do
-      link = %{room | id: "link", title: "Zoo", source: :link, started_at: DateTime.utc_now()}
-
-      video = %{
-        status: :live,
-        title: "Zoo",
-        url: "https://www.youtube.com/watch?v=abcdefghijk",
-        added_by: "Ana",
-        paused_by: nil,
-        room_id: "link",
-        duration_ms: 600_000,
-        position_ms: 65_000
-      }
-
-      {:ok, view, _html} = live_guild(conn, "1")
-      Screens.broadcast(%{link | live?: true}, :live)
-      send(view.pid, {:restream, {:state, video}})
-
-      viewer = "#screen-viewer-link"
-
-      assert has_element?(
-               view,
-               ~s(#{viewer}[data-video-status=live][data-video-position="65000"][data-video-duration="600000"])
-             )
-
-      assert has_element?(view, "#{viewer} input[type=range][data-video-seek]")
-      assert has_element?(view, "#{viewer} [data-video-time]")
-      refute has_element?(view, "#screen-viewer-video-status-link")
-
-      send(view.pid, {:restream, {:state, %{video | status: :paused, paused_by: "Bia"}}})
-      assert has_element?(view, "#screen-viewer-video-status-link", "Paused by Bia")
-      assert has_element?(view, "#{viewer}[data-video-status=paused]")
-      assert has_element?(view, "#video-status", "Paused")
-    end
-
-    test "tells which links can't be shown", %{conn: conn} do
-      {:ok, view, _html} = live_guild(conn, "1")
-
-      show_link(view, "https://example.com/video.mp4")
-
-      assert has_element?(view, "#video-error", "Only YouTube and Twitch links can be shown")
-    end
-  end
-
   describe "pointers" do
     @move %{
       "a" => %{"k" => "p", "i" => "guild:1"},
@@ -1316,6 +1210,20 @@ defmodule BotchiniWebTest.ScreenLiveTest do
   end
 
   describe "managing your own stream" do
+    test "reports how the screen comes through, once every 5 seconds", %{conn: conn} do
+      attach_telemetry([:botchini, :screens, :broadcaster, :video])
+      manage = live_manage(conn)
+
+      stats = %{"video" => %{"fps" => 30}, "quality_limitation" => "cpu"}
+      render_hook(manage, "broadcast_stats", stats)
+      render_hook(manage, "source", %{"surface" => "window"})
+      render_hook(manage, "broadcast_stats", stats)
+      render_hook(manage, "broadcast_stats", stats)
+
+      assert_receive {:telemetry, %{fps: 30}, %{source: "window", quality_limitation: "cpu"}}
+      refute_receive {:telemetry, _measurements, _metadata}
+    end
+
     defp live_manage(conn) do
       {:ok, manage, _html} = live(conn, ~p"/screens/1/share")
       manage

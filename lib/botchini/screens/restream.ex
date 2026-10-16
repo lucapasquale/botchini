@@ -2,7 +2,7 @@ defmodule Botchini.Screens.Restream do
   @moduledoc """
   A YouTube video, or a YouTube or Twitch live stream, shown on a guild's page as
   one of its screens, at the same moment for everyone. Anyone adds links, pauses
-  them and skips through videos, and a guild shows one at a time.
+  them, skips through videos and stops them, and a guild shows one at a time.
 
   The link is looked up first, for its title and to turn down what can't be
   shown. Then a room is made for it, and `Pipeline` sends the video and the
@@ -129,14 +129,10 @@ defmodule Botchini.Screens.Restream do
   end
 
   @doc """
-  Stops showing the video, ending its room. Only admins can, which the pages check
+  Stops showing the video, ending its room, which says who stopped it
   """
-  @spec stop(String.t()) :: :ok
-  def stop(guild_id) do
-    GenServer.call(via(guild_id), :stop)
-  catch
-    :exit, _not_running -> :ok
-  end
+  @spec stop(String.t(), user()) :: :ok
+  def stop(guild_id, user), do: call(guild_id, {:stop, user})
 
   defp via(guild_id), do: {:via, Registry, {Screens.RestreamRegistry, guild_id}}
   defp topic(guild_id), do: "screens:restream:#{guild_id}"
@@ -171,7 +167,8 @@ defmodule Botchini.Screens.Restream do
         port: nil,
         output: "",
         start_timer: nil,
-        end_reason: :stopped
+        end_reason: :stopped,
+        end_detail: nil
       }
       |> broadcast()
 
@@ -182,8 +179,10 @@ defmodule Botchini.Screens.Restream do
   @impl true
   def handle_call(:state, _from, state), do: {:reply, public(state), state}
 
-  def handle_call(:stop, _from, state),
-    do: {:stop, :normal, :ok, %{state | end_reason: :closed_by_admin}}
+  def handle_call({:stop, user}, _from, state),
+    do:
+      {:stop, :normal, :ok,
+       %{state | end_reason: :video_stopped, end_detail: "stopped by #{user.name}"}}
 
   # Not before it went live, as there's nothing to pause yet
   def handle_call({:pause, user}, _from, %{live?: true, port: port} = state)
@@ -241,7 +240,7 @@ defmodule Botchini.Screens.Restream do
     fail(%{state | lookup: nil}, :unknown)
   end
 
-  # The room ended, closed by an admin or after streaming for too long
+  # The room ended on its own, like after streaming for too long
   def handle_info({:DOWN, ref, :process, _pid, _reason}, %{room_ref: ref} = state),
     do: {:stop, :normal, %{state | room_id: nil}}
 
@@ -310,7 +309,7 @@ defmodule Botchini.Screens.Restream do
   @impl true
   def terminate(_reason, state) do
     close_pipeline(state)
-    if state.room_id, do: Room.stop(state.room_id, state.end_reason)
+    if state.room_id, do: Room.stop(state.room_id, state.end_reason, state.end_detail)
     broadcast(state.guild_id, nil)
     Logger.info("Restream ended", event: "restream_ended", reason: state.end_reason)
   end

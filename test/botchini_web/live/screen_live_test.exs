@@ -1075,8 +1075,8 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     # yt-dlp finds a video titled "Zoo", which plays until it's stopped, as the
     # pipeline is a cat waiting for the port to close
     setup do
-      Restream.stop("1")
-      on_exit(fn -> Restream.stop("1") end)
+      Restream.stop("1", %{id: "10", name: "Ana"})
+      on_exit(fn -> Restream.stop("1", %{id: "10", name: "Ana"}) end)
 
       patch_function(YtDlp, :lookup_stream, fn url ->
         {:ok, %{title: "Zoo", url: url, live?: false, duration_ms: 600_000}}
@@ -1092,7 +1092,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     defp show_link(view, url),
       do: view |> element("#video-form") |> render_submit(%{"url" => url})
 
-    test "lets anyone show a link, but only admins stop it", %{conn: conn} do
+    test "lets anyone show a link and stop it", %{conn: conn} do
       {:ok, view, _html} = live_guild(conn, "1")
       assert has_element?(view, "#video-toggle[aria-pressed=false]")
 
@@ -1104,23 +1104,30 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       end)
 
       assert has_element?(view, "#video-toggle[aria-pressed=true]")
-      refute has_element?(view, "#video-stop")
-
-      render_click(view, "video:stop", %{})
-      assert Restream.state("1")
-    end
-
-    test "lets admins stop it", %{conn: conn} do
-      patch_function(Discord, :check_member, :admin)
-      {:ok, view, _html} = live_guild(conn, "1")
-
-      show_link(view, "https://www.youtube.com/watch?v=abcdefghijk")
-      eventually(fn -> assert has_element?(view, "#video-stop") end)
 
       view |> element("#video-stop") |> render_click()
 
       eventually(fn -> assert has_element?(view, "#video-form") end)
       assert Restream.state("1") == nil
+    end
+
+    test "lets anyone close the video's screen, unlike other screens",
+         %{conn: conn, room: room} do
+      patch_function(Restream, :stop, :ok)
+      link = %{room | id: "link", title: "Zoo", source: :link, started_at: DateTime.utc_now()}
+
+      {:ok, view, _html} = live_guild(conn, "1")
+      Screens.broadcast(%{room | live?: true}, :live)
+      Screens.broadcast(%{link | live?: true}, :live)
+
+      assert has_element?(view, ~s(#screen-link button[phx-click="close"]))
+      refute has_element?(view, ~s(#screen-#{room.id} button[phx-click="close"]))
+
+      view |> element(~s(#screen-link button[phx-click="close"])) |> render_click()
+      render_hook(view, "close", %{"room_id" => room.id})
+
+      assert_called_once(Restream.stop("1", %{id: "10", name: "Ana"}))
+      assert Screens.get_room(room.id)
     end
 
     test "lets anyone pause it and skip through it", %{conn: conn} do

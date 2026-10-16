@@ -164,12 +164,12 @@ defmodule BotchiniWeb.ScreenLive.Guild do
           </button>
 
           <div
-            :if={@admin? or room != @main}
+            :if={@admin? or room.source == :link or room != @main}
             class="absolute right-1.5 top-1.5 z-20 flex gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
           >
             <.pin_button :if={room != @main} room={room} pinned?={room in @big} />
             <.close_button
-              :if={@admin?}
+              :if={@admin? or room.source == :link}
               room_id={room.id}
               class="bg-black/60 text-gray-200 hover:bg-red-600 hover:text-white"
             />
@@ -215,7 +215,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         />
         <Music.menu state={@music} error={@music_error} admin?={@admin?} />
         <Soundboard.pointer_menu page_key={"guild:#{@guild_id}"} />
-        <Video.menu video={@video} error={@video_error} admin?={@admin?} />
+        <Video.menu video={@video} error={@video_error} />
         <Ads.admin_menu :if={@admin?} mode={@ads_mode} ad_id={@ads_ad_id} />
         <span class="mx-0.5 h-6 w-px bg-gray-700" aria-hidden="true"></span>
         <Chat.toggle_button open?={@chat_open?} unread={@chat_unread} />
@@ -325,15 +325,14 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     end
   end
 
-  # Admins' rights are checked again, as they can lose them while the page is open
+  # Anyone stops a video from a link, like from its menu, while other screens are
+  # for admins, whose rights are checked again as they can lose them while the
+  # page is open
   def handle_event("close", %{"room_id" => room_id}, socket) do
-    with %Room{} = room <- Enum.find(socket.assigns.rooms, &(&1.id == room_id)),
-         :admin <- Auth.member_status(socket, room.guild_id) do
-      Screens.stop_room(room, :closed_by_admin)
-      {:noreply, socket}
-    else
-      status when status in [:member, :not_member] -> {:noreply, assign(socket, admin?: false)}
-      _unknown_room_or_error -> {:noreply, socket}
+    case Enum.find(socket.assigns.rooms, &(&1.id == room_id)) do
+      %Room{source: :link} -> {:noreply, Video.handle_event("video:stop", %{}, socket)}
+      %Room{} = room -> as_admin(socket, &close_room(&1, room))
+      nil -> {:noreply, socket}
     end
   end
 
@@ -351,10 +350,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   def handle_event("music:remove", params, socket),
     do: as_admin(socket, &Music.remove(&1, params))
 
-  # Anyone can show, pause and skip through a video, but only admins stop it
-  def handle_event("video:stop" = event, params, socket),
-    do: as_admin(socket, &Video.handle_event(event, params, &1))
-
+  # Anyone can show, pause, skip through and stop a video
   def handle_event("video:" <> _action = event, params, socket),
     do: {:noreply, Video.handle_event(event, params, socket)}
 
@@ -435,6 +431,11 @@ defmodule BotchiniWeb.ScreenLive.Guild do
      |> chime_for_owner(room)
      |> update(:rooms, &put_room(&1, room))
      |> assign_sharing()}
+  end
+
+  defp close_room(socket, room) do
+    Screens.stop_room(room, :closed_by_admin)
+    socket
   end
 
   # Checked again like closing a screen share

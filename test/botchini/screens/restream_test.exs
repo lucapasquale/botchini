@@ -25,7 +25,7 @@ defmodule BotchiniTest.Screens.RestreamTest do
     test = self()
 
     on_exit(fn ->
-      Restream.stop(guild_id)
+      Restream.stop(guild_id, @ana)
       File.rm_rf!(dir)
     end)
 
@@ -328,15 +328,17 @@ defmodule BotchiniTest.Screens.RestreamTest do
   end
 
   describe "stopping" do
-    test "stop/1 ends the room", %{guild_id: guild_id} do
+    test "stop/2 ends the room, saying who stopped it", %{guild_id: guild_id} do
       Activity.subscribe(guild_id)
       {video_port, _audio_port} = start(guild_id)
       send_rtp(video_port, 1)
       assert_receive {:screen_activity, %{kind: :stream_started}}
 
-      assert Restream.stop(guild_id) == :ok
+      assert Restream.stop(guild_id, @bia) == :ok
 
-      assert_receive {:screen_activity, %{kind: :stream_ended, detail: "closed by an admin"}}
+      assert_receive {:screen_activity,
+                      %{kind: :stream_ended, actor: "Ana", detail: "stopped by Bia"}}
+
       assert Restream.state(guild_id) == nil
       assert link_room(guild_id) == nil
     end

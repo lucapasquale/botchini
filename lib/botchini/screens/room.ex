@@ -121,9 +121,12 @@ defmodule Botchini.Screens.Room do
   @spec whereis(String.t()) :: pid() | nil
   def whereis(room_id), do: GenServer.whereis(via(room_id))
 
-  @spec stop(String.t(), atom()) :: :ok | {:error, :not_found}
-  def stop(room_id, reason) do
-    case call(room_id, {:stop, reason}) do
+  @doc """
+  Ends the room. The activity says why, from the reason or the detail given
+  """
+  @spec stop(String.t(), atom(), String.t() | nil) :: :ok | {:error, :not_found}
+  def stop(room_id, reason, detail \\ nil) do
+    case call(room_id, {:stop, reason, detail}) do
       {:error, :not_found} -> {:error, :not_found}
       _ -> :ok
     end
@@ -185,7 +188,8 @@ defmodule Botchini.Screens.Room do
         last_keyframe_request: nil,
         idle_timer: nil,
         peak_viewers: 0,
-        end_reason: :shutdown
+        end_reason: :shutdown,
+        end_detail: nil
       }
       |> schedule_idle_timeout(config[:start_timeout_ms])
 
@@ -215,8 +219,8 @@ defmodule Botchini.Screens.Room do
     {:reply, :ok, rename(state, source_changes(state.room, source))}
   end
 
-  def handle_call({:stop, reason}, _from, state) do
-    {:stop, :normal, :ok, %{state | end_reason: reason}}
+  def handle_call({:stop, reason, detail}, _from, state) do
+    {:stop, :normal, :ok, %{state | end_reason: reason, end_detail: detail}}
   end
 
   def handle_call({:publish, lv, offer}, _from, state) do
@@ -364,7 +368,7 @@ defmodule Botchini.Screens.Room do
         room.guild_id,
         :stream_ended,
         room.owner_name,
-        ended_detail(state.end_reason)
+        state.end_detail || ended_detail(state.end_reason)
       )
     end
 

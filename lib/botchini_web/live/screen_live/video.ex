@@ -2,9 +2,9 @@ defmodule BotchiniWeb.ScreenLive.Video do
   @moduledoc """
   The guild page's menu for showing a YouTube video, or a YouTube or Twitch live
   stream, as one of its screens. Everyone watches it together, like a screen
-  share, and anyone adds one, pauses it or skips through a video, while only
-  admins stop it. The guild page calls `mount/3`, passes its `video:` events here,
-  once it checked an admin sent `video:stop`, and its `{:restream, message}` messages
+  share, and anyone adds one, pauses it, skips through a video or stops it. The
+  guild page calls `mount/3`, passes its `video:` events here, and its
+  `{:restream, message}` messages
   """
 
   use BotchiniWeb, :html
@@ -51,7 +51,7 @@ defmodule BotchiniWeb.ScreenLive.Video do
   end
 
   def handle_event("video:stop", _params, socket) do
-    Restream.stop(socket.assigns.video_guild_id)
+    Restream.stop(socket.assigns.video_guild_id, socket.assigns.video_user)
     socket
   end
 
@@ -83,7 +83,6 @@ defmodule BotchiniWeb.ScreenLive.Video do
 
   attr :video, :map, default: nil
   attr :error, :string, default: nil
-  attr :admin?, :boolean, default: false
 
   @doc """
   The menu as a button of the bar, which opens it above the bar. The button is
@@ -126,7 +125,6 @@ defmodule BotchiniWeb.ScreenLive.Video do
               </p>
             </div>
             <button
-              :if={@admin?}
               type="button"
               id="video-stop"
               phx-click="video:stop"
@@ -159,7 +157,7 @@ defmodule BotchiniWeb.ScreenLive.Video do
           <p class="text-xs text-gray-500">
             Shows a YouTube video or a YouTube or Twitch live stream as a screen, at the same
             moment for everyone on the page. Anyone can pause it or skip through a video from
-            its controls. One can be shown at a time, and it stops when the video ends.
+            its controls, or stop it here. One can be shown at a time, and it stops when the video ends.
           </p>
         </div>
       </div>

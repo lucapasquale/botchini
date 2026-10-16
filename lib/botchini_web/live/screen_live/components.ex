@@ -19,10 +19,9 @@ defmodule BotchiniWeb.ScreenLive.Components do
   screen, as clicking the picture is for drawing and a live stream has no timeline.
   The ScreenViewer hook runs them.
 
-  Videos from links only start once each viewer clicks play, so a page left open
-  doesn't play them on its own. Their pause button pauses them for everyone, and
-  videos get a timeline to skip through them, which the hook moves along from
-  where the server last said they were
+  The pause button of videos from links pauses them for everyone, and videos get
+  a timeline to skip through them, which the hook moves along from where the
+  server last said they were
   """
   def viewer(assigns) do
     assigns =
@@ -37,7 +36,7 @@ defmodule BotchiniWeb.ScreenLive.Components do
       id={"screen-viewer-#{@room.id}"}
       phx-hook="ScreenViewer"
       data-room-id={@room.id}
-      data-click-to-play={@room.source == :link}
+      data-from-link={@room.source == :link}
       data-video-status={@video && @video.status}
       data-video-position={@video && @video.position_ms}
       data-video-duration={@video && @video.duration_ms}
@@ -142,24 +141,6 @@ defmodule BotchiniWeb.ScreenLive.Components do
       >
         {if @video.status == :paused, do: "Paused by #{@video.paused_by}", else: "Loading..."}
       </span>
-
-      <%!-- Above the picture and its controls until clicked, when the hook hides it.
-        Small screens' own button stays above it, to watch them first --%>
-      <button
-        :if={@room.source == :link}
-        id={"screen-viewer-start-#{@room.id}"}
-        phx-update="ignore"
-        type="button"
-        data-video-start
-        data-pointer-menu
-        title="Play"
-        class="group/start absolute inset-0 grid place-items-center bg-black/60 text-white"
-      >
-        <span class="grid h-16 w-16 place-items-center rounded-full bg-black/70 transition group-hover/start:bg-indigo-500">
-          <span class="sr-only">Play</span>
-          <.bar_icon name={:play} class="scale-150" />
-        </span>
-      </button>
 
       <div
         :if={!@room.live?}

@@ -261,32 +261,18 @@ export const ScreenViewer = {
     this.status = this.el.querySelector("[data-screen-status]")
     this.handleEvent(`screen:${this.roomId}:ice_candidate`, candidate => this.connection?.addRemoteCandidate(candidate))
     this.handleEvent(`screen:${this.roomId}:ended`, () => this.teardown())
-    this.handleEvent(`screen:${this.roomId}:reconnect`, () => this.started && this.connect())
+    this.handleEvent(`screen:${this.roomId}:reconnect`, () => this.connect())
 
-    // Videos from links wait for a click, as they'd otherwise play on every open page.
-    // Pausing them pauses them for everyone, so the server says whether they are
-    this.fromLink = this.el.dataset.clickToPlay !== undefined
+    // Pausing videos from links pauses them for everyone, so the server says whether they are
+    this.fromLink = this.el.dataset.fromLink !== undefined
     this.mountControls()
     if (this.fromLink) this.mountTimeline()
-
-    this.started = !this.fromLink
-    if (this.started) this.connect()
-    else this.el.querySelector("[data-video-start]").addEventListener("click", () => this.start())
+    this.connect()
   },
 
   updated() {
     if (this.fromLink) this.syncVideo()
     this.renderControls()
-  },
-
-  // The click lets the browser play it with sound, which it only allows after one
-  start() {
-    this.started = true
-    this.el.querySelector("[data-video-start]").hidden = true
-    this.video.muted = false
-    this.video.volume = this.lastVolume
-    this.video.play().catch(() => {})
-    this.connect()
   },
 
   // Streams start muted, as browsers only autoplay those. The slider brings back
@@ -409,7 +395,7 @@ export const ScreenViewer = {
   },
 
   reconnected() {
-    if (this.started) this.connect()
+    this.connect()
   },
 
   destroyed() {

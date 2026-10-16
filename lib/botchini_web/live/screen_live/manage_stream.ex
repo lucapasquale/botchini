@@ -19,7 +19,7 @@ defmodule BotchiniWeb.ScreenLive.ManageStream do
     ]
 
   alias Botchini.Screens
-  alias Botchini.Screens.Room
+  alias Botchini.Screens.{ClientStats, Room}
   alias BotchiniWeb.Auth
 
   @doc """
@@ -30,7 +30,12 @@ defmodule BotchiniWeb.ScreenLive.ManageStream do
 
   @impl true
   def mount(params, _session, socket) do
-    socket = assign(socket, page_title: "Share your screen", user: socket.assigns.current_user)
+    socket =
+      assign(socket,
+        page_title: "Share your screen",
+        user: socket.assigns.current_user,
+        stats_reported_at: %{}
+      )
 
     # Discord is only asked once connected, instead of for both renders
     with true <- connected?(socket),
@@ -206,6 +211,22 @@ defmodule BotchiniWeb.ScreenLive.ManageStream do
   end
 
   def handle_event("ice_candidate", _candidate, socket), do: {:noreply, socket}
+
+  # How the screen comes through to the server, for the metrics
+  def handle_event("broadcast_stats", params, %{assigns: %{room: %Room{} = room}} = socket) do
+    now = System.monotonic_time(:millisecond)
+
+    case ClientStats.due(socket.assigns.stats_reported_at, room.id, now) do
+      {:ok, reported_at} ->
+        ClientStats.broadcaster(room.source, params)
+        {:noreply, assign(socket, stats_reported_at: reported_at)}
+
+      :too_soon ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("broadcast_stats", _params, socket), do: {:noreply, socket}
 
   def handle_event("title", %{"title" => title}, %{assigns: %{room: %Room{} = room}} = socket)
       when is_binary(title) do

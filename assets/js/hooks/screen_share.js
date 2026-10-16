@@ -9,10 +9,10 @@ const MAX_FRAMERATE = 60
 // makes the first seconds blurry, so Chrome and Edge are told to start higher
 const START_BITRATE_KBPS = 10_000
 const RETRY_DELAY_MS = 2_000
-// What videos from links send too, enough for music
+// Stereo Opus at this bitrate is enough for music
 const AUDIO_BITRATE = 128_000
-// How often the timeline of a video from a link moves along
-const TIMELINE_TICK_MS = 250
+// How often pages tell the server how their connection is doing, for its metrics
+const STATS_INTERVAL_MS = 10_000
 
 class Connection {
   constructor(hook, onConnectionState, params = {}) {
@@ -91,6 +91,67 @@ function withStartBitrate({type, sdp}, kbps) {
   return {type, sdp}
 }
 
+// WebRTC's stats count up from the start, so reports take the difference with
+// the previous ones. Values a browser doesn't have are left out
+function rtpStats(report, type) {
+  const stats = {}
+  report.forEach(entry => {
+    if (entry.type === type && (entry.kind === "video" || entry.kind === "audio")) stats[entry.kind] = entry
+  })
+  return stats
+}
+
+const change = (now, before, key) => (now[key] ?? 0) - (before[key] ?? 0)
+const percent = (part, whole) => (whole > 0 ? (Math.max(part, 0) / whole) * 100 : undefined)
+const seconds = (now, before) => (now && before ? (now.timestamp - before.timestamp) / 1000 : 0)
+
+function receivedVideo(now, before) {
+  const elapsed = seconds(now, before)
+  if (elapsed <= 0) return undefined
+
+  const [decoded, dropped] = [change(now, before, "framesDecoded"), change(now, before, "framesDropped")]
+  const [received, lost] = [change(now, before, "packetsReceived"), change(now, before, "packetsLost")]
+  const emitted = change(now, before, "jitterBufferEmittedCount")
+
+  return {
+    kbps: (change(now, before, "bytesReceived") * 8) / 1000 / elapsed,
+    fps: now.framesPerSecond ?? decoded / elapsed,
+    height: now.frameHeight,
+    frames_dropped_percent: percent(dropped, decoded + dropped),
+    freezes: now.freezeCount === undefined ? undefined : change(now, before, "freezeCount"),
+    packet_loss_percent: percent(lost, received + Math.max(lost, 0)),
+    jitter_ms: now.jitter * 1000,
+    jitter_buffer_ms: emitted > 0 ? (change(now, before, "jitterBufferDelay") / emitted) * 1000 : undefined
+  }
+}
+
+function receivedAudio(report, now, before) {
+  const elapsed = seconds(now, before)
+  if (elapsed <= 0) return undefined
+
+  const [received, lost] = [change(now, before, "packetsReceived"), change(now, before, "packetsLost")]
+  const fmtp = report.get(now.codecId)?.sdpFmtpLine ?? ""
+
+  return {
+    kbps: (change(now, before, "bytesReceived") * 8) / 1000 / elapsed,
+    packet_loss_percent: percent(lost, received + Math.max(lost, 0)),
+    concealed_percent: percent(change(now, before, "concealedSamples"), change(now, before, "totalSamplesReceived")),
+    jitter_ms: now.jitter * 1000,
+    stereo: /(^|;)\s*stereo=1/.test(fmtp)
+  }
+}
+
+function sent(now, before) {
+  const elapsed = seconds(now, before)
+  if (elapsed <= 0) return undefined
+
+  return {
+    kbps: (change(now, before, "bytesSent") * 8) / 1000 / elapsed,
+    fps: now.framesPerSecond,
+    height: now.frameHeight
+  }
+}
+
 export const ScreenBroadcast = {
   mounted() {
     this.stream = null
@@ -108,6 +169,32 @@ export const ScreenBroadcast = {
 
     this.handleEvent("screen:ice_candidate", candidate => this.connection?.addRemoteCandidate(candidate))
     this.handleEvent("screen:ended", () => this.teardown())
+    this.statsTimer = setInterval(() => this.reportStats(), STATS_INTERVAL_MS)
+  },
+
+  // What the browser sends, and why it's holding back quality, if it is
+  async reportStats() {
+    const pc = this.connection?.pc
+    if (pc?.connectionState !== "connected") return
+
+    const report = await pc.getStats()
+    const now = rtpStats(report, "outbound-rtp")
+    const before = this.lastStats?.pc === pc ? this.lastStats : null
+    this.lastStats = {pc, ...now}
+    if (!before) return
+
+    const remote = rtpStats(report, "remote-inbound-rtp").video
+    const video = now.video && before.video ? sent(now.video, before.video) : undefined
+
+    this.pushEvent("broadcast_stats", {
+      video: video && {
+        ...video,
+        rtt_ms: remote?.roundTripTime === undefined ? undefined : remote.roundTripTime * 1000,
+        packet_loss_percent: remote?.fractionLost === undefined ? undefined : remote.fractionLost * 100
+      },
+      audio: now.audio && before.audio ? sent(now.audio, before.audio) : undefined,
+      quality_limitation: now.video?.qualityLimitationReason
+    })
   },
 
   // The new LiveView process doesn't know about the old connection, and the room
@@ -117,6 +204,7 @@ export const ScreenBroadcast = {
   },
 
   destroyed() {
+    clearInterval(this.statsTimer)
     this.teardown()
   },
 
@@ -281,17 +369,27 @@ export const ScreenViewer = {
     this.handleEvent(`screen:${this.roomId}:ice_candidate`, candidate => this.connection?.addRemoteCandidate(candidate))
     this.handleEvent(`screen:${this.roomId}:ended`, () => this.teardown())
     this.handleEvent(`screen:${this.roomId}:reconnect`, () => this.connect())
-
-    // Pausing videos from links pauses them for everyone, so the server says whether they are
-    this.fromLink = this.el.dataset.fromLink !== undefined
     this.mountControls()
-    if (this.fromLink) this.mountTimeline()
     this.connect()
+    this.statsTimer = setInterval(() => this.reportStats(), STATS_INTERVAL_MS)
   },
 
-  updated() {
-    if (this.fromLink) this.syncVideo()
-    this.renderControls()
+  // How the screen comes through: smooth, lossy, frozen, stereo...
+  async reportStats() {
+    const pc = this.connection?.pc
+    if (pc?.connectionState !== "connected") return
+
+    const report = await pc.getStats()
+    const now = rtpStats(report, "inbound-rtp")
+    const before = this.lastStats?.pc === pc ? this.lastStats : null
+    this.lastStats = {pc, ...now}
+    if (!before) return
+
+    this.pushEvent("viewer_stats", {
+      room_id: this.roomId,
+      video: now.video && before.video ? receivedVideo(now.video, before.video) : undefined,
+      audio: now.audio && before.audio ? receivedAudio(report, now.audio, before.audio) : undefined
+    })
   },
 
   // Streams start muted, as browsers only autoplay those. The slider brings back
@@ -305,8 +403,7 @@ export const ScreenViewer = {
     this.lastVolume = 1
 
     this.playButton.addEventListener("click", () => {
-      if (this.fromLink) this.pushEvent(this.isPaused() ? "video:resume" : "video:pause", {})
-      else if (this.video.paused) this.video.play().catch(() => {})
+      if (this.video.paused) this.video.play().catch(() => {})
       else this.video.pause()
     })
 
@@ -339,68 +436,12 @@ export const ScreenViewer = {
     this.renderControls()
   },
 
-  // Videos keep going between the server's updates, which say where they were
-  mountTimeline() {
-    this.timeLabel = this.controls.querySelector("[data-video-time]")
-    this.seekInput = this.controls.querySelector("[data-video-seek]")
-    this.seeking = false
-
-    this.seekInput.addEventListener("input", () => {
-      this.seeking = true
-      this.renderTimeline()
-    })
-    // Moved along from there until the server says where it is
-    this.seekInput.addEventListener("change", () => {
-      this.seeking = false
-      this.videoPosition = Number(this.seekInput.value)
-      this.videoSyncedAt = performance.now()
-      this.pushEvent("video:seek", {position_ms: Math.round(this.videoPosition)})
-    })
-
-    this.syncVideo()
-    this.renderControls()
-    this.timelineTimer = setInterval(() => this.renderTimeline(), TIMELINE_TICK_MS)
-  },
-
-  // The page updates for other reasons too, which leave these as they were
-  syncVideo() {
-    const {videoStatus: status, videoPosition: position, videoDuration: duration} = this.el.dataset
-    if (status === this.videoStatus && position === this.videoPositionSent) return
-
-    this.videoStatus = status
-    this.videoPositionSent = position
-    this.videoPosition = Number(position ?? 0)
-    this.videoDuration = Number(duration ?? 0)
-    this.videoSyncedAt = performance.now()
-    this.renderTimeline()
-  },
-
-  currentPosition() {
-    const elapsed = this.videoStatus === "live" ? performance.now() - this.videoSyncedAt : 0
-    return Math.min(this.videoPosition + elapsed, this.videoDuration)
-  },
-
-  renderTimeline() {
-    const video = this.videoDuration > 0
-    this.timeLabel.hidden = !video
-    this.seekInput.hidden = !video
-    if (!video) return
-
-    if (!this.seeking) this.seekInput.value = this.currentPosition()
-    this.seekInput.max = this.videoDuration
-    this.timeLabel.textContent = `${formatTime(Number(this.seekInput.value))} / ${formatTime(this.videoDuration)}`
-  },
-
   isMuted() {
     return this.video.muted || this.video.volume === 0
   },
 
-  isPaused() {
-    return this.fromLink ? this.videoStatus === "paused" : this.video.paused
-  },
-
   renderControls() {
-    const paused = this.isPaused()
+    const paused = this.video.paused
     const muted = this.isMuted()
     const fullscreen = document.fullscreenElement === this.el
 
@@ -418,7 +459,7 @@ export const ScreenViewer = {
   },
 
   destroyed() {
-    clearInterval(this.timelineTimer)
+    clearInterval(this.statsTimer)
     this.teardown()
   },
 
@@ -465,12 +506,4 @@ export const ScreenViewer = {
     this.connection = null
     this.video.srcObject = null
   }
-}
-
-// 1:05, or 1:02:05 for videos an hour or longer
-function formatTime(ms) {
-  const seconds = Math.floor(ms / 1000)
-  const [hours, minutes] = [Math.floor(seconds / 3600), Math.floor((seconds % 3600) / 60)]
-  const rest = String(seconds % 60).padStart(2, "0")
-  return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${rest}` : `${minutes}:${rest}`
 }

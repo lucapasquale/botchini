@@ -6,9 +6,6 @@ defmodule Botchini.Screens.Room do
   The room owns every PeerConnection, so the LiveViews only relay signaling
   between the browsers and this process. Each LiveView talks to the room with
   its own pid, and is monitored so closing the tab drops its connection.
-
-  A process on the server can broadcast too, sending RTP packets it makes itself,
-  like a `Botchini.Screens.Restream` showing a video from a link.
   """
 
   use GenServer, restart: :temporary
@@ -36,7 +33,7 @@ defmodule Botchini.Screens.Room do
           custom_title?: boolean()
         }
 
-  @type source :: :screen | :window | :tab | :obs | :link
+  @type source :: :screen | :window | :tab | :obs
 
   @enforce_keys [:id, :title, :guild_id, :channel_id, :owner_id, :owner_name]
   defstruct @enforce_keys ++
@@ -60,26 +57,6 @@ defmodule Botchini.Screens.Room do
   """
   @spec publish(String.t(), map()) :: {:ok, map()} | {:error, term()}
   def publish(room_id, offer), do: call(room_id, {:publish, self(), offer})
-
-  @doc """
-  Connects the calling process as the broadcaster, which sends its packets with
-  `send_rtp/3`. The room goes live right away, so it's called once packets are
-  coming. Video must be H.264 with its SPS and PPS before every keyframe, as the
-  room can't ask this broadcaster for a keyframe when viewers join.
-
-  The broadcaster calls it again when its packets start over, like after a
-  pause, for viewers to keep playing them
-  """
-  @spec publish_rtp(String.t()) :: :ok | {:error, :not_found}
-  def publish_rtp(room_id), do: call(room_id, {:publish_rtp, self()})
-
-  @doc """
-  Forwards a packet of the calling process to the viewers, once it's the broadcaster
-  """
-  @spec send_rtp(String.t(), :video | :audio, ExRTP.Packet.t()) :: :ok
-  def send_rtp(room_id, kind, packet) when kind in [:video, :audio] do
-    GenServer.cast(via(room_id), {:rtp, self(), kind, packet})
-  end
 
   @spec publish_whip(String.t(), String.t()) :: {:ok, String.t(), String.t()} | {:error, term()}
   def publish_whip(room_id, sdp) when is_binary(sdp), do: call(room_id, {:publish_whip, sdp})
@@ -112,21 +89,14 @@ defmodule Botchini.Screens.Room do
   def default_title(owner_name, :tab), do: "#{owner_name}'s tab"
   def default_title(owner_name, :window), do: "#{owner_name}'s window"
   def default_title(owner_name, :obs), do: "#{owner_name}'s stream"
-  def default_title(owner_name, :link), do: "#{owner_name}'s video"
   def default_title(owner_name, _source), do: "#{owner_name}'s screen"
 
   @spec info(String.t()) :: {:ok, t()} | {:error, :not_found}
   def info(room_id), do: call(room_id, :info)
 
-  @spec whereis(String.t()) :: pid() | nil
-  def whereis(room_id), do: GenServer.whereis(via(room_id))
-
-  @doc """
-  Ends the room. The activity says why, from the reason or the detail given
-  """
-  @spec stop(String.t(), atom(), String.t() | nil) :: :ok | {:error, :not_found}
-  def stop(room_id, reason, detail \\ nil) do
-    case call(room_id, {:stop, reason, detail}) do
+  @spec stop(String.t(), atom()) :: :ok | {:error, :not_found}
+  def stop(room_id, reason) do
+    case call(room_id, {:stop, reason}) do
       {:error, :not_found} -> {:error, :not_found}
       _ -> :ok
     end
@@ -138,11 +108,6 @@ defmodule Botchini.Screens.Room do
     :exit, {:noproc, _} -> {:error, :not_found}
     :exit, {:normal, _} -> {:error, :not_found}
   end
-
-  # Rooms showing a link aren't their owner's own stream, so they don't count as
-  # the one room an owner has per guild
-  defp via(%__MODULE__{source: :link} = room),
-    do: {:via, Registry, {Screens.Registry, room.id, {room.guild_id, :link}}}
 
   defp via(%__MODULE__{} = room),
     do: {:via, Registry, {Screens.Registry, room.id, {room.guild_id, room.owner_id}}}
@@ -188,8 +153,7 @@ defmodule Botchini.Screens.Room do
         last_keyframe_request: nil,
         idle_timer: nil,
         peak_viewers: 0,
-        end_reason: :shutdown,
-        end_detail: nil
+        end_reason: :shutdown
       }
       |> schedule_idle_timeout(config[:start_timeout_ms])
 
@@ -219,8 +183,8 @@ defmodule Botchini.Screens.Room do
     {:reply, :ok, rename(state, source_changes(state.room, source))}
   end
 
-  def handle_call({:stop, reason, detail}, _from, state) do
-    {:stop, :normal, :ok, %{state | end_reason: reason, end_detail: detail}}
+  def handle_call({:stop, reason}, _from, state) do
+    {:stop, :normal, :ok, %{state | end_reason: reason}}
   end
 
   def handle_call({:publish, lv, offer}, _from, state) do
@@ -243,25 +207,6 @@ defmodule Botchini.Screens.Room do
         Logger.warning("Failed to connect screen broadcaster", reason: inspect(reason))
         {:reply, {:error, reason}, state}
     end
-  end
-
-  # Its new packets take on where the last ones left off
-  def handle_call({:publish_rtp, pid}, _from, %{publisher: pid} = state),
-    do: {:reply, :ok, use_codec(state, :h264)}
-
-  # The broadcaster is linked, standing in for its PeerConnection
-  def handle_call({:publish_rtp, pid}, _from, state) do
-    state = drop_publisher(state)
-    Process.link(pid)
-    peer = Map.put(new_peer(:publisher, nil, %{}), :internal?, true)
-
-    state =
-      state
-      |> put_peer(pid, peer)
-      |> Map.put(:publisher, pid)
-      |> use_codec(:h264)
-
-    {:reply, :ok, handle_peer_event({:connection_state_change, :connected}, pid, peer, state)}
   end
 
   def handle_call({:publish_whip, sdp}, from, state) do
@@ -314,12 +259,6 @@ defmodule Botchini.Screens.Room do
     {:noreply, state}
   end
 
-  def handle_cast({:rtp, pid, kind, packet}, %{publisher: pid} = state),
-    do: {:noreply, forward_rtp(state, kind, packet)}
-
-  # Late packets from a broadcaster that was replaced
-  def handle_cast({:rtp, _pid, _kind, _packet}, state), do: {:noreply, state}
-
   @impl true
   def handle_info({:ex_webrtc, pc, event}, state) do
     case Map.fetch(state.peers, pc) do
@@ -357,7 +296,7 @@ defmodule Botchini.Screens.Room do
 
   @impl true
   def terminate(_reason, state) do
-    Enum.each(state.peers, fn {pc, peer} -> stop_peer(pc, peer) end)
+    Enum.each(Map.keys(state.peers), &stop_peer_connection/1)
 
     room = %{state.room | live?: false, viewer_count: 0}
     Screens.broadcast(room, :ended)
@@ -368,7 +307,7 @@ defmodule Botchini.Screens.Room do
         room.guild_id,
         :stream_ended,
         room.owner_name,
-        state.end_detail || ended_detail(state.end_reason)
+        ended_detail(state.end_reason)
       )
     end
 
@@ -389,13 +328,7 @@ defmodule Botchini.Screens.Room do
     Logger.info("Screen room ended", event: "screen_room_ended", reason: state.end_reason)
   end
 
-  # Videos from links say what's being shown, as it isn't their owner's screen
-  defp started_detail(%{source: :link, title: title}), do: title
-  defp started_detail(_room), do: nil
-
   defp ended_detail(:closed_by_admin), do: "closed by an admin"
-  defp ended_detail(:finished), do: "the video ended"
-  defp ended_detail(:link_failed), do: "the video stopped loading"
   defp ended_detail(_reason), do: nil
 
   ## Peer events
@@ -437,14 +370,8 @@ defmodule Botchini.Screens.Room do
         event = if state.went_live?, do: :updated, else: :live
         log_broadcaster_connected(event)
 
-        if event == :live do
-          Activity.record(
-            state.room.guild_id,
-            :stream_started,
-            state.room.owner_name,
-            started_detail(state.room)
-          )
-        end
+        if event == :live,
+          do: Activity.record(state.room.guild_id, :stream_started, state.room.owner_name)
 
         %{state | went_live?: true}
         |> cancel_idle_timeout()
@@ -656,7 +583,7 @@ defmodule Botchini.Screens.Room do
   defp remove_peer(state, pc, opts \\ []) do
     {peer, peers} = Map.pop(state.peers, pc)
     if peer.lv_ref, do: Process.demonitor(peer.lv_ref, [:flush])
-    if Keyword.get(opts, :stop_pc, true), do: stop_peer(pc, peer)
+    if Keyword.get(opts, :stop_pc, true), do: stop_peer_connection(pc)
 
     {waiting, whip_answers} = Map.pop(state.whip_answers, pc)
     if waiting, do: GenServer.reply(waiting, {:error, :closed})
@@ -688,8 +615,6 @@ defmodule Botchini.Screens.Room do
     end
   end
 
-  # Broadcasters on the server don't come back, they end the room when they're done
-  defp reconnect_timeout(_config, %{internal?: true}), do: 0
   # Only browser broadcasters have a page, OBS ones connect over WHIP
   defp reconnect_timeout(config, %{lv: nil}), do: config[:reconnect_timeout_ms]
   defp reconnect_timeout(config, _browser), do: config[:tab_reconnect_timeout_ms]
@@ -727,11 +652,6 @@ defmodule Botchini.Screens.Room do
     do: %{source: source, title: default_title(room.owner_name, source)}
 
   defp random_id, do: 16 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
-
-  # Broadcasters on the server watch the room and stop with it, and stopping one
-  # here could wait on it while it's sending to the room
-  defp stop_peer(pid, %{internal?: true}), do: Process.unlink(pid)
-  defp stop_peer(pc, _peer), do: stop_peer_connection(pc)
 
   defp stop_peer_connection(pc) do
     Process.unlink(pc)

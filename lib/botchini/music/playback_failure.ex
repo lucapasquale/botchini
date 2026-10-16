@@ -26,7 +26,7 @@ defmodule Botchini.Music.PlaybackFailure do
     rate_limited: ["HTTP Error 429"],
     unavailable: ["unavailable", "Private video", "removed", "HTTP Error 404"],
     unsupported_url: ["Unsupported URL"],
-    stream_offline: ["No playable streams", "not currently live"]
+    stream_offline: ["No playable streams"]
   ]
 
   @doc """

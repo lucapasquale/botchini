@@ -3,8 +3,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   Page where members watch the screens being shared in a guild. One screen takes
   most of the page, or several pinned ones share it, with the chat floating over
   them. The others wait in a strip below, next to the bar with the soundboard, the
-  music, the pointer and the chat's switch. Anyone can show a video from a link
-  there too, which everyone watches like a screen share
+  music, the pointer and the chat's switch
   """
 
   use BotchiniWeb, :live_view
@@ -12,9 +11,9 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   import BotchiniWeb.ScreenLive.Components
 
   alias Botchini.Screens
-  alias Botchini.Screens.Room
+  alias Botchini.Screens.{ClientStats, Room}
   alias BotchiniWeb.Auth
-  alias BotchiniWeb.ScreenLive.{Ads, Chat, Music, Pointers, Soundboard, Video}
+  alias BotchiniWeb.ScreenLive.{Ads, Chat, Music, Pointers, Soundboard}
 
   @doc """
   Link to this page for a guild. Anyone can know it, as only the guild's
@@ -32,7 +31,8 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         pinned: [],
         online: [],
         admin?: false,
-        full_width?: true
+        full_width?: true,
+        stats_reported_at: %{}
       )
 
     # Discord is only asked once connected, instead of for both renders
@@ -59,7 +59,6 @@ defmodule BotchiniWeb.ScreenLive.Guild do
        |> Chat.mount(guild_id, socket.assigns.current_user)
        |> Soundboard.mount(guild_id, socket.assigns.current_user)
        |> Music.mount(guild_id, socket.assigns.current_user)
-       |> Video.mount(guild_id, socket.assigns.current_user)
        |> Pointers.mount(guild_id, socket.assigns.current_user)}
     else
       false -> {:ok, assign(socket, status: :connecting)}
@@ -142,7 +141,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         class={["group min-w-0", tile_class(room in @big)]}
         style={tile_style(room, @big, @layout)}
       >
-        <.viewer room={room} controls?={room in @big} video={@video}>
+        <.viewer room={room} controls?={room in @big}>
           <span
             :if={@main == nil and room in @big}
             class="pointer-events-none absolute left-1.5 top-1.5 z-10 max-w-[calc(100%_-_5rem)] truncate rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white"
@@ -159,17 +158,17 @@ defmodule BotchiniWeb.ScreenLive.Guild do
             class="absolute inset-0 z-10 flex items-end rounded-lg p-1.5 text-left ring-indigo-400 transition hover:ring-2"
           >
             <span class="max-w-full truncate rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white">
-              {if room.source == :link, do: room.title, else: room.owner_name}
+              {room.owner_name}
             </span>
           </button>
 
           <div
-            :if={@admin? or room.source == :link or room != @main}
+            :if={@admin? or room != @main}
             class="absolute right-1.5 top-1.5 z-20 flex gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
           >
             <.pin_button :if={room != @main} room={room} pinned?={room in @big} />
             <.close_button
-              :if={@admin? or room.source == :link}
+              :if={@admin?}
               room_id={room.id}
               class="bg-black/60 text-gray-200 hover:bg-red-600 hover:text-white"
             />
@@ -215,7 +214,6 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         />
         <Music.menu state={@music} error={@music_error} admin?={@admin?} />
         <Soundboard.pointer_menu page_key={"guild:#{@guild_id}"} />
-        <Video.menu video={@video} error={@video_error} />
         <Ads.admin_menu :if={@admin?} mode={@ads_mode} ad_id={@ads_ad_id} />
         <span class="mx-0.5 h-6 w-px bg-gray-700" aria-hidden="true"></span>
         <Chat.toggle_button open?={@chat_open?} unread={@chat_unread} />
@@ -325,14 +323,15 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     end
   end
 
-  # Anyone stops a video from a link, like from its menu, while other screens are
-  # for admins, whose rights are checked again as they can lose them while the
-  # page is open
+  # Admins' rights are checked again, as they can lose them while the page is open
   def handle_event("close", %{"room_id" => room_id}, socket) do
-    case Enum.find(socket.assigns.rooms, &(&1.id == room_id)) do
-      %Room{source: :link} -> {:noreply, Video.handle_event("video:stop", %{}, socket)}
-      %Room{} = room -> as_admin(socket, &close_room(&1, room))
-      nil -> {:noreply, socket}
+    with %Room{} = room <- Enum.find(socket.assigns.rooms, &(&1.id == room_id)),
+         :admin <- Auth.member_status(socket, room.guild_id) do
+      Screens.stop_room(room, :closed_by_admin)
+      {:noreply, socket}
+    else
+      status when status in [:member, :not_member] -> {:noreply, assign(socket, admin?: false)}
+      _unknown_room_or_error -> {:noreply, socket}
     end
   end
 
@@ -350,10 +349,6 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   def handle_event("music:remove", params, socket),
     do: as_admin(socket, &Music.remove(&1, params))
 
-  # Anyone can show, pause, skip through and stop a video
-  def handle_event("video:" <> _action = event, params, socket),
-    do: {:noreply, Video.handle_event(event, params, socket)}
-
   def handle_event("offer", %{"room_id" => room_id} = offer, socket) do
     with true <- watching?(socket, room_id),
          {:ok, answer} <- Room.watch(room_id, Map.delete(offer, "room_id")) do
@@ -361,6 +356,19 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     else
       {:error, :full} -> {:reply, %{error: "This screen share is full"}, socket}
       _error -> {:reply, %{error: "Couldn't connect to the screen share"}, socket}
+    end
+  end
+
+  # How the screens come through to this page, for the metrics
+  def handle_event("viewer_stats", %{"room_id" => room_id} = params, socket) do
+    now = System.monotonic_time(:millisecond)
+
+    with %Room{} = room <- Enum.find(socket.assigns.rooms, &(&1.id == room_id)),
+         {:ok, reported_at} <- ClientStats.due(socket.assigns.stats_reported_at, room_id, now) do
+      ClientStats.viewer(room.source, params)
+      {:noreply, assign(socket, stats_reported_at: reported_at)}
+    else
+      _unknown_room_or_too_soon -> {:noreply, socket}
     end
   end
 
@@ -402,9 +410,6 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   def handle_info({:music, message}, socket),
     do: {:noreply, Music.handle_info(message, socket)}
 
-  def handle_info({:restream, message}, socket),
-    do: {:noreply, Video.handle_info(message, socket)}
-
   def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, socket) do
     {:noreply, assign(socket, online: Screens.list_online(socket.assigns.guild_id))}
   end
@@ -433,11 +438,6 @@ defmodule BotchiniWeb.ScreenLive.Guild do
      |> assign_sharing()}
   end
 
-  defp close_room(socket, room) do
-    Screens.stop_room(room, :closed_by_admin)
-    socket
-  end
-
   # Checked again like closing a screen share
   defp as_admin(socket, fun) do
     case Auth.member_status(socket, socket.assigns.guild_id) do
@@ -447,20 +447,16 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     end
   end
 
-  # Marks the header's share link live, for the layout to show. Videos from
-  # links aren't the admin's own stream
+  # Marks the header's share link live, for the layout to show
   defp assign_sharing(socket) do
     user_id = socket.assigns.current_user.id
-
-    assign(socket,
-      sharing?: Enum.any?(socket.assigns.rooms, &(&1.owner_id == user_id and &1.source != :link))
-    )
+    assign(socket, sharing?: Enum.any?(socket.assigns.rooms, &(&1.owner_id == user_id)))
   end
 
   # Streamers hear their viewers come and go here too, which is the only place
   # they can hear it when streaming from OBS
   defp chime_for_owner(socket, room) do
-    with true <- room.owner_id == socket.assigns.current_user.id and room.source != :link,
+    with true <- room.owner_id == socket.assigns.current_user.id,
          %Room{} = before <- Enum.find(socket.assigns.rooms, &(&1.id == room.id)) do
       push_viewer_chime(socket, before.viewer_count, room.viewer_count)
     else

@@ -15,8 +15,6 @@ defmodule Botchini.Music.YtDlp do
     "youtu.be"
   ]
 
-  @twitch_hosts ["twitch.tv", "www.twitch.tv", "m.twitch.tv"]
-
   @max_filesize "100M"
 
   @type video :: %{
@@ -26,19 +24,6 @@ defmodule Botchini.Music.YtDlp do
           thumbnail: String.t(),
           duration_ms: pos_integer() | nil,
           channel: String.t() | nil
-        }
-
-  @typedoc """
-  A video or live stream to show on a guild's page. Live streams have no duration.
-  The media are the links of the format asked for, one with both video and audio
-  or the video's and then the audio's, which stay valid for a few hours
-  """
-  @type stream :: %{
-          title: String.t(),
-          url: String.t(),
-          live?: boolean(),
-          duration_ms: pos_integer() | nil,
-          media: [String.t()]
         }
 
   @type reason :: PlaybackFailure.reason() | :not_found | :too_big
@@ -97,48 +82,8 @@ defmodule Botchini.Music.YtDlp do
     end
   end
 
-  @doc """
-  Finds the video or live stream a YouTube or Twitch link points to, to show it
-  on a guild's page, with the links of its media in `format`. Twitch channels are
-  only found while they're live
-  """
-  @spec lookup_stream(String.t(), String.t()) :: {:ok, stream()} | {:error, reason()}
-  def lookup_stream(url, format) do
-    with true <- stream_url?(url) || {:error, :unsupported_url},
-         {:ok, output} <-
-           run([
-             "--no-playlist",
-             "--playlist-items",
-             "1",
-             "--format",
-             format,
-             "--print",
-             "%(.{title,is_live,webpage_url,duration})j",
-             "--print",
-             "urls",
-             "--",
-             url
-           ]) do
-      lines = String.split(output, "\n", trim: true)
-      media = Enum.filter(lines, &String.starts_with?(&1, ["https://", "http://"]))
-
-      lines
-      |> Enum.find(&String.starts_with?(&1, "{"))
-      |> parse_stream(url, media)
-    end
-  end
-
   @spec youtube_url?(String.t()) :: boolean()
   def youtube_url?(term), do: URI.parse(term).host in @youtube_hosts
-
-  @doc """
-  Whether the link is one `lookup_stream/1` takes: YouTube or Twitch, over HTTP(S)
-  """
-  @spec stream_url?(String.t()) :: boolean()
-  def stream_url?(term) do
-    uri = URI.parse(term)
-    uri.scheme in ["http", "https"] and uri.host in (@youtube_hosts ++ @twitch_hosts)
-  end
 
   defp target(term) do
     cond do
@@ -165,26 +110,6 @@ defmodule Botchini.Music.YtDlp do
        }}
     else
       _not_a_video -> {:error, :not_found}
-    end
-  end
-
-  defp parse_stream(nil, _url, _media), do: {:error, :not_found}
-  defp parse_stream(_line, _url, []), do: {:error, :not_found}
-
-  defp parse_stream(line, url, media) do
-    case Jason.decode(line) do
-      {:ok, %{"title" => title} = stream} when is_binary(title) ->
-        {:ok,
-         %{
-           title: title,
-           url: if(is_binary(stream["webpage_url"]), do: stream["webpage_url"], else: url),
-           live?: stream["is_live"] == true,
-           duration_ms: if(stream["is_live"] != true, do: duration_ms(stream["duration"])),
-           media: media
-         }}
-
-      _not_a_video ->
-        {:error, :not_found}
     end
   end
 

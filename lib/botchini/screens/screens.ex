@@ -61,19 +61,6 @@ defmodule Botchini.Screens do
     end
   end
 
-  @doc """
-  Starts a room showing a video from a link, which `Botchini.Screens.Restream`
-  broadcasts. It doesn't count as the owner's own room, so they can still share
-  their screen
-  """
-  @spec start_link_room(start_attrs()) :: {:ok, Room.t()} | {:error, term()}
-  def start_link_room(attrs) do
-    room = struct!(Room, attrs |> Map.put(:id, random_id()) |> Map.put(:source, :link))
-
-    with {:ok, _pid} <- DynamicSupervisor.start_child(RoomSupervisor, {Room, room}),
-         do: Room.info(room.id)
-  end
-
   @spec get_room(String.t()) :: Room.t() | nil
   def get_room(room_id) when is_binary(room_id) do
     case Room.info(room_id) do

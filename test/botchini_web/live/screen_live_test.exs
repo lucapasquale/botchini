@@ -365,6 +365,21 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       refute has_element?(view, ".hidden > #{controls}")
     end
 
+    test "only plays videos from links once clicked", %{conn: conn, room: room} do
+      link = %{room | id: "link", title: "Zoo", source: :link, started_at: DateTime.utc_now()}
+
+      {:ok, view, _html} = live_guild(conn, "1")
+      Screens.broadcast(%{room | live?: true}, :live)
+      Screens.broadcast(%{link | live?: true}, :live)
+
+      assert has_element?(view, "#screen-viewer-link[data-click-to-play]")
+      assert has_element?(view, "#screen-viewer-link #screen-viewer-start-link[data-video-start]")
+
+      # Screen shares still start on their own
+      refute has_element?(view, "#screen-viewer-#{room.id}[data-click-to-play]")
+      refute has_element?(view, "#screen-viewer-#{room.id} [data-video-start]")
+    end
+
     test "goes back to the first screen when the watched one ends", %{conn: conn, room: room} do
       other = %{room | id: "other", title: "Hades", started_at: DateTime.utc_now()}
       {:ok, view, _html} = live_guild(conn, "1")

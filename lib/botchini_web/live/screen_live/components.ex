@@ -16,7 +16,10 @@ defmodule BotchiniWeb.ScreenLive.Components do
   @doc """
   Screen being watched. Its controls only pause, change the volume and go full
   screen, as clicking the picture is for drawing and a live stream has no timeline.
-  The ScreenViewer hook runs them
+  The ScreenViewer hook runs them.
+
+  Videos from links only start once each viewer clicks play, so a page left open
+  doesn't play them on its own
   """
   def viewer(assigns) do
     ~H"""
@@ -24,6 +27,7 @@ defmodule BotchiniWeb.ScreenLive.Components do
       id={"screen-viewer-#{@room.id}"}
       phx-hook="ScreenViewer"
       data-room-id={@room.id}
+      data-click-to-play={@room.source == :link}
       data-ice-servers={ice_servers_json()}
       class="group/viewer relative aspect-video w-full overflow-hidden rounded-lg bg-black"
     >
@@ -97,6 +101,24 @@ defmodule BotchiniWeb.ScreenLive.Components do
         video's controls stay reachable below --%>
       <div data-pointer-shield class="absolute inset-x-0 top-0 bottom-12 hidden" aria-hidden="true">
       </div>
+
+      <%!-- Above the picture and its controls until clicked, when the hook hides it.
+        Small screens' own button stays above it, to watch them first --%>
+      <button
+        :if={@room.source == :link}
+        id={"screen-viewer-start-#{@room.id}"}
+        phx-update="ignore"
+        type="button"
+        data-video-start
+        data-pointer-menu
+        title="Play"
+        class="group/start absolute inset-0 grid place-items-center bg-black/60 text-white"
+      >
+        <span class="grid h-16 w-16 place-items-center rounded-full bg-black/70 transition group-hover/start:bg-indigo-500">
+          <span class="sr-only">Play</span>
+          <.bar_icon name={:play} class="scale-150" />
+        </span>
+      </button>
 
       <div
         :if={!@room.live?}

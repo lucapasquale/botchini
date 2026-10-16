@@ -3,7 +3,8 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   Page where members watch the screens being shared in a guild. One screen takes
   most of the page, or several pinned ones share it, with the chat floating over
   them. The others wait in a strip below, next to the bar with the soundboard, the
-  music, the pointer and the chat's switch
+  music, the pointer and the chat's switch. Admins can show a video from a link
+  there too, which everyone watches like a screen share
   """
 
   use BotchiniWeb, :live_view
@@ -13,7 +14,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   alias Botchini.Screens
   alias Botchini.Screens.Room
   alias BotchiniWeb.Auth
-  alias BotchiniWeb.ScreenLive.{Ads, Chat, Music, Pointers, Soundboard}
+  alias BotchiniWeb.ScreenLive.{Ads, Chat, Music, Pointers, Soundboard, Video}
 
   @doc """
   Link to this page for a guild. Anyone can know it, as only the guild's
@@ -58,6 +59,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
        |> Chat.mount(guild_id, socket.assigns.current_user)
        |> Soundboard.mount(guild_id, socket.assigns.current_user)
        |> Music.mount(guild_id, socket.assigns.current_user)
+       |> Video.mount(guild_id, socket.assigns.current_user)
        |> Pointers.mount(guild_id, socket.assigns.current_user)}
     else
       false -> {:ok, assign(socket, status: :connecting)}
@@ -157,7 +159,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
             class="absolute inset-0 z-10 flex items-end rounded-lg p-1.5 text-left ring-indigo-400 transition hover:ring-2"
           >
             <span class="max-w-full truncate rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white">
-              {room.owner_name}
+              {if room.source == :link, do: room.title, else: room.owner_name}
             </span>
           </button>
 
@@ -213,6 +215,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         />
         <Music.menu state={@music} error={@music_error} admin?={@admin?} />
         <Soundboard.pointer_menu page_key={"guild:#{@guild_id}"} />
+        <Video.menu :if={@admin?} video={@video} error={@video_error} />
         <Ads.admin_menu :if={@admin?} mode={@ads_mode} ad_id={@ads_ad_id} />
         <span class="mx-0.5 h-6 w-px bg-gray-700" aria-hidden="true"></span>
         <Chat.toggle_button open?={@chat_open?} unread={@chat_unread} />
@@ -348,6 +351,9 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   def handle_event("music:remove", params, socket),
     do: as_admin(socket, &Music.remove(&1, params))
 
+  def handle_event("video:" <> _action = event, params, socket),
+    do: as_admin(socket, &Video.handle_event(event, params, &1))
+
   def handle_event("offer", %{"room_id" => room_id} = offer, socket) do
     with true <- watching?(socket, room_id),
          {:ok, answer} <- Room.watch(room_id, Map.delete(offer, "room_id")) do
@@ -396,6 +402,9 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   def handle_info({:music, message}, socket),
     do: {:noreply, Music.handle_info(message, socket)}
 
+  def handle_info({:restream, message}, socket),
+    do: {:noreply, Video.handle_info(message, socket)}
+
   def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, socket) do
     {:noreply, assign(socket, online: Screens.list_online(socket.assigns.guild_id))}
   end
@@ -433,16 +442,20 @@ defmodule BotchiniWeb.ScreenLive.Guild do
     end
   end
 
-  # Marks the header's share link live, for the layout to show
+  # Marks the header's share link live, for the layout to show. Videos from
+  # links aren't the admin's own stream
   defp assign_sharing(socket) do
     user_id = socket.assigns.current_user.id
-    assign(socket, sharing?: Enum.any?(socket.assigns.rooms, &(&1.owner_id == user_id)))
+
+    assign(socket,
+      sharing?: Enum.any?(socket.assigns.rooms, &(&1.owner_id == user_id and &1.source != :link))
+    )
   end
 
   # Streamers hear their viewers come and go here too, which is the only place
   # they can hear it when streaming from OBS
   defp chime_for_owner(socket, room) do
-    with true <- room.owner_id == socket.assigns.current_user.id,
+    with true <- room.owner_id == socket.assigns.current_user.id and room.source != :link,
          %Room{} = before <- Enum.find(socket.assigns.rooms, &(&1.id == room.id)) do
       push_viewer_chime(socket, before.viewer_count, room.viewer_count)
     else

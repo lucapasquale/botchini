@@ -259,8 +259,22 @@ export const ScreenViewer = {
     this.status = this.el.querySelector("[data-screen-status]")
     this.handleEvent(`screen:${this.roomId}:ice_candidate`, candidate => this.connection?.addRemoteCandidate(candidate))
     this.handleEvent(`screen:${this.roomId}:ended`, () => this.teardown())
-    this.handleEvent(`screen:${this.roomId}:reconnect`, () => this.connect())
+    this.handleEvent(`screen:${this.roomId}:reconnect`, () => this.started && this.connect())
     this.mountControls()
+
+    // Videos from links wait for a click, as they'd otherwise play on every open page
+    this.started = this.el.dataset.clickToPlay === undefined
+    if (this.started) this.connect()
+    else this.el.querySelector("[data-video-start]").addEventListener("click", () => this.start())
+  },
+
+  // The click lets the browser play it with sound, which it only allows after one
+  start() {
+    this.started = true
+    this.el.querySelector("[data-video-start]").hidden = true
+    this.video.muted = false
+    this.video.volume = this.lastVolume
+    this.video.play().catch(() => {})
     this.connect()
   },
 
@@ -327,7 +341,7 @@ export const ScreenViewer = {
   },
 
   reconnected() {
-    this.connect()
+    if (this.started) this.connect()
   },
 
   destroyed() {

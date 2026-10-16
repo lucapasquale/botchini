@@ -9,6 +9,8 @@ const MAX_FRAMERATE = 60
 // makes the first seconds blurry, so Chrome and Edge are told to start higher
 const START_BITRATE_KBPS = 10_000
 const RETRY_DELAY_MS = 2_000
+// What videos from links send too, enough for music
+const AUDIO_BITRATE = 128_000
 // How often the timeline of a video from a link moves along
 const TIMELINE_TICK_MS = 250
 
@@ -27,7 +29,7 @@ class Connection {
 
   // Resolves once the server answer is applied, rejects with a message to show
   async negotiate({startBitrateKbps} = {}) {
-    await this.pc.setLocalDescription(await this.pc.createOffer())
+    await this.pc.setLocalDescription(withStereoAudio(await this.pc.createOffer()))
 
     const reply = await new Promise(resolve => {
       this.hook.pushEvent("offer", {...this.params, ...this.pc.localDescription.toJSON()}, resolve)
@@ -53,6 +55,23 @@ class Connection {
     this.pc.onconnectionstatechange = null
     this.pc.close()
   }
+}
+
+// Chrome plays and sends Opus in mono, at about 32 kbps, unless the SDP asks for
+// stereo. The server answers with the parameters offered, and would turn down
+// the audio if it asked for them itself
+function withStereoAudio({type, sdp}) {
+  const payload = sdp.match(/^a=rtpmap:(\d+) opus\/48000\/2/im)?.[1]
+  if (!payload) return {type, sdp}
+
+  const params = `stereo=1;sprop-stereo=1;maxaveragebitrate=${AUDIO_BITRATE}`
+  // SDP lines end in \r\n, and . would match the \r
+  const fmtp = new RegExp(`^a=fmtp:${payload} [^\\r\\n]*`, "m")
+  sdp = fmtp.test(sdp)
+    ? sdp.replace(fmtp, line => `${line};${params}`)
+    : sdp.replace(new RegExp(`^a=rtpmap:${payload} [^\\r\\n]*`, "m"), line => `${line}\r\na=fmtp:${payload} ${params}`)
+
+  return {type, sdp}
 }
 
 // Chrome and Edge read the bitrate to start sending at from the answer's video

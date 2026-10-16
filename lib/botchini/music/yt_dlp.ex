@@ -15,6 +15,8 @@ defmodule Botchini.Music.YtDlp do
     "youtu.be"
   ]
 
+  @twitch_hosts ["twitch.tv", "www.twitch.tv", "m.twitch.tv"]
+
   @max_filesize "100M"
 
   @type video :: %{
@@ -25,6 +27,11 @@ defmodule Botchini.Music.YtDlp do
           duration_ms: pos_integer() | nil,
           channel: String.t() | nil
         }
+
+  @typedoc """
+  A video or live stream to show on a guild's page
+  """
+  @type stream :: %{title: String.t(), url: String.t(), live?: boolean()}
 
   @type reason :: PlaybackFailure.reason() | :not_found | :too_big
 
@@ -82,8 +89,41 @@ defmodule Botchini.Music.YtDlp do
     end
   end
 
+  @doc """
+  Finds the video or live stream a YouTube or Twitch link points to, to show it
+  on a guild's page. Twitch channels are only found while they're live
+  """
+  @spec lookup_stream(String.t()) :: {:ok, stream()} | {:error, reason()}
+  def lookup_stream(url) do
+    with true <- stream_url?(url) || {:error, :unsupported_url},
+         {:ok, output} <-
+           run([
+             "--no-playlist",
+             "--playlist-items",
+             "1",
+             "--print",
+             "%(.{title,is_live,webpage_url})j",
+             "--",
+             url
+           ]) do
+      output
+      |> String.split("\n", trim: true)
+      |> Enum.find(&String.starts_with?(&1, "{"))
+      |> parse_stream(url)
+    end
+  end
+
   @spec youtube_url?(String.t()) :: boolean()
   def youtube_url?(term), do: URI.parse(term).host in @youtube_hosts
+
+  @doc """
+  Whether the link is one `lookup_stream/1` takes: YouTube or Twitch, over HTTP(S)
+  """
+  @spec stream_url?(String.t()) :: boolean()
+  def stream_url?(term) do
+    uri = URI.parse(term)
+    uri.scheme in ["http", "https"] and uri.host in (@youtube_hosts ++ @twitch_hosts)
+  end
 
   defp target(term) do
     cond do
@@ -110,6 +150,23 @@ defmodule Botchini.Music.YtDlp do
        }}
     else
       _not_a_video -> {:error, :not_found}
+    end
+  end
+
+  defp parse_stream(nil, _url), do: {:error, :not_found}
+
+  defp parse_stream(line, url) do
+    case Jason.decode(line) do
+      {:ok, %{"title" => title} = stream} when is_binary(title) ->
+        {:ok,
+         %{
+           title: title,
+           url: if(is_binary(stream["webpage_url"]), do: stream["webpage_url"], else: url),
+           live?: stream["is_live"] == true
+         }}
+
+      _not_a_video ->
+        {:error, :not_found}
     end
   end
 

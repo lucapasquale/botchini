@@ -34,6 +34,9 @@ defmodule Botchini.Application do
         {Registry, keys: :unique, name: Botchini.Screens.JukeboxRegistry},
         {DynamicSupervisor, name: Botchini.Screens.JukeboxSupervisor, strategy: :one_for_one},
         {Task.Supervisor, name: Botchini.Screens.JukeboxTasks},
+        # Videos from links shown on the screen sharing pages, one for each guild
+        {Registry, keys: :unique, name: Botchini.Screens.RestreamRegistry},
+        {DynamicSupervisor, name: Botchini.Screens.RestreamSupervisor, strategy: :one_for_one},
         # Start a worker by calling: Botchini.Worker.start_link(arg)
         # {Botchini.Worker, arg},
         # Start to serve requests, typically the last entry

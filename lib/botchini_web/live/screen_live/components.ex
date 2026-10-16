@@ -415,6 +415,14 @@ defmodule BotchiniWeb.ScreenLive.Components do
     """
   end
 
+  defp icon_paths(:tv) do
+    assigns = %{}
+
+    ~H"""
+    <rect x="2" y="7" width="20" height="15" rx="2" /><path d="m17 2-5 5-5-5" />
+    """
+  end
+
   defp icon_paths(:music) do
     assigns = %{}
 

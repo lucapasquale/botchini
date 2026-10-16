@@ -8,7 +8,8 @@ defmodule BotchiniWebTest.ScreenLiveTest do
   alias Botchini.Discord
   alias Botchini.Music.YtDlp
   alias Botchini.Screens
-  alias Botchini.Screens.{Activity, Jukebox}
+  alias Botchini.Screens.{Activity, Jukebox, Restream}
+  alias Botchini.Screens.Restream.Pipeline
   alias BotchiniWeb.ScreenLive.{Ads, Guild}
 
   setup %{conn: conn} do
@@ -1052,6 +1053,69 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
       song_playing(view, "one")
       assert has_element?(other, "#music-now", "Nothing playing")
+    end
+  end
+
+  describe "videos from links" do
+    # yt-dlp finds a video titled "Zoo", which plays until it's stopped
+    setup do
+      Restream.stop("1")
+      on_exit(fn -> Restream.stop("1") end)
+
+      patch_function(YtDlp, :lookup_stream, fn url ->
+        {:ok, %{title: "Zoo", url: url, live?: false}}
+      end)
+
+      patch_function(Pipeline, :open, fn _url, _video_port, _audio_port ->
+        Port.open({:spawn_executable, System.find_executable("setsid")}, [
+          :binary,
+          :exit_status,
+          args: ["sh", "-c", "sleep 600"]
+        ])
+      end)
+
+      :ok
+    end
+
+    defp show_link(view, url),
+      do: view |> element("#video-form") |> render_submit(%{"url" => url})
+
+    test "are only for admins", %{conn: conn} do
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      refute has_element?(view, "#video-toggle")
+
+      render_click(view, "video:start", %{"url" => "https://www.youtube.com/watch?v=abcdefghijk"})
+      assert Restream.state("1") == nil
+    end
+
+    test "lets admins show a link and stop it", %{conn: conn} do
+      patch_function(Discord, :check_member, :admin)
+      {:ok, view, _html} = live_guild(conn, "1")
+      assert has_element?(view, "#video-toggle[aria-pressed=false]")
+
+      show_link(view, "https://www.youtube.com/watch?v=abcdefghijk")
+
+      eventually(fn ->
+        assert has_element?(view, "#video-title", "Zoo")
+        assert has_element?(view, "#video-status", "Starting...")
+      end)
+
+      assert has_element?(view, "#video-toggle[aria-pressed=true]")
+
+      view |> element("#video-stop") |> render_click()
+
+      eventually(fn -> assert has_element?(view, "#video-form") end)
+      assert Restream.state("1") == nil
+    end
+
+    test "tells admins which links can't be shown", %{conn: conn} do
+      patch_function(Discord, :check_member, :admin)
+      {:ok, view, _html} = live_guild(conn, "1")
+
+      show_link(view, "https://example.com/video.mp4")
+
+      assert has_element?(view, "#video-error", "Only YouTube and Twitch links can be shown")
     end
   end
 

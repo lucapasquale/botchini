@@ -13,7 +13,13 @@ defmodule BotchiniWeb.ScreenLive.ActivityFeed do
   def describe(%{kind: :left, actor: actor}), do: "#{actor} left"
   def describe(%{kind: :sound, actor: actor, detail: sound}), do: "#{actor} played #{sound}"
   def describe(%{kind: :sound_stopped, actor: actor}), do: "#{actor} stopped the sounds"
-  def describe(%{kind: :stream_started, actor: actor}), do: "#{actor} started streaming"
+
+  def describe(%{kind: :stream_started, actor: actor, detail: nil}),
+    do: "#{actor} started streaming"
+
+  def describe(%{kind: :stream_started, actor: actor, detail: title}),
+    do: "#{actor} is showing #{title}"
+
   def describe(%{kind: :song_added, actor: actor, detail: song}), do: "#{actor} added #{song}"
   def describe(%{kind: :song_skipped, actor: actor, detail: song}), do: "#{actor} skipped #{song}"
   def describe(%{kind: :song_failed, detail: song}), do: "Couldn't play #{song}, skipping it"

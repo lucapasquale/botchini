@@ -1057,7 +1057,8 @@ defmodule BotchiniWebTest.ScreenLiveTest do
   end
 
   describe "videos from links" do
-    # yt-dlp finds a video titled "Zoo", which plays until it's stopped
+    # yt-dlp finds a video titled "Zoo", which plays until it's stopped, as the
+    # pipeline is a cat waiting for the port to close
     setup do
       Restream.stop("1")
       on_exit(fn -> Restream.stop("1") end)
@@ -1067,11 +1068,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       end)
 
       patch_function(Pipeline, :open, fn _url, _video_port, _audio_port ->
-        Port.open({:spawn_executable, System.find_executable("setsid")}, [
-          :binary,
-          :exit_status,
-          args: ["sh", "-c", "sleep 600"]
-        ])
+        Port.open({:spawn_executable, System.find_executable("cat")}, [:binary, :exit_status])
       end)
 
       :ok

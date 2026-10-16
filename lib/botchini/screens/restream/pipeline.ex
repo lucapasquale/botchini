@@ -4,9 +4,10 @@ defmodule Botchini.Screens.Restream.Pipeline do
   which turns it into H.264 and Opus in real time and sends them as RTP to two
   local UDP ports.
 
-  Both run in a session of their own under a small shell script. When the port
-  closes, even with the BEAM going down, the script kills them both, as ffmpeg
-  sending to UDP would never notice on its own
+  Both run under a small shell script, which like every port's program is the
+  leader of a session of its own. When the port closes, even with the BEAM going
+  down, the script kills its session, as ffmpeg sending to UDP would never notice
+  on its own
   """
 
   # Formats ffmpeg decodes cheaply come first. Live streams on YouTube have
@@ -48,12 +49,11 @@ defmodule Botchini.Screens.Restream.Pipeline do
     youtubedl = Application.get_env(:nostrum, :youtubedl, "yt-dlp")
     ffmpeg = Application.get_env(:nostrum, :ffmpeg, "ffmpeg")
 
-    Port.open({:spawn_executable, System.find_executable("setsid")}, [
+    Port.open({:spawn_executable, System.find_executable("sh")}, [
       :binary,
       :exit_status,
       :stderr_to_stdout,
       args: [
-        "sh",
         "-c",
         @script,
         "restream",
@@ -68,19 +68,15 @@ defmodule Botchini.Screens.Restream.Pipeline do
   end
 
   @doc """
-  Stops yt-dlp and ffmpeg, unless they already exited
+  Stops yt-dlp and ffmpeg, unless they already exited. The script kills them once
+  it notices the port closed, this doesn't wait for that
   """
   @spec close(port()) :: :ok
   def close(port) do
-    case Port.info(port, :os_pid) do
-      {:os_pid, os_pid} ->
-        Port.close(port)
-        # The script kills them once it notices, this doesn't wait for that
-        System.cmd("kill", ["-TERM", "-#{os_pid}"], stderr_to_stdout: true)
-        :ok
-
-      nil ->
-        :ok
-    end
+    Port.close(port)
+    :ok
+  rescue
+    # It exited already
+    ArgumentError -> :ok
   end
 end

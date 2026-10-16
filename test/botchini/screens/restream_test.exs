@@ -42,19 +42,23 @@ defmodule BotchiniTest.Screens.RestreamTest do
   end
 
   # Prints what's in the file once it shows up, exiting with the code on its first
-  # line. It runs in a session of its own like the real one, which closing kills
+  # line. Like the real one, it kills its session once the port closes
   defp fake_pipeline(end_file) do
     script = ~S"""
+    exec 3<&0
+    { cat >/dev/null; kill -TERM 0; } <&3 &
     while [ ! -f "$1" ]; do sleep 0.02; done
+    trap '' TERM
+    kill -TERM 0
     tail -n +2 "$1"
     exit "$(head -n 1 "$1")"
     """
 
-    Port.open({:spawn_executable, System.find_executable("setsid")}, [
+    Port.open({:spawn_executable, System.find_executable("sh")}, [
       :binary,
       :exit_status,
       :stderr_to_stdout,
-      args: ["sh", "-c", script, "fake-pipeline", end_file]
+      args: ["-c", script, "fake-pipeline", end_file]
     ])
   end
 

@@ -9,6 +9,10 @@ const MAX_FRAMERATE = 60
 // makes the first seconds blurry, so Chrome and Edge are told to start higher
 const START_BITRATE_KBPS = 10_000
 const RETRY_DELAY_MS = 2_000
+// What videos from links send too, enough for music
+const AUDIO_BITRATE = 128_000
+// How often the timeline of a video from a link moves along
+const TIMELINE_TICK_MS = 250
 
 class Connection {
   constructor(hook, onConnectionState, params = {}) {
@@ -25,7 +29,7 @@ class Connection {
 
   // Resolves once the server answer is applied, rejects with a message to show
   async negotiate({startBitrateKbps} = {}) {
-    await this.pc.setLocalDescription(await this.pc.createOffer())
+    await this.pc.setLocalDescription(withStereoAudio(await this.pc.createOffer()))
 
     const reply = await new Promise(resolve => {
       this.hook.pushEvent("offer", {...this.params, ...this.pc.localDescription.toJSON()}, resolve)
@@ -51,6 +55,23 @@ class Connection {
     this.pc.onconnectionstatechange = null
     this.pc.close()
   }
+}
+
+// Chrome plays and sends Opus in mono, at about 32 kbps, unless the SDP asks for
+// stereo. The server answers with the parameters offered, and would turn down
+// the audio if it asked for them itself
+function withStereoAudio({type, sdp}) {
+  const payload = sdp.match(/^a=rtpmap:(\d+) opus\/48000\/2/im)?.[1]
+  if (!payload) return {type, sdp}
+
+  const params = `stereo=1;sprop-stereo=1;maxaveragebitrate=${AUDIO_BITRATE}`
+  // SDP lines end in \r\n, and . would match the \r
+  const fmtp = new RegExp(`^a=fmtp:${payload} [^\\r\\n]*`, "m")
+  sdp = fmtp.test(sdp)
+    ? sdp.replace(fmtp, line => `${line};${params}`)
+    : sdp.replace(new RegExp(`^a=rtpmap:${payload} [^\\r\\n]*`, "m"), line => `${line}\r\na=fmtp:${payload} ${params}`)
+
+  return {type, sdp}
 }
 
 // Chrome and Edge read the bitrate to start sending at from the answer's video
@@ -259,23 +280,18 @@ export const ScreenViewer = {
     this.status = this.el.querySelector("[data-screen-status]")
     this.handleEvent(`screen:${this.roomId}:ice_candidate`, candidate => this.connection?.addRemoteCandidate(candidate))
     this.handleEvent(`screen:${this.roomId}:ended`, () => this.teardown())
-    this.handleEvent(`screen:${this.roomId}:reconnect`, () => this.started && this.connect())
-    this.mountControls()
+    this.handleEvent(`screen:${this.roomId}:reconnect`, () => this.connect())
 
-    // Videos from links wait for a click, as they'd otherwise play on every open page
-    this.started = this.el.dataset.clickToPlay === undefined
-    if (this.started) this.connect()
-    else this.el.querySelector("[data-video-start]").addEventListener("click", () => this.start())
+    // Pausing videos from links pauses them for everyone, so the server says whether they are
+    this.fromLink = this.el.dataset.fromLink !== undefined
+    this.mountControls()
+    if (this.fromLink) this.mountTimeline()
+    this.connect()
   },
 
-  // The click lets the browser play it with sound, which it only allows after one
-  start() {
-    this.started = true
-    this.el.querySelector("[data-video-start]").hidden = true
-    this.video.muted = false
-    this.video.volume = this.lastVolume
-    this.video.play().catch(() => {})
-    this.connect()
+  updated() {
+    if (this.fromLink) this.syncVideo()
+    this.renderControls()
   },
 
   // Streams start muted, as browsers only autoplay those. The slider brings back
@@ -289,7 +305,8 @@ export const ScreenViewer = {
     this.lastVolume = 1
 
     this.playButton.addEventListener("click", () => {
-      if (this.video.paused) this.video.play().catch(() => {})
+      if (this.fromLink) this.pushEvent(this.isPaused() ? "video:resume" : "video:pause", {})
+      else if (this.video.paused) this.video.play().catch(() => {})
       else this.video.pause()
     })
 
@@ -322,12 +339,68 @@ export const ScreenViewer = {
     this.renderControls()
   },
 
+  // Videos keep going between the server's updates, which say where they were
+  mountTimeline() {
+    this.timeLabel = this.controls.querySelector("[data-video-time]")
+    this.seekInput = this.controls.querySelector("[data-video-seek]")
+    this.seeking = false
+
+    this.seekInput.addEventListener("input", () => {
+      this.seeking = true
+      this.renderTimeline()
+    })
+    // Moved along from there until the server says where it is
+    this.seekInput.addEventListener("change", () => {
+      this.seeking = false
+      this.videoPosition = Number(this.seekInput.value)
+      this.videoSyncedAt = performance.now()
+      this.pushEvent("video:seek", {position_ms: Math.round(this.videoPosition)})
+    })
+
+    this.syncVideo()
+    this.renderControls()
+    this.timelineTimer = setInterval(() => this.renderTimeline(), TIMELINE_TICK_MS)
+  },
+
+  // The page updates for other reasons too, which leave these as they were
+  syncVideo() {
+    const {videoStatus: status, videoPosition: position, videoDuration: duration} = this.el.dataset
+    if (status === this.videoStatus && position === this.videoPositionSent) return
+
+    this.videoStatus = status
+    this.videoPositionSent = position
+    this.videoPosition = Number(position ?? 0)
+    this.videoDuration = Number(duration ?? 0)
+    this.videoSyncedAt = performance.now()
+    this.renderTimeline()
+  },
+
+  currentPosition() {
+    const elapsed = this.videoStatus === "live" ? performance.now() - this.videoSyncedAt : 0
+    return Math.min(this.videoPosition + elapsed, this.videoDuration)
+  },
+
+  renderTimeline() {
+    const video = this.videoDuration > 0
+    this.timeLabel.hidden = !video
+    this.seekInput.hidden = !video
+    if (!video) return
+
+    if (!this.seeking) this.seekInput.value = this.currentPosition()
+    this.seekInput.max = this.videoDuration
+    this.timeLabel.textContent = `${formatTime(Number(this.seekInput.value))} / ${formatTime(this.videoDuration)}`
+  },
+
   isMuted() {
     return this.video.muted || this.video.volume === 0
   },
 
+  isPaused() {
+    return this.fromLink ? this.videoStatus === "paused" : this.video.paused
+  },
+
   renderControls() {
-    const paused = this.video.paused
+    const paused = this.isPaused()
     const muted = this.isMuted()
     const fullscreen = document.fullscreenElement === this.el
 
@@ -341,10 +414,11 @@ export const ScreenViewer = {
   },
 
   reconnected() {
-    if (this.started) this.connect()
+    this.connect()
   },
 
   destroyed() {
+    clearInterval(this.timelineTimer)
     this.teardown()
   },
 
@@ -391,4 +465,12 @@ export const ScreenViewer = {
     this.connection = null
     this.video.srcObject = null
   }
+}
+
+// 1:05, or 1:02:05 for videos an hour or longer
+function formatTime(ms) {
+  const seconds = Math.floor(ms / 1000)
+  const [hours, minutes] = [Math.floor(seconds / 3600), Math.floor((seconds % 3600) / 60)]
+  const rest = String(seconds % 60).padStart(2, "0")
+  return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${rest}` : `${minutes}:${rest}`
 }

@@ -11,6 +11,7 @@ defmodule BotchiniWeb.ScreenLive.Components do
 
   attr :room, :map, required: true
   attr :controls?, :boolean, default: true, doc: "Whether the video's controls are shown"
+  attr :video, :map, default: nil, doc: "The video from a link the guild shows, if any"
   slot :inner_block, doc: "Overlays shown on top of the video"
 
   @doc """
@@ -18,16 +19,27 @@ defmodule BotchiniWeb.ScreenLive.Components do
   screen, as clicking the picture is for drawing and a live stream has no timeline.
   The ScreenViewer hook runs them.
 
-  Videos from links only start once each viewer clicks play, so a page left open
-  doesn't play them on its own
+  The pause button of videos from links pauses them for everyone, and videos get
+  a timeline to skip through them, which the hook moves along from where the
+  server last said they were
   """
   def viewer(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :video,
+        if(assigns.video && assigns.video.room_id == assigns.room.id, do: assigns.video)
+      )
+
     ~H"""
     <div
       id={"screen-viewer-#{@room.id}"}
       phx-hook="ScreenViewer"
       data-room-id={@room.id}
-      data-click-to-play={@room.source == :link}
+      data-from-link={@room.source == :link}
+      data-video-status={@video && @video.status}
+      data-video-position={@video && @video.position_ms}
+      data-video-duration={@video && @video.duration_ms}
       data-ice-servers={ice_servers_json()}
       class="group/viewer relative aspect-video w-full overflow-hidden rounded-lg bg-black"
     >
@@ -84,6 +96,26 @@ defmodule BotchiniWeb.ScreenLive.Components do
             class="w-20 accent-indigo-400"
           />
 
+          <%!-- Shown by the hook for videos, which live streams aren't --%>
+          <span
+            :if={@room.source == :link}
+            data-video-time
+            hidden
+            class="ml-2 shrink-0 text-xs tabular-nums"
+          ></span>
+          <input
+            :if={@room.source == :link}
+            type="range"
+            data-video-seek
+            hidden
+            min="0"
+            max="0"
+            step="1000"
+            value="0"
+            aria-label="Skip to"
+            class="mx-2 min-w-0 flex-1 accent-indigo-400"
+          />
+
           <button
             type="button"
             data-video-fullscreen
@@ -102,23 +134,13 @@ defmodule BotchiniWeb.ScreenLive.Components do
       <div data-pointer-shield class="absolute inset-x-0 top-0 bottom-12 hidden" aria-hidden="true">
       </div>
 
-      <%!-- Above the picture and its controls until clicked, when the hook hides it.
-        Small screens' own button stays above it, to watch them first --%>
-      <button
-        :if={@room.source == :link}
-        id={"screen-viewer-start-#{@room.id}"}
-        phx-update="ignore"
-        type="button"
-        data-video-start
-        data-pointer-menu
-        title="Play"
-        class="group/start absolute inset-0 grid place-items-center bg-black/60 text-white"
+      <span
+        :if={@video && @video.status in [:paused, :starting]}
+        id={"screen-viewer-video-status-#{@room.id}"}
+        class="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 truncate rounded bg-black/70 px-2 py-1 text-xs font-semibold text-white"
       >
-        <span class="grid h-16 w-16 place-items-center rounded-full bg-black/70 transition group-hover/start:bg-indigo-500">
-          <span class="sr-only">Play</span>
-          <.bar_icon name={:play} class="scale-150" />
-        </span>
-      </button>
+        {if @video.status == :paused, do: "Paused by #{@video.paused_by}", else: "Loading..."}
+      </span>
 
       <div
         :if={!@room.live?}

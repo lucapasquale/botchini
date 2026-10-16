@@ -65,7 +65,10 @@ defmodule Botchini.Screens.Room do
   Connects the calling process as the broadcaster, which sends its packets with
   `send_rtp/3`. The room goes live right away, so it's called once packets are
   coming. Video must be H.264 with its SPS and PPS before every keyframe, as the
-  room can't ask this broadcaster for a keyframe when viewers join
+  room can't ask this broadcaster for a keyframe when viewers join.
+
+  The broadcaster calls it again when its packets start over, like after a
+  pause, for viewers to keep playing them
   """
   @spec publish_rtp(String.t()) :: :ok | {:error, :not_found}
   def publish_rtp(room_id), do: call(room_id, {:publish_rtp, self()})
@@ -118,9 +121,12 @@ defmodule Botchini.Screens.Room do
   @spec whereis(String.t()) :: pid() | nil
   def whereis(room_id), do: GenServer.whereis(via(room_id))
 
-  @spec stop(String.t(), atom()) :: :ok | {:error, :not_found}
-  def stop(room_id, reason) do
-    case call(room_id, {:stop, reason}) do
+  @doc """
+  Ends the room. The activity says why, from the reason or the detail given
+  """
+  @spec stop(String.t(), atom(), String.t() | nil) :: :ok | {:error, :not_found}
+  def stop(room_id, reason, detail \\ nil) do
+    case call(room_id, {:stop, reason, detail}) do
       {:error, :not_found} -> {:error, :not_found}
       _ -> :ok
     end
@@ -182,7 +188,8 @@ defmodule Botchini.Screens.Room do
         last_keyframe_request: nil,
         idle_timer: nil,
         peak_viewers: 0,
-        end_reason: :shutdown
+        end_reason: :shutdown,
+        end_detail: nil
       }
       |> schedule_idle_timeout(config[:start_timeout_ms])
 
@@ -212,8 +219,8 @@ defmodule Botchini.Screens.Room do
     {:reply, :ok, rename(state, source_changes(state.room, source))}
   end
 
-  def handle_call({:stop, reason}, _from, state) do
-    {:stop, :normal, :ok, %{state | end_reason: reason}}
+  def handle_call({:stop, reason, detail}, _from, state) do
+    {:stop, :normal, :ok, %{state | end_reason: reason, end_detail: detail}}
   end
 
   def handle_call({:publish, lv, offer}, _from, state) do
@@ -237,6 +244,10 @@ defmodule Botchini.Screens.Room do
         {:reply, {:error, reason}, state}
     end
   end
+
+  # Its new packets take on where the last ones left off
+  def handle_call({:publish_rtp, pid}, _from, %{publisher: pid} = state),
+    do: {:reply, :ok, use_codec(state, :h264)}
 
   # The broadcaster is linked, standing in for its PeerConnection
   def handle_call({:publish_rtp, pid}, _from, state) do
@@ -357,7 +368,7 @@ defmodule Botchini.Screens.Room do
         room.guild_id,
         :stream_ended,
         room.owner_name,
-        ended_detail(state.end_reason)
+        state.end_detail || ended_detail(state.end_reason)
       )
     end
 

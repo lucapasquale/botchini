@@ -199,7 +199,8 @@ defmodule BotchiniTest.ScreensTest do
 
       publisher = connect(room, :publisher)
       assert_receive {:screen_room, :live, %Room{live?: true}}
-      # Keyframes can only be requested once the room knows the stream's SSRC
+      # Keyframes can only be requested once the room knows the stream's SSRC and
+      # RID, which it learns from a packet
       TestBrowser.send_rtp(publisher, :video, vp8_packet(99))
 
       viewer = connect(room, :viewer)

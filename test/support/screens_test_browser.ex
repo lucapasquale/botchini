@@ -8,6 +8,7 @@ defmodule Botchini.Screens.TestBrowser do
   use GenServer
 
   alias ExRTCP.Packet.PayloadFeedback.PLI
+  alias ExRTP.Packet.Extension
   alias ExWebRTC.{ICECandidate, MediaStreamTrack, PeerConnection, SessionDescription}
 
   alias Botchini.Screens.Room
@@ -41,7 +42,18 @@ defmodule Botchini.Screens.TestBrowser do
     :ok = PeerConnection.set_local_description(pc, offer)
     :ok = connect(role, room_id, pc, offer)
 
-    {:ok, %{room_id: room_id, pc: pc, role: role, test_pid: test_pid, tracks: tracks}}
+    state = %{
+      room_id: room_id,
+      pc: pc,
+      role: role,
+      test_pid: test_pid,
+      tracks: tracks,
+      # Chrome tags the single video encoding it sends with a RID, and the room
+      # needs that same RID to address keyframe requests to the stream
+      rid: rid(role, pc)
+    }
+
+    {:ok, state}
   end
 
   defp video_codecs(:publisher), do: [:vp8]
@@ -66,6 +78,23 @@ defmodule Botchini.Screens.TestBrowser do
     PeerConnection.set_remote_description(pc, SessionDescription.from_json(answer))
   end
 
+  # OBS publishes without a RID, browsers send one on the encoding they share
+  defp rid(:whip_publisher, _pc), do: nil
+  defp rid(:viewer, _pc), do: nil
+
+  defp rid(_browser, pc) do
+    case PeerConnection.get_remote_description(pc) do
+      %SessionDescription{sdp: sdp} ->
+        case Regex.run(~r/^a=extmap:(\d+) urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id/m, sdp) do
+          [_, id] -> {String.to_integer(id), "0"}
+          nil -> nil
+        end
+
+      nil ->
+        nil
+    end
+  end
+
   # Publishers map kind => outbound track id, viewers map inbound track id => kind
   defp add_transceivers(pc, role) when role in [:publisher, :h264_publisher, :whip_publisher] do
     Map.new([:video, :audio], fn kind ->
@@ -85,9 +114,15 @@ defmodule Botchini.Screens.TestBrowser do
 
   @impl true
   def handle_cast({:send_rtp, kind, packet}, state) do
-    PeerConnection.send_rtp(state.pc, state.tracks[kind], packet)
+    PeerConnection.send_rtp(state.pc, state.tracks[kind], tagged(state, kind, packet))
     {:noreply, state}
   end
+
+  defp tagged(%{rid: {id, rid}}, :video, packet) do
+    ExRTP.Packet.add_extension(packet, Extension.new(id, rid))
+  end
+
+  defp tagged(_state, _kind, packet), do: packet
 
   @impl true
   def handle_info({:screens, _room_id, :reconnect}, state) do

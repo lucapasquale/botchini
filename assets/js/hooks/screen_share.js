@@ -2,12 +2,16 @@
 // server answers, with ICE candidates trickled both ways through the LiveView.
 
 // Tuned for games: the source's full resolution at up to 60 fps, only for
-// friends, so the bitrate can be high
-const MAX_BITRATE = 20_000_000
+// friends, so the bitrate can be high. Browsers were reporting CPU-limited
+// encoders most of the time at 1080p60 under a 20 Mbps ceiling, which viewers see
+// as stutter, so the ceiling is lower and tabs are capped at 30 fps
+const MAX_BITRATE = 8_000_000
 const MAX_FRAMERATE = 60
+// Tabs are slides, pages and video: half the frames and sharper ones suit them
+const TAB_MAX_FRAMERATE = 30
 // Browsers start sending low and take a while to trust the connection, which
 // makes the first seconds blurry, so Chrome and Edge are told to start higher
-const START_BITRATE_KBPS = 10_000
+const START_BITRATE_KBPS = 4_000
 const RETRY_DELAY_MS = 2_000
 // Stereo Opus at this bitrate is enough for music
 const AUDIO_BITRATE = 128_000
@@ -230,7 +234,10 @@ export const ScreenBroadcast = {
 
     const [video] = this.stream.getVideoTracks()
     const [audio] = this.stream.getAudioTracks()
-    const encoding = {maxBitrate: MAX_BITRATE, maxFramerate: MAX_FRAMERATE}
+    const encoding = {
+      maxBitrate: MAX_BITRATE,
+      maxFramerate: this.isTab() ? TAB_MAX_FRAMERATE : MAX_FRAMERATE
+    }
 
     // Both transceivers always exist, so switching sources only replaces tracks
     // and never needs a renegotiation, even when the new source has no audio
@@ -285,7 +292,9 @@ export const ScreenBroadcast = {
 
     this.preview.srcObject = stream
     this.showAudioNotice(stream)
-    this.pushEvent("source", {surface: stream.getVideoTracks()[0].getSettings().displaySurface ?? null})
+    // "browser" is a tab, "window" and "monitor" can be anything, games included
+    this.surface = stream.getVideoTracks()[0].getSettings().displaySurface ?? null
+    this.pushEvent("source", {surface: this.surface})
     // Clicking the browser's own "Stop sharing" bar ends the share too
     stream.getVideoTracks()[0].addEventListener("ended", () => {
       if (this.stream === stream) this.stop()
@@ -313,13 +322,27 @@ export const ScreenBroadcast = {
     const track = this.stream?.getVideoTracks()[0]
     if (!track) return
 
-    track.contentHint = "motion"
+    // Games read better smooth, slides and pages read better sharp, and the
+    // browser gives up quality along the hinted axis when it has to
+    track.contentHint = this.isTab() ? "detail" : "motion"
 
     if (this.videoSender) {
       const params = this.videoSender.getParameters()
       params.degradationPreference = "balanced"
+      const encodings = params.encodings?.length ? params.encodings : [{}]
+
+      for (const encoding of encodings) {
+        encoding.maxBitrate = MAX_BITRATE
+        encoding.maxFramerate = this.isTab() ? TAB_MAX_FRAMERATE : MAX_FRAMERATE
+      }
+
+      params.encodings = encodings
       this.videoSender.setParameters(params).catch(() => {})
     }
+  },
+
+  isTab() {
+    return this.surface === "browser"
   },
 
   onConnectionState(connection, state) {

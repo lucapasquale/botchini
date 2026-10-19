@@ -347,9 +347,9 @@ defmodule Botchini.Screens.Room do
     update_in(state, [:peers, pc, :tracks], &Map.put(&1, track.id, track.kind))
   end
 
-  defp handle_peer_event({:rtp, track_id, _rid, packet}, _pc, %{role: :publisher} = peer, state) do
+  defp handle_peer_event({:rtp, track_id, rid, packet}, pc, %{role: :publisher} = peer, state) do
     case Map.fetch(peer.tracks, track_id) do
-      {:ok, kind} -> forward_rtp(state, kind, packet)
+      {:ok, kind} -> state |> remember_rid(pc, track_id, rid) |> forward_rtp(kind, packet)
       :error -> state
     end
   end
@@ -397,6 +397,16 @@ defmodule Botchini.Screens.Room do
   end
 
   defp handle_peer_event(_event, _pc, _peer, state), do: state
+
+  # ex_webrtc addresses RTCP feedback to the stream a track's packets came on, and
+  # browsers tag their encoding with a RID, so a keyframe request has to carry the
+  # same one: without it the PLI is dropped inside the peer connection and viewers
+  # stay frozen until the broadcaster happens to send a keyframe
+  defp remember_rid(state, pc, track_id, rid) when is_binary(rid) do
+    update_in(state, [:peers, pc, :rids], &Map.put_new(&1, track_id, rid))
+  end
+
+  defp remember_rid(state, _pc, _track_id, _rid), do: state
 
   defp log_broadcaster_connected(:live) do
     :telemetry.execute([:botchini, :screens, :room, :live], %{count: 1}, %{})
@@ -449,7 +459,7 @@ defmodule Botchini.Screens.Room do
         now - state.last_keyframe_request < @keyframe_interval_ms
 
     if video_track && not recent? do
-      PeerConnection.send_pli(state.publisher, video_track)
+      PeerConnection.send_pli(state.publisher, video_track, publisher.rids[video_track])
       %{state | last_keyframe_request: now}
     else
       state
@@ -561,7 +571,15 @@ defmodule Botchini.Screens.Room do
 
   defp new_peer(role, lv, tracks) do
     # Publisher tracks map inbound track id => kind, viewer tracks map kind => outbound track id
-    %{role: role, lv: lv, lv_ref: lv && Process.monitor(lv), connected?: false, tracks: tracks}
+    %{
+      role: role,
+      lv: lv,
+      lv_ref: lv && Process.monitor(lv),
+      connected?: false,
+      tracks: tracks,
+      # track id => RID, learned from the broadcaster's packets
+      rids: %{}
+    }
   end
 
   defp put_peer(state, pc, peer) do

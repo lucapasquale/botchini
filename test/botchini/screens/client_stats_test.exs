@@ -58,6 +58,25 @@ defmodule BotchiniTest.Screens.ClientStatsTest do
       assert_receive {:telemetry, _event, _audio, %{source: "other", stereo: "false"}}
     end
 
+    test "records how long the report covered and how much of it was frozen" do
+      ClientStats.viewer(:window, %{
+        "video" => %{"freezes" => 4, "frozen_percent" => 62.5, "elapsed_ms" => 10_000}
+      })
+
+      assert_receive {:telemetry, [:botchini, :screens, :viewer, :video], video,
+                      %{source: "window"}}
+
+      assert video == %{freezes: 4, frozen_percent: 62.5, elapsed_ms: 10_000}
+    end
+
+    test "leaves out a report interval too long to be one" do
+      ClientStats.viewer(:tab, %{"video" => %{"elapsed_ms" => 900_000, "freezes" => 2}})
+
+      assert_receive {:telemetry, [:botchini, :screens, :viewer, :video], video, %{source: "tab"}}
+
+      assert video == %{freezes: 2}
+    end
+
     test "says nothing without numbers" do
       ClientStats.viewer(:screen, %{"video" => "lots", "audio" => %{"kbps" => nil}})
       refute_receive {:telemetry, _event, _measurements, _metadata}

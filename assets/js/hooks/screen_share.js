@@ -123,6 +123,14 @@ function receivedVideo(now, before) {
     height: now.frameHeight,
     frames_dropped_percent: percent(dropped, decoded + dropped),
     freezes: now.freezeCount === undefined ? undefined : change(now, before, "freezeCount"),
+    // A count alone can't tell four hitches from one four second stall, and the
+    // time a report covers grows when browsers throttle timers in background tabs,
+    // so the freeze's own duration and the interval both go along with it
+    frozen_percent:
+      now.totalFreezesDuration === undefined
+        ? undefined
+        : percent(change(now, before, "totalFreezesDuration"), elapsed),
+    elapsed_ms: elapsed * 1000,
     packet_loss_percent: percent(lost, received + Math.max(lost, 0)),
     jitter_ms: now.jitter * 1000,
     jitter_buffer_ms: emitted > 0 ? (change(now, before, "jitterBufferDelay") / emitted) * 1000 : undefined

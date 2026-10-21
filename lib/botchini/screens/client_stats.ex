@@ -22,6 +22,9 @@ defmodule Botchini.Screens.ClientStats do
     height: 4_320,
     frames_dropped_percent: 100,
     freezes: 100,
+    frozen_percent: 100,
+    # Reports are meant to take 10s; a much longer gap is not a report interval
+    elapsed_ms: 600_000,
     packet_loss_percent: 100,
     jitter_ms: 10_000,
     jitter_buffer_ms: 10_000

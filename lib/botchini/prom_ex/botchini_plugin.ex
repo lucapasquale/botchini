@@ -137,6 +137,18 @@ defmodule Botchini.PromEx.BotchiniPlugin do
       client_distribution(video, :freezes, "Video freezes viewers saw", [0, 1, 2, 5, 10]),
       client_distribution(
         video,
+        :frozen_percent,
+        "Share of the time viewers' video was frozen, over each report",
+        @percent_buckets
+      ),
+      client_distribution(
+        video,
+        :elapsed_ms,
+        "How much time each viewer report covered",
+        [2_000, 5_000, 10_000, 15_000, 30_000, 60_000]
+      ),
+      client_distribution(
+        video,
         :packet_loss_percent,
         "Video packets lost on the way to viewers",
         @percent_buckets

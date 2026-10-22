@@ -117,7 +117,13 @@ defmodule BotchiniDiscord.Screens.Interactions.Screen do
     - **Server:** `#{Components.whip_url()}`
     - **Bearer Token:** ||`#{key}`||
 
-    In **Settings → Output**, pick an **H.264** encoder.
+    In **Settings → Output → Streaming**, use an **H.264** encoder at \
+    **CBR 6000 kbps**, **keyframe interval 1s**, **B-frames 0** - \
+    **NVENC** if you have a GPU, otherwise **x264 veryfast**. \
+    With 20 Mbps of upload or more you can raise it to 8000 kbps.
+    In **Settings → Video**, set Base and Output resolution to **1920x1080** and **60 FPS** \
+    (720p60 at 4000 kbps if your machine can't hold it).
+
     Then **Start Streaming**, and #{announcement(Integer.to_string(interaction.guild_id))}.
 
     For game audio without Discord, turn on **Capture audio** in Game Capture or add an \

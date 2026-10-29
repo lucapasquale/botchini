@@ -450,28 +450,36 @@ export const ScreenViewer = {
     this.presented = 0
     const tick = () => {
       this.presented += 1
+      this.presentedAt = performance.now()
       this.frameRequest = this.video.requestVideoFrameCallback(tick)
     }
     this.frameRequest = this.video.requestVideoFrameCallback(tick)
   },
 
-  // Frames per second, from the best source that actually moves: the compositor
-  // (requestVideoFrameCallback) when it ticks, otherwise the WebRTC receiver, whose
-  // framesDecoded also covers hardware decoders. getVideoPlaybackQuality's
-  // totalVideoFrames stays at 0 for streams decoded outside the media pipeline,
-  // which is exactly an OBS share, so it is only the last resort.
+  // Frames per second, from the source the dashboard itself uses. The receiver's
+  // `framesPerSecond` (and its framesDecoded) is what clients report every 10s, so
+  // the badge cannot disagree with the metrics; the compositor counter and the
+  // playback-quality counters are only fallbacks, because both stop moving without
+  // saying so — a pinned tile that Chrome decides not to composite keeps its last
+  // value forever, which is what pinned the badge on 0 fps.
   async updateFps() {
     if (this.sampling) return
     this.sampling = true
 
     try {
       const sample = await this.frameSample()
+      if (!sample) return
+
+      if (sample.rate !== undefined) {
+        this.lastFps = `${Math.round(sample.rate)} fps`
+        return
+      }
+
       const now = performance.now()
       const before = this.lastSample
-      this.lastSample = sample && {...sample, at: now}
+      this.lastSample = {...sample, at: now}
 
-      if (!sample || sample.frames === undefined) return
-      if (!before || before.source !== sample.source || now <= before.at) return
+      if (before?.source !== sample.source || now <= before.at) return
 
       const fps = Math.round(((sample.frames - before.frames) * 1000) / (now - before.at))
       this.lastFps = `${Math.max(0, fps)} fps`
@@ -482,10 +490,20 @@ export const ScreenViewer = {
   },
 
   async frameSample() {
-    if (this.presented > 0) return {source: "presented", frames: this.presented}
-
     const inbound = await this.inboundVideo()
+
+    // A rate, not a counter: no baseline to keep, and it is the same number the
+    // metrics show
+    if (Number.isFinite(inbound?.framesPerSecond) && inbound.framesPerSecond > 0) {
+      return {source: "reported", rate: inbound.framesPerSecond}
+    }
     if (inbound?.framesDecoded !== undefined) return {source: "decoded", frames: inbound.framesDecoded}
+
+    // Only while it is actually ticking: a stale compositor count is worse than
+    // no count at all
+    if (this.presented > 0 && performance.now() - (this.presentedAt || 0) < 2500) {
+      return {source: "presented", frames: this.presented}
+    }
 
     const quality = this.video.getVideoPlaybackQuality?.() || this.video.webkitGetVideoPlaybackQuality?.()
     if (quality?.totalVideoFrames !== undefined) {

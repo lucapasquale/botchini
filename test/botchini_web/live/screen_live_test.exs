@@ -444,12 +444,19 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       # The only big screen can't be unpinned
       refute has_element?(view, "#screen-#{room.id} button[phx-click=pin]")
 
+      # The stream info badge shows on every big screen, pinned or not, but not on
+      # the previews in the strip
+      assert has_element?(view, "#screen-#{room.id} [data-stream-info]")
+      refute has_element?(view, "#screen-other [data-stream-info]")
+
       view |> element("#screen-other button[phx-click=pin]") |> render_click()
 
       assert has_element?(view, "#screen-#{room.id}[data-main=true]")
       assert has_element?(view, "#screen-other[data-main=true]")
       assert has_element?(view, "#screen-third[data-main=false]")
       assert has_element?(view, "#watching", "Watching 2 screens")
+      assert has_element?(view, "#screen-other [data-stream-info]")
+      refute has_element?(view, "#screen-third [data-stream-info]")
       assert has_element?(view, "#screen-other", "Hades · Bia")
       assert has_element?(view, "#screen-other button[phx-click=pin][aria-pressed=true]")
       assert has_element?(view, "#screen-third button[phx-click=pin][aria-pressed=false]")

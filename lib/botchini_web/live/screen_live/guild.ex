@@ -162,7 +162,6 @@ defmodule BotchiniWeb.ScreenLive.Guild do
 
             <%!-- What the stream is and what actually arrives, while the pointer is on it --%>
             <span
-              :if={room.id in @pinned}
               data-stream-info
               class="max-w-full truncate rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white opacity-0 transition group-hover:opacity-100"
             >

@@ -401,8 +401,60 @@ export const ScreenViewer = {
     this.handleEvent(`screen:${this.roomId}:ended`, () => this.teardown())
     this.handleEvent(`screen:${this.roomId}:reconnect`, () => this.connect())
     this.mountControls()
+    this.mountInfo()
     this.connect()
     this.statsTimer = setInterval(() => this.reportStats(), STATS_INTERVAL_MS)
+  },
+
+  // The badge on a pinned screen: what the stream is, at what size, and how many
+  // frames per second actually arrive in this browser. It lives inside the tile,
+  // and only exists while the screen is pinned
+  mountInfo() {
+    const info = this.el.querySelector("[data-stream-info]")
+    if (!info) return this.unmountInfo()
+    if (this.info === info) return this.updateResolution()
+
+    this.unmountInfo()
+    this.info = info
+    this.resolution = info.querySelector("[data-stream-info-resolution]")
+    this.fps = info.querySelector("[data-stream-info-fps]")
+
+    this.updateResolution()
+    this.video.addEventListener("loadedmetadata", () => this.updateResolution())
+    this.video.addEventListener("resize", () => this.updateResolution())
+    this.fpsTimer = setInterval(() => this.updateFps(), 1000)
+  },
+
+  unmountInfo() {
+    clearInterval(this.fpsTimer)
+    this.fpsTimer = null
+    this.info = null
+    this.resolution = null
+    this.fps = null
+    this.lastQuality = null
+  },
+
+  // What the publisher sends, not what the tile is sized at
+  updateResolution() {
+    if (!this.resolution) return
+    const {videoWidth: width, videoHeight: height} = this.video
+    this.resolution.textContent = width && height ? `${width}×${height}` : "—"
+  },
+
+  // Decoded frames over the last second: what the viewer really sees, so a stream
+  // that arrives at 12 fps says so even if the publisher claims 60
+  updateFps() {
+    if (!this.fps) return
+    const quality = this.video.getVideoPlaybackQuality?.() || this.video.webkitGetVideoPlaybackQuality?.()
+    const frames = quality?.totalVideoFrames
+    const now = performance.now()
+    const before = this.lastQuality
+    this.lastQuality = {frames, at: now}
+
+    if (before?.frames === undefined || frames === undefined || this.video.paused) return
+    const elapsed = now - before.at
+    if (elapsed <= 0) return
+    this.fps.textContent = `${Math.round(((frames - before.frames) * 1000) / elapsed)} fps`
   },
 
   // How the screen comes through: smooth, lossy, frozen, stereo...
@@ -489,8 +541,15 @@ export const ScreenViewer = {
     this.connect()
   },
 
+  // A pinned screen gains the badge (and an unpinned one loses it) without the
+  // hook being remounted, so pick it up here
+  updated() {
+    this.mountInfo()
+  },
+
   destroyed() {
     clearInterval(this.statsTimer)
+    this.unmountInfo()
     this.teardown()
   },
 

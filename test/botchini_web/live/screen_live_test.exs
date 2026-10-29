@@ -1273,6 +1273,7 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
       assert_patch(guild, ~p"/screens/1/share")
       assert has_element?(guild, "#share-modal:not(.hidden)")
+      assert has_element?(guild, "#share-modal h2", "Share your screen")
       assert find_live_child(guild, "manage-stream")
     end
 
@@ -1298,7 +1299,6 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     test "has the controls to share a screen", %{conn: conn} do
       manage = live_manage(conn)
 
-      assert has_element?(manage, "h2", "Share your screen")
       assert has_element?(manage, "[data-screen-start]", "Share screen")
       assert has_element?(manage, "[data-screen-switch]")
       assert has_element?(manage, "[data-screen-stop]")

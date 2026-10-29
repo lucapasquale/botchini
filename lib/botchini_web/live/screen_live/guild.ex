@@ -304,23 +304,26 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         phx-window-keydown={@open? && "close_share"}
         phx-key="Escape"
       >
-        <button
-          id="share-modal-close"
-          phx-click="close_share"
-          class="absolute right-3 top-3 rounded p-1.5 text-gray-400 hover:bg-white/10 hover:text-white"
-        >
-          <span class="sr-only">Close</span>
-          <svg
-            class="h-5 w-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <h2 id="share-modal-title" class="text-xl font-semibold">Share your screen</h2>
+          <button
+            id="share-modal-close"
+            phx-click="close_share"
+            class="-mr-1.5 shrink-0 rounded p-1.5 text-gray-400 hover:bg-white/10 hover:text-white"
           >
-            <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round" />
-          </svg>
-        </button>
+            <span class="sr-only">Close</span>
+            <svg
+              class="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
 
         {live_render(@socket, BotchiniWeb.ScreenLive.ManageStream,
           id: "manage-stream",

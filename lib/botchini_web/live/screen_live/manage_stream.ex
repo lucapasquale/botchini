@@ -67,8 +67,6 @@ defmodule BotchiniWeb.ScreenLive.ManageStream do
 
   def render(assigns) do
     ~H"""
-    <h2 id="share-modal-title" class="mb-4 pr-8 text-xl font-semibold">Share your screen</h2>
-
     <p :if={obs?(@room)} class="text-sm text-gray-400">
       You're sharing from OBS. Stop that stream to share your screen from here.
     </p>

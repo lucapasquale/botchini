@@ -91,7 +91,9 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   # out on the page. Screens never move in the DOM, as moving a video would remount
   # its hook and restart the connection, so a grid places them: the big ones take
   # the rows after the header, and the others fill the next one's first columns,
-  # before the bar
+  # before the bar. With more than one screen pinned, the ScreenGrid hook redoes this
+  # arrangement in the browser, where the streams' resolutions and the viewer's window
+  # are known; what is rendered here is the no-JS fallback and the first paint.
   def render(assigns) do
     big = big_rooms(assigns.rooms, assigns.pinned)
     main = if length(big) == 1, do: hd(big)
@@ -110,7 +112,11 @@ defmodule BotchiniWeb.ScreenLive.Guild do
       class="mx-auto grid w-full gap-3"
       style={columns(length(@rooms) - length(@big)) <> rows(@layout) <> max_width(@layout)}
     >
-      <div class="col-span-full row-start-1 flex min-w-0 items-center justify-between gap-3">
+      <div
+        id="screen-header"
+        phx-hook="ScreenGrid"
+        class="col-span-full row-start-1 flex min-w-0 items-center justify-between gap-3"
+      >
         <div id="watching" class="flex min-w-0 items-center gap-2.5">
           <%= cond do %>
             <% @main -> %>
@@ -138,6 +144,7 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         :for={room <- @rooms}
         id={"screen-#{room.id}"}
         data-main={to_string(room in @big)}
+        data-big-index={big_index(room, @big)}
         class={["group min-w-0", tile_class(room in @big)]}
         style={tile_style(room, @big, @layout)}
       >
@@ -299,6 +306,11 @@ defmodule BotchiniWeb.ScreenLive.Guild do
       big -> big
     end
   end
+
+  # Where a pinned screen sits in the pin order. The ScreenGrid hook uses it to keep
+  # that order when it chooses the arrangement the server can't know: the streams'
+  # resolutions and the viewer's window only exist in the browser
+  defp big_index(room, big), do: Enum.find_index(big, &(&1 == room))
 
   defp big_ids(socket) do
     socket.assigns.rooms |> big_rooms(socket.assigns.pinned) |> Enum.map(& &1.id)

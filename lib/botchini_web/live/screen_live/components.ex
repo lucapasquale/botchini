@@ -23,6 +23,7 @@ defmodule BotchiniWeb.ScreenLive.Components do
     <div
       id={"screen-viewer-#{@room.id}"}
       phx-hook="ScreenViewer"
+      data-screen-viewer
       data-room-id={@room.id}
       data-ice-servers={ice_servers_json()}
       class="group/viewer relative aspect-video w-full overflow-hidden rounded-lg bg-black"

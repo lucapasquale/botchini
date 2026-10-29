@@ -22,6 +22,7 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import {ScreenBroadcast, ScreenViewer} from "./hooks/screen_share"
+import {ScreenGrid} from "./hooks/screen_grid"
 import {playNotification} from "./hooks/notification_sounds"
 import {Soundboard} from "./hooks/soundboard"
 import {Music} from "./hooks/music"
@@ -33,7 +34,7 @@ let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {ChatForm, Music, OnlineMutes, Pointer, Popovers, ScreenBroadcast, ScreenViewer, Soundboard}
+  hooks: {ChatForm, Music, OnlineMutes, Pointer, Popovers, ScreenBroadcast, ScreenGrid, ScreenViewer, Soundboard}
 })
 
 // Show progress bar on live navigation and form submits

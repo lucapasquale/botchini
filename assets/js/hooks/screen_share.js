@@ -412,49 +412,115 @@ export const ScreenViewer = {
   mountInfo() {
     const info = this.el.querySelector("[data-stream-info]")
     if (!info) return this.unmountInfo()
-    if (this.info === info) return this.updateResolution()
 
-    this.unmountInfo()
-    this.info = info
-    this.resolution = info.querySelector("[data-stream-info-resolution]")
-    this.fps = info.querySelector("[data-stream-info-fps]")
+    if (this.info !== info) {
+      this.unmountInfo()
+      this.info = info
+      this.resolution = info.querySelector("[data-stream-info-resolution]")
+      this.fps = info.querySelector("[data-stream-info-fps]")
 
+      this.video.addEventListener("loadedmetadata", () => this.updateResolution())
+      this.video.addEventListener("resize", () => this.updateResolution())
+      this.countPresentedFrames()
+      this.fpsTimer = setInterval(() => this.updateFps(), 1000)
+    }
+
+    // LiveView can put the placeholders back, so what is known is written again
     this.updateResolution()
-    this.video.addEventListener("loadedmetadata", () => this.updateResolution())
-    this.video.addEventListener("resize", () => this.updateResolution())
-    this.fpsTimer = setInterval(() => this.updateFps(), 1000)
+    this.renderFps()
   },
 
   unmountInfo() {
     clearInterval(this.fpsTimer)
     this.fpsTimer = null
+    if (this.frameRequest !== undefined) this.video?.cancelVideoFrameCallback?.(this.frameRequest)
+    this.frameRequest = undefined
+    this.presented = undefined
     this.info = null
     this.resolution = null
     this.fps = null
-    this.lastQuality = null
+    this.lastSample = null
+    this.lastFps = null
+    this.lastResolution = null
+  },
+
+  // Counts the frames the compositor was handed, one by one
+  countPresentedFrames() {
+    if (!this.video.requestVideoFrameCallback) return
+    this.presented = 0
+    const tick = () => {
+      this.presented += 1
+      this.frameRequest = this.video.requestVideoFrameCallback(tick)
+    }
+    this.frameRequest = this.video.requestVideoFrameCallback(tick)
+  },
+
+  // Frames per second, from the best source that actually moves: the compositor
+  // (requestVideoFrameCallback) when it ticks, otherwise the WebRTC receiver, whose
+  // framesDecoded also covers hardware decoders. getVideoPlaybackQuality's
+  // totalVideoFrames stays at 0 for streams decoded outside the media pipeline,
+  // which is exactly an OBS share, so it is only the last resort.
+  async updateFps() {
+    if (this.sampling) return
+    this.sampling = true
+
+    try {
+      const sample = await this.frameSample()
+      const now = performance.now()
+      const before = this.lastSample
+      this.lastSample = sample && {...sample, at: now}
+
+      if (!sample || sample.frames === undefined) return
+      if (!before || before.source !== sample.source || now <= before.at) return
+
+      const fps = Math.round(((sample.frames - before.frames) * 1000) / (now - before.at))
+      this.lastFps = `${Math.max(0, fps)} fps`
+    } finally {
+      this.sampling = false
+      this.renderFps()
+    }
+  },
+
+  async frameSample() {
+    if (this.presented > 0) return {source: "presented", frames: this.presented}
+
+    const inbound = await this.inboundVideo()
+    if (inbound?.framesDecoded !== undefined) return {source: "decoded", frames: inbound.framesDecoded}
+
+    const quality = this.video.getVideoPlaybackQuality?.() || this.video.webkitGetVideoPlaybackQuality?.()
+    if (quality?.totalVideoFrames !== undefined) {
+      return {source: "quality", frames: quality.totalVideoFrames}
+    }
+    return null
+  },
+
+  async inboundVideo() {
+    const pc = this.connection?.pc
+    if (!pc || pc.connectionState !== "connected") return null
+
+    try {
+      const report = await pc.getStats()
+      let inbound = null
+      report.forEach((stat) => {
+        if (stat.type === "inbound-rtp" && stat.kind === "video") inbound = stat
+      })
+      return inbound
+    } catch {
+      return null
+    }
+  },
+
+  // A paused picture is not a measurement failure, so it says so
+  renderFps() {
+    if (!this.fps) return
+    this.fps.textContent = this.video.paused ? "paused" : this.lastFps || "—"
   },
 
   // What the publisher sends, not what the tile is sized at
   updateResolution() {
-    if (!this.resolution) return
     const {videoWidth: width, videoHeight: height} = this.video
-    this.resolution.textContent = width && height ? `${width}×${height}` : "—"
-  },
-
-  // Decoded frames over the last second: what the viewer really sees, so a stream
-  // that arrives at 12 fps says so even if the publisher claims 60
-  updateFps() {
-    if (!this.fps) return
-    const quality = this.video.getVideoPlaybackQuality?.() || this.video.webkitGetVideoPlaybackQuality?.()
-    const frames = quality?.totalVideoFrames
-    const now = performance.now()
-    const before = this.lastQuality
-    this.lastQuality = {frames, at: now}
-
-    if (before?.frames === undefined || frames === undefined || this.video.paused) return
-    const elapsed = now - before.at
-    if (elapsed <= 0) return
-    this.fps.textContent = `${Math.round(((frames - before.frames) * 1000) / elapsed)} fps`
+    this.lastResolution = width && height ? `${width}×${height}` : null
+    if (this.resolution) this.resolution.textContent = this.lastResolution || "—"
   },
 
   // How the screen comes through: smooth, lossy, frozen, stereo...

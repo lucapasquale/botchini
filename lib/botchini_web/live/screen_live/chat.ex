@@ -39,7 +39,9 @@ defmodule BotchiniWeb.ScreenLive.Chat do
       chat_guild_id: guild_id,
       chat_user: user,
       chat_events: events,
-      chat_open?: true,
+      # The page is for the screens: the chat starts hidden and counts what it
+      # misses, so opening it is a choice, not something covering the video
+      chat_open?: false,
       chat_unread: 0,
       chat_limiter: Activity.new_limiter(),
       chat_limited?: false

@@ -48,7 +48,7 @@ defmodule BotchiniWeb.Router do
       on_mount: {BotchiniWeb.Auth, :require_user} do
       live "/screens", ScreenLive.Guild
       live "/screens/:guild_id", ScreenLive.Guild
-      live "/screens/:guild_id/share", ScreenLive.ManageStream
+      live "/screens/:guild_id/share", ScreenLive.Guild, :share
     end
   end
 

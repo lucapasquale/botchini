@@ -1,9 +1,10 @@
 defmodule BotchiniWeb.ScreenLive.ManageStream do
   @moduledoc """
-  Page where members share their own screen, logged in with Discord. It's apart
-  from the guild page, as a room talks to one process per peer, and that page's
-  process is already watching. The guild page's header and /stream start link here.
-  The room is only made once the member picks something to share
+  Where members share their own screen, logged in with Discord. It's rendered inside
+  the guild page's share modal, but as its own LiveView, as a room talks to one
+  process per peer and that page's process is already watching. The guild page's
+  header and /stream start open it. The room is only made once the member picks
+  something to share
   """
 
   use BotchiniWeb, :live_view
@@ -22,24 +23,16 @@ defmodule BotchiniWeb.ScreenLive.ManageStream do
   alias Botchini.Screens.{ClientStats, Room}
   alias BotchiniWeb.Auth
 
-  @doc """
-  Link to this page for a guild, where members log in to share their screen
-  """
-  @spec share_url(String.t()) :: String.t()
-  def share_url(guild_id), do: url(~p"/screens/#{guild_id}/share")
+  # Nested LiveViews skip the router's hooks, so the guild page hands over who's sharing
+  on_mount {BotchiniWeb.Auth, :require_user}
 
   @impl true
-  def mount(params, _session, socket) do
-    socket =
-      assign(socket,
-        page_title: "Share your screen",
-        user: socket.assigns.current_user,
-        stats_reported_at: %{}
-      )
+  def mount(_params, session, socket) do
+    socket = assign(socket, user: socket.assigns.current_user, stats_reported_at: %{})
 
     # Discord is only asked once connected, instead of for both renders
     with true <- connected?(socket),
-         {:ok, guild_id} <- parse_guild_id(params["guild_id"]),
+         {:ok, guild_id} <- parse_guild_id(session["guild_id"]),
          access when access in [:member, :admin] <- Auth.member_status(socket, guild_id) do
       room = Screens.find_owner_room(guild_id, socket.assigns.user.id)
       if room, do: Screens.subscribe(room.id)
@@ -74,18 +67,7 @@ defmodule BotchiniWeb.ScreenLive.ManageStream do
 
   def render(assigns) do
     ~H"""
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-2xl font-semibold">Share your screen</h1>
-      <%!-- A new tab, as leaving this one ends the stream --%>
-      <a
-        id="watch-link"
-        href={~p"/screens/#{@guild_id}"}
-        target="_blank"
-        class="text-sm text-indigo-400 hover:underline"
-      >
-        Watch the server's streams
-      </a>
-    </div>
+    <h2 id="share-modal-title" class="mb-4 pr-8 text-xl font-semibold">Share your screen</h2>
 
     <p :if={obs?(@room)} class="text-sm text-gray-400">
       You're sharing from OBS. Stop that stream to share your screen from here.
@@ -163,8 +145,8 @@ defmodule BotchiniWeb.ScreenLive.ManageStream do
 
       <p class="mt-2 text-sm text-gray-500">
         To share sound, use Chrome or Edge, pick a browser tab or your entire screen (on Windows)
-        and turn on audio sharing in the picker. Firefox can't share sound. Closing this tab ends
-        your stream.
+        and turn on audio sharing in the picker. Firefox can't share sound. Closing this keeps
+        your stream going, leaving or reloading the page ends it.
       </p>
     </div>
     """

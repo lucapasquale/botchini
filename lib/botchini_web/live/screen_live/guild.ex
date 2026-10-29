@@ -3,7 +3,8 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   Page where members watch the screens being shared in a guild. One screen takes
   most of the page, or several pinned ones share it, with the chat floating over
   them. The others wait in a strip below, next to the bar with the soundboard, the
-  music, the pointer and the chat's switch
+  music, the pointer and the chat's switch. Members share their own screen from a
+  modal over the page, see `BotchiniWeb.ScreenLive.ManageStream`
   """
 
   use BotchiniWeb, :live_view
@@ -22,6 +23,12 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   @spec watch_url(String.t()) :: String.t()
   def watch_url(guild_id), do: url(~p"/screens/#{guild_id}")
 
+  @doc """
+  Link to this page with the modal to share a screen open, where members log in to share
+  """
+  @spec share_url(String.t()) :: String.t()
+  def share_url(guild_id), do: url(~p"/screens/#{guild_id}/share")
+
   @impl true
   def mount(params, _session, socket) do
     socket =
@@ -32,7 +39,9 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         online: [],
         admin?: false,
         full_width?: true,
-        stats_reported_at: %{}
+        stats_reported_at: %{},
+        share_open?: false,
+        share_mounted?: false
       )
 
     # Discord is only asked once connected, instead of for both renders
@@ -67,6 +76,18 @@ defmodule BotchiniWeb.ScreenLive.Guild do
       :invalid -> {:ok, assign(socket, status: :not_found)}
     end
   end
+
+  # The share modal follows the URL, so /stream start's link opens it. Once opened, its
+  # LiveView stays mounted while hidden, as closing the modal mustn't end the stream
+  @impl true
+  def handle_params(_params, _url, %{assigns: %{status: :open}} = socket) do
+    open? = socket.assigns.live_action == :share
+
+    {:noreply,
+     assign(socket, share_open?: open?, share_mounted?: socket.assigns.share_mounted? or open?)}
+  end
+
+  def handle_params(_params, _url, socket), do: {:noreply, socket}
 
   @impl true
   def render(%{status: :connecting} = assigns) do
@@ -245,6 +266,72 @@ defmodule BotchiniWeb.ScreenLive.Guild do
       Streams start muted, use the video controls to turn the sound on. Click a stream under the
       big one to watch it instead, or pin it to keep both big.
     </p>
+
+    <.share_modal
+      :if={@share_mounted?}
+      socket={@socket}
+      open?={@share_open?}
+      guild_id={@guild_id}
+      user={@current_user}
+    />
+    """
+  end
+
+  attr :socket, :any, required: true
+  attr :open?, :boolean, required: true
+  attr :guild_id, :string, required: true
+  attr :user, :map, required: true
+
+  # Sharing runs in its own LiveView, as a room talks to one process per peer and this
+  # page's process is already watching. Hidden instead of removed when closed, so the
+  # stream keeps going; leaving the page ends it
+  defp share_modal(assigns) do
+    ~H"""
+    <div
+      id="share-modal"
+      class={[
+        "fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:items-center",
+        !@open? && "hidden"
+      ]}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="share-modal-title"
+    >
+      <div class="fixed inset-0 bg-black/70" phx-click="close_share" aria-hidden="true"></div>
+
+      <div
+        class="relative w-full max-w-4xl rounded-xl border border-gray-700 bg-gray-900 p-5 shadow-xl"
+        phx-window-keydown={@open? && "close_share"}
+        phx-key="Escape"
+      >
+        <button
+          id="share-modal-close"
+          phx-click="close_share"
+          class="absolute right-3 top-3 rounded p-1.5 text-gray-400 hover:bg-white/10 hover:text-white"
+        >
+          <span class="sr-only">Close</span>
+          <svg
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round" />
+          </svg>
+        </button>
+
+        {live_render(@socket, BotchiniWeb.ScreenLive.ManageStream,
+          id: "manage-stream",
+          session: %{
+            "guild_id" => @guild_id,
+            "discord_user_id" => @user.id,
+            "discord_user_name" => @user.name
+          }
+        )}
+      </div>
+    </div>
     """
   end
 
@@ -336,6 +423,9 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   end
 
   @impl true
+  def handle_event("close_share", _params, socket),
+    do: {:noreply, push_patch(socket, to: ~p"/screens/#{socket.assigns.guild_id}")}
+
   def handle_event("watch", %{"room_id" => room_id}, socket) do
     if watching?(socket, room_id),
       do: {:noreply, assign(socket, pinned: [room_id])},

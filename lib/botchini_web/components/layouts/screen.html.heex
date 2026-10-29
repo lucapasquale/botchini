@@ -3,12 +3,11 @@
     <h2 class="text-lg font-semibold leading-6 my-0 hover:underline">Botchini</h2>
   </a>
   <div class="flex items-center gap-4">
-    <%!-- A new tab, so the stream keeps going while watching here --%>
-    <a
+    <%!-- Opens the share modal over the page, so watching never stops --%>
+    <.link
       :if={assigns[:share_path]}
       id="share-link"
-      href={@share_path}
-      target="_blank"
+      patch={@share_path}
       class="flex items-center gap-2 font-semibold text-indigo-400 hover:underline"
     >
       {if assigns[:sharing?], do: "Manage my stream", else: "Share my screen"}
@@ -18,7 +17,7 @@
       >
         LIVE
       </span>
-    </a>
+    </.link>
     <span :if={assigns[:current_user]} class="text-gray-400">{@current_user.name}</span>
   </div>
 </header>

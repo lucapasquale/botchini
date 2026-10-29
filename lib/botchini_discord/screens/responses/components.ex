@@ -7,14 +7,14 @@ defmodule BotchiniDiscord.Screens.Responses.Components do
 
   alias Nostrum.Constants.{ButtonStyle, ComponentType}
 
-  alias BotchiniWeb.ScreenLive.{Guild, ManageStream}
+  alias BotchiniWeb.ScreenLive.Guild
 
   @spec share_screen(String.t()) :: map()
   def share_screen(guild_id) do
     %{
       type: ComponentType.action_row(),
       components: [
-        link_button("Start sharing", ManageStream.share_url(guild_id)),
+        link_button("Start sharing", Guild.share_url(guild_id)),
         link_button("Watch all", Guild.watch_url(guild_id))
       ]
     }

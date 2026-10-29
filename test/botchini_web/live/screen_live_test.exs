@@ -1249,9 +1249,11 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       refute_receive {:telemetry, _measurements, _metadata}
     end
 
+    # The share link opens the guild page with the modal, whose controls are their own
+    # LiveView
     defp live_manage(conn) do
-      {:ok, manage, _html} = live(conn, ~p"/screens/1/share")
-      manage
+      {:ok, guild, _html} = live(conn, ~p"/screens/1/share")
+      find_live_child(guild, "manage-stream")
     end
 
     defp my_room, do: Screens.find_owner_room("1", "10")
@@ -1260,23 +1262,43 @@ defmodule BotchiniWebTest.ScreenLiveTest do
       on_exit(fn -> if room = my_room(), do: Screens.stop_room(room) end)
     end
 
-    test "is linked from the guild page's header, opening a new tab", %{conn: conn} do
+    test "opens in a modal from the guild page's header", %{conn: conn} do
       {:ok, guild, _html} = live(conn, ~p"/screens/1")
 
-      assert has_element?(
-               guild,
-               "#share-link[href='/screens/1/share'][target=_blank]",
-               "Share my screen"
-             )
+      assert has_element?(guild, "#share-link[href='/screens/1/share']", "Share my screen")
+      refute has_element?(guild, "#share-modal")
+      assert find_live_child(guild, "manage-stream") == nil
 
-      refute has_element?(guild, "#manage-stream")
+      guild |> element("#share-link") |> render_click()
+
+      assert_patch(guild, ~p"/screens/1/share")
+      assert has_element?(guild, "#share-modal:not(.hidden)")
+      assert find_live_child(guild, "manage-stream")
+    end
+
+    test "keeps sharing while the modal is closed", %{conn: conn} do
+      {:ok, guild, _html} = live(conn, ~p"/screens/1/share")
+      manage = find_live_child(guild, "manage-stream")
+      render_hook(manage, "source", %{"surface" => "monitor"})
+      room_id = my_room().id
+
+      guild |> element("#share-modal-close") |> render_click()
+
+      assert_patch(guild, ~p"/screens/1")
+      assert has_element?(guild, "#share-modal.hidden")
+      assert find_live_child(guild, "manage-stream")
+      assert Screens.get_room(room_id)
+
+      guild |> element("#share-link") |> render_click()
+
+      assert has_element?(guild, "#share-modal:not(.hidden)")
+      assert find_live_child(guild, "manage-stream") == manage
     end
 
     test "has the controls to share a screen", %{conn: conn} do
       manage = live_manage(conn)
 
-      assert has_element?(manage, "h1", "Share your screen")
-      assert has_element?(manage, "#watch-link[href='/screens/1'][target=_blank]")
+      assert has_element?(manage, "h2", "Share your screen")
       assert has_element?(manage, "[data-screen-start]", "Share screen")
       assert has_element?(manage, "[data-screen-switch]")
       assert has_element?(manage, "[data-screen-stop]")
@@ -1286,16 +1308,17 @@ defmodule BotchiniWebTest.ScreenLiveTest do
     test "keeps other people out", %{conn: conn} do
       patch_function(Discord, :check_member, :not_member)
 
-      manage = live_manage(conn)
+      {:ok, guild, _html} = live(conn, ~p"/screens/1/share")
 
-      assert render(manage) =~ "Not in this server"
-      refute has_element?(manage, "[data-screen-start]")
+      assert render(guild) =~ "Not in this server"
+      assert find_live_child(guild, "manage-stream") == nil
     end
 
     test "only works for real guilds", %{conn: conn} do
-      {:ok, manage, _html} = live(conn, ~p"/screens/abc/share")
+      {:ok, guild, _html} = live(conn, ~p"/screens/abc/share")
 
-      assert render(manage) =~ "Server not found"
+      assert render(guild) =~ "Server not found"
+      assert find_live_child(guild, "manage-stream") == nil
     end
 
     test "needs a login" do

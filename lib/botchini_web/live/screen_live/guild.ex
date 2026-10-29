@@ -149,12 +149,27 @@ defmodule BotchiniWeb.ScreenLive.Guild do
         style={tile_style(room, @big, @layout)}
       >
         <.viewer room={room} controls?={room in @big}>
-          <span
-            :if={@main == nil and room in @big}
-            class="pointer-events-none absolute left-1.5 top-1.5 z-10 max-w-[calc(100%_-_5rem)] truncate rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white"
+          <div
+            :if={room in @big}
+            class="pointer-events-none absolute left-1.5 top-1.5 z-10 flex max-w-[calc(100%_-_5rem)] flex-col items-start gap-1"
           >
-            {room.title} · {room.owner_name}
-          </span>
+            <span
+              :if={@main == nil}
+              class="max-w-full truncate rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white"
+            >
+              {room.title} · {room.owner_name}
+            </span>
+
+            <%!-- What the stream is and what actually arrives, while the pointer is on it --%>
+            <span
+              :if={room.id in @pinned}
+              data-stream-info
+              class="max-w-full truncate rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white opacity-0 transition group-hover:opacity-100"
+            >
+              {source_label(room.source)} · <span data-stream-info-resolution>—</span>
+              · <span data-stream-info-fps>—</span>
+            </span>
+          </div>
 
           <button
             :if={room not in @big}
@@ -311,6 +326,11 @@ defmodule BotchiniWeb.ScreenLive.Guild do
   # that order when it chooses the arrangement the server can't know: the streams'
   # resolutions and the viewer's window only exist in the browser
   defp big_index(room, big), do: Enum.find_index(big, &(&1 == room))
+
+  # What a screen is shared from. The badge says the browser's own sharing is the
+  # poor relation here, as an OBS share usually arrives bigger and steadier
+  defp source_label(:obs), do: "OBS"
+  defp source_label(_source), do: "WebRTC 😡"
 
   defp big_ids(socket) do
     socket.assigns.rooms |> big_rooms(socket.assigns.pinned) |> Enum.map(& &1.id)

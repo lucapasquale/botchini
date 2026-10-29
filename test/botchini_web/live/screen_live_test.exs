@@ -302,7 +302,14 @@ defmodule BotchiniWebTest.ScreenLiveTest do
   end
 
   describe "guild page" do
-    defp live_guild(conn, guild_id), do: live(conn, ~p"/screens/#{guild_id}")
+    # The page opens with the chat hidden, to leave the screens the room. These tests
+    # are about what the chat says, so they open it; the closed start has its own test
+    defp live_guild(conn, guild_id) do
+      {:ok, view, html} = live(conn, ~p"/screens/#{guild_id}")
+      # Pages that deny access render no bar at all
+      if has_element?(view, "#chat-toggle"), do: view |> element("#chat-toggle") |> render_click()
+      {:ok, view, html}
+    end
 
     test "has a fixed link for each guild" do
       assert Guild.watch_url("1") =~ ~r"^https?://[^/]+/screens/1$"
@@ -869,6 +876,17 @@ defmodule BotchiniWebTest.ScreenLiveTest do
 
   describe "chat" do
     defp say(view, text), do: view |> element("#chat-form") |> render_submit(%{"text" => text})
+
+    test "starts hidden, so the screens have the page to themselves", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/screens/1")
+
+      refute has_element?(view, "#chat")
+      assert has_element?(view, "#screen-bar #chat-toggle[aria-pressed=false]")
+
+      view |> element("#chat-toggle") |> render_click()
+      assert has_element?(view, "#chat")
+      assert has_element?(view, "#chat-toggle[aria-pressed=true]")
+    end
 
     test "sends messages to everyone on the guild's page", %{conn: conn} do
       {:ok, view, _html} = live_guild(conn, "1")
